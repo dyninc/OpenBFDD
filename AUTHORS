@@ -1,0 +1,7 @@
+Authors of OpenBFD
+
+Jake Montgomery 
+  Initial design and development of bfdd-beacon.
+  Initial design and development of bfdd-control.
+  Wrote docs and manpages. 
+  Setup configuration and build system. 

@@ -1,0 +1,216 @@
+README for OpenBFDD
+*******************
+
+================
++ Contents 
+================
+
+   * Intro
+   * Building and Installing
+   * License
+   * Platforms
+   * About bfdd-beacon 
+   * About bfdd-control
+   * Limitations and Bugs
+   * Notes on Remote BFD Platforms
+   * Bidirectional Forwarding Detection (BFD) Protocol
+
+================
++ Intro
+================
+
+OpenBFDD is an open source package that provides a software based 
+implantation of the Bidirectional Forwarding Detection (BFD) protocol. It 
+is designed to run on a server. Its primary purpose is to allow the 
+administrator to quickly take the server off-line when the core service, 
+such as a bind or unbound server, goes down. This is done by providing a 
+BFD "beacon", bfdd-beacon, that can communicate with a properly 
+configured, BFD enabled, router. A control utility, bfdd-control, can be 
+used to configure the running bfdd-beacon daemon, and to change the state 
+of its BFD sessions. 
+
+================
++ Building and Installing
+================
+
+See the included INSTALL document for instructions on building and 
+installing the OpenBFDD tools and documentation.
+
+
+================
++ License
+================
+
+See the included COPYING file for licensing information.
+
+
+================
++ Platforms
+================
+
+The software was originally developed on FreeBDS 7.1. It has been built, 
+and tested on the following platforms:
+   
+   * FreeBDS 7.1 AMD64
+   * FreeBDS 8.1 AMD64
+
+It may, or may not, be possible to build and run it on other BSD platforms
+ithout modification. If your system is not included, then we encourage you
+o make the modifications necessary and submit them to <PLACEHOLDER> for 
+inclusion in future releases.
+
+The source currently uses the kevent() system call, which my only be 
+available on BSD systems. A release is planned, in the near future, which 
+will remove this dependency, and should make it easier to port OpenBFD to 
+other systems.
+
+================
++ About bfdd-beacon
+================
+
+The bfdd-beacon is a daemon that implements a simple, configurable, 
+Bidirectional Forwarding Detection (BFD) client. When running the 
+bfdd-control utility can be used to control and communicate with the 
+bfdd-beacon. 
+
+Once the project is installed, you can obtain more information using `man 
+bfdd-beacon' 
+
+== Communication ==
+
+Currently the bfdd-beacon opens two ports 957 and 958 on 127.0.0.1 to 
+allow for socket communication with the bfdd-control utility. The first 
+port is "primary" and is used by default. This will probably be made 
+configurable in the future.
+
+== Timing ==
+
+BFD requires that packets be sent with fairly precise timing. Since 
+bfdd-beacon is implemented in software and is running on the same platform
+s other services, it is possible for the link to go "down" under system 
+stress conditions. Further testing will be needed to determine if this is 
+an actual issue. 
+
+== Notes ==
+
+While the bfdd-beacon does (as of v 0.2.0) support setting "Required 
+Minimum Receive Interval" to 0, not all remote platforms support it. See 
+the "Notes on Remote BFD Platforms" section in this document for more 
+details Therefore it is advisable not to set "Required Minimum Receive 
+Interval" to 0 without first testing the feature, and confirming that the 
+remote system supports this.
+
+================
++ About bfdd-control
+================
+
+The bfdd-control is a utility that communicates with the bfdd-beacon 
+daemon when it is running. Once the project is installed, you can obtain 
+more information, including a complete list of  command that can be sent 
+to the bfdd-beacon using `man bfdd-control'
+
+== Communication ==
+
+See also the Communication section of the `About bfdd-beacon' entry in 
+this document as well. Communication normally happens through a single 
+(primary) port. It is unlikely, put possible, for connection to fail if 
+multiple simultaneous instances of bfdd-control are being run. For that 
+reason a second, alternate, port is provided as a backup, or when making 
+repeated bfdd-control calls, such as a "monitoring" script. Use the 
+`--altport' parameter as described in the bfdd-control manpage.
+
+================
++ Limitations and Bugs
+================
+
+   * BFD Demand Mode ( http://tools.ietf.org/html/rfc5880#section-6.6 ) is
+   not implemented in the current version.
+
+   * BFD Echo Mode ( http://tools.ietf.org/html/rfc5880#section-6.4 ) is 
+   not implemented in the current version.
+
+   * BFD Authentication ( http://tools.ietf.org/html/rfc5880#section-6.7 )
+   s not implemented in the current version.  
+
+   * Although it attempts to follow the protocol specification, it was 
+   designed and tested to work with the Juniper line of routers. It has 
+   currently been tested with JUNOS 8.5.
+
+   * The bfdd-beacon may behave improperly or even crash in low memory 
+   situations. A fix is expected soon. 
+
+================
++ Notes on Remote BFD Platforms
+================
+
+bfdd-beacon communicates with a "remote" system. Since the BFD 
+specification was, until recently, in the draft stage, and many 
+implementations may have not been fully exercised, this page provides a 
+location for notes about various BFD implementations.
+
+== JUNOS 8.5S4 ==
+
+   * This platform does not handle a remote "Required Minimum Receive 
+   Interval" of 0. It treats it as an actual 0 value and proceeds to spew 
+   control packets at the fastest possible rate. This is contrary to the 
+   bfd.RequiredMinRxInterval clause in Section 6.8.1 of RFC 5880 ( 
+   http://tools.ietf.org/html/rfc5880#section-6.8.1 ). Therefore it is 
+   advisable not to set "Required Minimum Receive Interval" to 0 with this
+   ystem.
+
+   * This platform does not set bfd.RemoteDiscr to 0 after a Detection 
+   time has elapsed, as mandated by the bfd.RemoteDiscr clause in Section
+   .8.1 of RFC 5880  ( http://tools.ietf.org/html/rfc5880#section-6.8.1 
+   ). It maintains bfd.RemoteDiscr for 2 detection times. Without the 
+   "workaround" the result is that is a session is removed, either 
+   intentionally, or from a timeout on our end, the remote system will 
+   continue to send packets with a non-zero "Your Discriminator", 
+   preventing us from starting a new session. A "workaround" for this has
+   been added. Passive sessions are now not deleted (and so the 
+   discriminator is maintained) for at least 3 times the remote detection
+   time. 
+ 
+
+   * This platform, in some cases, delays sending a packet when its state 
+   changes from Down to Init. This is contrary to Section 6.8.7 paragraph 
+   10 of RFC 5880  ( http://tools.ietf.org/html/rfc5880#section-6.8.7 ). 
+   This section does refer to "SHOULD", not "MUST", so this is not 
+   technically a bug. It can be seen when the local system goes from 
+   Up->AdminDown->Up. If the period spent in AdminDown is relatively short
+   ompared with the "Local Desired Min Rx Interval", then the Local state 
+   will transition from AdminDown->Down and the Remote system will 
+   immediately transition to the Init state, but it will delay sending a 
+   packet, despite the state change, until the next scheduled transmit. 
+   This can delay the Local systems transition to the Up state. A 
+   workaround has been added, and is enabled by default. This consists of 
+   setting the Poll bit on the packet for the transition from 
+   AdminDown->Down. This will force the remote system to respond 
+   immediately. See `session set admin_up_poll' in the bfdd-control manpage.
+
+
+================
++ Bidirectional Forwarding Detection (BFD) Protocol
+================
+
+As of this writing the bfdd-beacon implements the  RFC5880 (June 2010) BFD
+pecification.
+
+See also: 
+   * IETF BFd home page at: 
+   http://www.ietf.org/dyn/wg/charter/bfdd-charter.html
+
+   * BFD Base Specification RFC5880 (June 2010) at: 
+   http://tools.ietf.org/html/rfc5880
+
+   * BFD Generic Application Specification RFC5882 at: 
+   http://tools.ietf.org/html/rfc5882
+
+   * BFD for IPv4 & IPv6 Single Hop Specification RFC5881 at: 
+   http://tools.ietf.org/html/rfc5881
+
+   
+
+
+ 
+
+

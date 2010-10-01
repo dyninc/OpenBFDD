@@ -1,0 +1,50 @@
+.\" Manpage for bfdd-beacon.
+.TH "bfdd-beacon" "8" "September 30, 2010" "OpenBFDD v0.2.0" "OpenBFDD v0.2.0" 
+.SH NAME
+\fBbfdd-beacon\fR - a Bidirectional Forwarding Detection (BFD) beacon daemon.
+.SH SYNOPSIS
+\fBbfdd-beacon\fR [\fI options \fR]
+.SH DESCRIPTION
+\fBbfdd-beacon\fP is software implementation of the Bidirectional Forwarding Detection (BFD) protocol. 
+When \fBbfdd-beacon\fP is running commands can be issued to the beacon using the \fBbfdd-control\fR(8) utility.
+It is part of the OpenBFDD package. 
+.SH OPTIONS 
+The \fIoptions\fR parameter can be one or more of the following:
+.TP
+.B --version
+This will print the current version and exit.
+.TP
+.B --tee
+All logging will be sent to stdout in addition to the normal syslog or log file. 
+This is the default in debug builds run with the \fB--nofork\fR option.
+This option is only applied if used with the \fB--nofork\fR option.
+.TP
+.B --notee
+Logging will not be sent to stdout. This is the default for release builds.
+.TP
+.B --nofork
+Prevents the beacon from running as a daemon. This is useful for debugging.
+.SH CONTROL
+When \fBbfdd-beacon\fP is running commands can be issued to the beacon using the \fBbfdd-control\fR(8) utility. 
+See \fBbfdd-control\fR(8) documentation for more details.
+.SH LOGGING
+Currently log messages go to syslog. The \fB--tee\fR command can be used to also send log messages to stdout. 
+The identity "bfdd-beacon" is used for all syslog logging. 
+Logging is fully configurable.                
+See \fBbfdd-control\fR(8) documentation for more details. 
+.SH NOTES
+when \fBbfdd-beacon\fP is first started it will not accept any connections.
+This allows \fBbfdd-beacon\fP to be configured using the \fBbfdd-control\fR(8) utility before any sessions begin. 
+The \fBbfdd-control\fR(8) utility can then be used to start an active session, or to enable passive sessions. 
+
+The current implementation of the BFD protocol was tested specifically with the Juniper router's BFD (JUNOS 8.5). Demand mode is not currently supported. 
+Echo mode is not currently supported. 
+Authentication is not supported. 
+.SH BUGS
+No known bugs at this time.
+.SH "SEE ALSO"
+\fBbfdd-control\fP(8)
+.SH AUTHOR
+Jake Montgomery for Dynamic Network Services, Inc.
+.SH COPYRIGHT
+Copyright (c) 2010, Dynamic Network Services, Inc.

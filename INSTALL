@@ -1,0 +1,46 @@
+Installation Instructions For OpenBFDD
+*************************
+
+=====================
++ Basic Installation From Distribution Package
+=====================
+                                     
+If you are building OpenBFDD from a distribution package, the following 
+should build and install the package if run from the directory containing 
+the package source code:
+
+   ./configure ; make ; make install
+
+This will builds and install bfdd-beacon, bfdd-control and the manpages 
+for both of these. 
+
+====================
++ Compiling For Your Operating System 
+====================
+
+OpenBFDD may not build, without modification, on all operating systems. 
+See the README file for a list of tested operating systems. If your system
+s not included, then we encourage you to make the modifications necessary 
+and submit them to http://github.com/dyninc/OpenBFDD for inclusion in future releases.
+
+=====================
++ Configuration Options
+=====================
+
+The standard configuration options are available. Run `./configure --help'
+or a list of these.
+   
+In addition the --enable-debug optional will enable additional runtime 
+checking and asserts. Be aware that, by default, these asserts will halt 
+execution of the bfdd-beacon. This build is for testing only and is not 
+recommended for production systems. 
+
+=====================
++ Setup From Source Repository
+=====================
+
+If you are not using a supplied ditribution package, but instead, are 
+working directly with the sources from the open source repository, then 
+you should have the DEVELOPERS document in your sources. See this document
+or more information on building from the source repository. 
+

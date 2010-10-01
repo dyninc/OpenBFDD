@@ -1,0 +1,188 @@
+.\" Manpage for bfdd-control.
+.TH "bfdd-control" "8" "September 30, 2010" "OpenBFDD v0.2.0" "OpenBFDD v0.2.0" 
+.SH NAME
+\fBbfdd-control\fR - control utility for \fBbfdd-beacon\fR(8)
+.SH SYNOPSIS
+\fBbfdd-control\fR [\fI options \fR] \fI command \fR
+.SH DESCRIPTION
+\fBbfdd-control\fP is a control and configuration application for \fBbfdd-beacon\fR(8). 
+It is part of the OpenBFDD package. 
+.SH OPTIONS 
+The optional \fIoptions\fR parameter can be one or more of the following:
+.TP
+.B --altport 
+Causes the "alternate" communications port to be used for connecting to \fBbfdd-beacon\fR. This can be used if there is a problem with the primary port. It could also be used to keep the main port free for normal control if commands are being sent repeatedly in a loop, such as a continual "monitoring" script.
+.SH COMMANDS
+The \fIcommand\fR parameter consists of a command to send to \fBbfdd-beacon\fR followed by one or more parameters for that command. The commands are:
+.TP 
+\fBversion\fR
+Displays the version number of this utility as well as the version of the current running bfd beacon, if it can be contacted.
+.TP 
+\fBstop\fR
+Causes \fBbfdd-beacon\fR to exit.
+.TP 
+\fBload\fR \fIpath\fR
+Runs all commands in the file specified by \fIpath\fR. The file should have each command on its own line. Any line beginning with # is considered a comment line, and will be ignored.  
+.TP 
+\fBallow\fR \fIip\fR
+Allows incoming packets from the given \fIip\fR address. This allows BFD sessions to be established if there is an active BFD service running on the given \fIip\fR. No session will be created until packets are received from the remote system. The beacon will act in passive mode for these sessions.
+.TP 
+\fBconnect\fR \fIip-pair\fR
+Starts an active session between the two ip addresses specified in \fIip-pair\fR. A session will be created immediately. If there is already a session with the given \fIip-pair\fR addresses then it is switched from passive to active.
+.TP 
+\fBblock\fR \fIip\fR
+Blocks any new connections from being established from the given \fIip\fR address. Existing sessions with this \fIip\fR will not be affected. By default all ip addresses are blocked.
+.TP 
+\fBlog\fR (\fBlevel\fR (\fIloglevel\fR | \fBlist\fR) | \fBtype\fR (\fIlogtype\fR  (\fByes\fR | \fBno\fR ) | \fBlist\fR))
+.RS 
+.TP
+\fBlevel\fR 
+Sets logging to one of a set of predefined \fIloglevel\fR values. Use the command \fBlog level list\fR to get a list of all available levels. Some of these include \fBnone\fR, \fBminimal\fR, \fBnormal\fR, \fBdetailed\fR, \fBdev\fR and \fBall\fR. The \fBall\fR level will produce a lot of logging and is not suitable for a production situation. The default level at startup is \fBnormal\fR.
+.TP
+\fBtype\fR 
+Enables or disables specific log types. Use the command \fBlog type list\fR to get a full list of \fIlogtype\fR values. 
+.RE
+.TP 
+\fBlog timing\fR (\fByes\fR | \fBno\fR )
+Enables or disables extended time logging. This will add a nanosecond timestamp to each message, in addition to the normal timestamp. The default is off.
+.TP 
+\fBstatus\fR [(\fIid\fR | \fIip-pair\fR | \fBall\fR) [\fBlevel\fR \fIlevel\fR] [\fB[no]compact\fR] [\fBbrief\fR]]
+Displays stats on one or all of the sessions.
+If no parameters are given then a brief \fBcompact\fR level 1 summary of all sessions will be displayed, including their \fIid\fR values. 
+If \fIid\fR or \fIip-pair\fR is supplied then the status of the specified session will be displayed. 
+If \fBall\fR is used, then information for all sessions will be displayed. 
+\fBlevel\fR \fIlevel\fR, where \fIlevel\fR is an integer, can be used to control the detail that is displayed. 
+The default \fIlevel\fR is 1. 
+\fBbrief\fR will cause certain values to be displayed as codes, or in shortened form, and will not use thousands separators for large numbers. 
+\fBcompact\fR will cause the stats for each session to be displayed on a single line. 
+\fBnocompact\fR will place each stat on its own line (this is the default). 
+
+The items returned in the status are documented in the \fBSTATUS ITEMS\fP(8) section of this document.
+.TP
+\fBsession\fR (\fIid\fR | \fIip-pair\fR | \fBall\fR) \fBstate\fR \fIstateval\fR [\fIdiagnostic\fR]
+Changes the state of the session specified by \fIid\fR or \fIip-pair\fR, or all sessions. \fIstateval\fR Can be one of the following:
+.RS 
+.TP
+\fBdown\fR
+Forces the session into the "Down" state, and holds it there. The session continues to communicate with the remote session, but the local state remains "Down".  \fIdiagnostic\fR is an optional integer diagnostic code (as defined in the bfd specification.) The default is 5 ("Path Down")
+.TP
+\fBadmin\fR
+Forces the session into the "AdminDown" state, and holds it there. The session continues to communicate with the remote session, but the local state remains "AdminDown". \fIdiagnostic\fR is an optional integer diagnostic code (as defined in the bfd specification.) The default is 7 (Administratively Down")
+.TP
+\fBup\fR
+Allows the session to transition normally out of its current state. Used to end a \fBdown\fR or \fBadmin\fR hold.
+.RE 
+.TP
+\fBsession\fR (\fIid\fR | \fIip-pair\fR | \fBall\fR) (\fBkill\fR | \fBreset\fR | \fBsuspend\fR | \fBresume\fR)
+Used to modify or remove a session specified by \fIid\fR or \fIip-pair\fR, or all sessions. The action depends on the parameter as follows:
+.RS 
+.TP
+\fBkill\fR
+Immediately deletes the session. Note that this does not prevent a new passive session from being immediately created if the \fBallow\fR command was used for the remote ip address. Use the \fBconnect\fR command to reestablish an active session, if desired. 
+.TP
+\fBreset\fR
+Immediately deletes the session. If the session was an active session then a new active session is created. If the session was a passive session then it will listen for control packets from the original ip address, and will create a session when packets are received, unless the \fBblock\fR command has been issued to block the remote ip address.
+.TP
+\fBsuspend\fR
+Prevents the session from sending any packets to the remote session, simulating a unidirectional link failure. This is used primarily for debugging purposes. 
+.TP
+\fBresume\fR
+Resumes sending packets after a previous \fBsuspend\fR. If the session is not suspended then this has no effect. 
+.RE 
+.TP
+\fBsession\fR (\fIid\fR | \fIip-pair\fR | \fBall\fR | \fBnew\fR) \fBset\fR \fIitem\fR \fIvalue\fR
+Used to set certain attributes for the session specified by \fIid\fR or \fIip-pair\fR, or all sessions, or for new sessions. If \fBnew\fR is specified then the setting applies to any future sessions that are created, but no current sessions will be affected. Some of the setting use a \fItimeval\fR for \fIvalue\fR. A \fItimeval\fR should be an integer, followed by a space, followed by 's' for seconds, 'ms' for milliseconds (1/1,000th of a second), or 'us' for microseconds (1/1,000,000th of a second.) The \fIitem\fR parameter can be one of the following:
+.RS 
+.TP
+\fBmintx\fR
+Sets the "Desired Minimum Transmit Interval" that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the "Required Minimum Receive Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 is not allowed. 
+.TP
+\fBminrx\fR
+Sets the "Required Minimum Receive Interval" that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the "Desired Minimum Transmit Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
+.TP
+\fBmulti\fR
+Sets the "Detection Multiplier" that the local session sends to the remote session in the control packet. This is (approximately) the number of periodic packets, from this session to the remote session, that can be lost before the remote system declares the link down due to timeout. The \fIvalue\fR parameter should be number between 1 and 255. 
+.TP
+\fBcpi\fR
+Sets the value of the "Control Plane Independent" (C) flag that the local session sends to the remote session in the control packet. This effects how the remote system handles the "Down" and "AdminDown" states. The exact implications of this flag are up to the remote system. The \fIvalue\fR parameter should be \fByes\fR or \fBno\fR. 
+.TP
+\fBadmin_up_poll\fR
+Enables or disables a workaround that prevents rapid Up->AdminDown->Up from taking a long time to come back Up. The workaround is needed (at least) for JUNOS8.5S4. See the wiki for more details. The default is enabled. The \fIvalue\fR parameter should be \fByes\fR or \fBno\fR. 
+.RE 
+.SH PARAMETERS
+Some of the parameters used in the \fBCOMMANDS\fR section require some additional explanation.
+.TP 
+\fIid\fR 
+This parameter describes a locally maintained identifier for a session. This id is primarily used as a convenient way to identify sessions when using \fBbfdd-control\fR. Note that this \fIid\fR is not the same as the \fBLocalId\fR used to identify the session to the remote system. Passive sessions can be destroyed after a timeout period. If they are later reestablished they will have a new \fIid\fR. For this, and other, reasons, it may be preferable to use an \fIip-pair\fR when managing sessions in an automated way. 
+.TP 
+\fIip-pair\fR 
+This parameter describes a pair of ip addresses. It should take the form "\fBlocal\fR \fIip\fR \fBremote\fR \fIip\fR", where \fIip\fR is a dotted quad IPv4 address. The \fBlocal\fR \fIip\fR describes the ip address on the local system that will be used for the bfd session. The \fBremote\fR \fIip\fR describes the ip address on the remote system that will be used for the bfd session. The \fBlocal\fR and \fBremote\fR addresses may be specified in any order in an \fBip-pair\fR.
+.SH STATUS ITEMS
+The \fBstatus\fR command returns a number of status items. Below is a brief description of some of these items.
+This assumes an understanding of the Bidirectional Forwarding Detection (BFD) protocol 
+and refers to items in BFD Base Specification the RFC5880  at http://www.rfc-editor.org/rfc/rfc5880.txt .
+
+Note that some items are only available at higher status levels.
+
+.TP
+\fBid\fR 
+The id of the given session. This id is only used to refer to the session when using \fBbfdd-control\fR commands. This is not used in the actual BFD protocol and is not the same as \fBLocalId\fR
+.TP
+\fBlocal\fR 
+The local ip address used to send and receive packets for this session. This may be followed by \fB(active)\fR or \fB(passive)\fR depending on what role the session is taking.
+.TP
+\fBremote\fR 
+The remote ip address used to send and receive packets for this session. 
+.TP
+\fBLocalState\fR 
+The local Session State (bfd.SessionState in outgoing control packets.) This is followed by the Local Diagnostic value (bfd.LocalDiag) which gives the reason for the most recent state change. This item may also include \fBForced\fR if the current state is being held using the \fBbfdd-control session state\fR command. This item may also include \fBSuspended\fR if the session is suspended.
+.TP
+\fBRemoteState\fR 
+The remote Session State (the "Sta" field in the most recently received control packet.) This is followed by the Remote  Diagnostic value (the "Diag" field in the most recently received control packet) which gives the reason for the most recent remote state change. 
+.TP
+\fBLocalId\fR 
+ The Discriminator used to identify this session in packet exchanges with the remote system (bfd.LocalDiscr, and the "My Discriminator" field in outgoing packets.)
+.TP
+\fBRemoteId\fR 
+The Discriminator used to identify the remote session in packet exchanges with the this system (bfd.RemoteDiscr, and the "My Discriminator" field in incoming packets.)
+.TP
+\fBTime\fR 
+The amount of time spent in the current state. At higher status levels this may include the time spent in the 4 most recent states.
+.TP
+\fBCurrentTxInterval\fR 
+The interval between sending scheduled control packets. This value is calculated based on a number of other settings. 
+.TP
+\fBCurrentRxTimeout\fR 
+The Detection Timeout after which, if no packets are received from the remote system, the session is put into the Down state. This is based on the larger of \fBRemoteDesiredMinTx\fR and \fBLocalRequiredMinRx\fR multiplied by \fBRemoteDetectMulti\fR.
+.TP
+\fBLocalDetectMulti\fR 
+The approximate number of scheduled packets that the remote system can't receive before it will declare the session Down. (bfd.DetectMult and the "Detect Mult" field in outgoing packets.)
+.TP
+\fBLocalDesiredMinTx\fR 
+The lowest interval (highest rate) at which we can (want) to send packets. (bfd.DesiredMinTxInterval and "Desired Min TX Interval" in outgoing packets.) The remote system will expect to receive packets at intervals of, approximately, the larger of this and \fBRemoteRequiredMinRx\fR. When the session is not Up, then the normal value may not be used. In that case the value that will be used when the session is up will be displayed in parenthesis and marked with \fBdef\fR. This value can be changed using the \fBbfdd-control session set mintx\fR command. In some cases the new value is not actually used until the remote system acknowledges the change. In these cases the pending value will be  displayed in parenthesis and marked with \fBpending\fR.
+.TP
+\fBLocalRequiredMinRx\fR 
+The lowest interval (highest rate) at which we can (want) to receive packets. (bfd.RequiredMinRxInterval and "Required Min RX Interval" in outgoing packets.) The remote system will send periodic control packets at intervals of, approximately, the larger of this and \fBRemoteDesiredMinTx\fR. This value can be changed using the \fBbfdd-control session set minrx\fR command. In some cases the new value is not actually used (for timeout detection) until the remote system acknowledges the change. In these cases the pending value will be displayed in parenthesis and marked with \fBpending\fR.
+.TP
+\fBRemoteDetectMulti\fR 
+The approximate number of scheduled packets that the local system can't receive before it will declare the session Down. ("Detect Mult" field of the last incoming packet.)
+.TP
+\fBRemoteDesiredMinTx\fR 
+The lowest interval (highest rate) at which the remote system can to send packets. ("Desired Min TX Interval" in the most recently received packet.) Used in calculating \fBCurrentRxTimeout\fR.
+.TP
+\fBRemoteRequiredMinRx\fR 
+The lowest interval (highest rate) at which the remote system can receive packets. ("Required Min RX Interval" in the most recent incoming packet.) Used in calculating \fBCurrentTxInterval\fR.
+
+.SH NOTES
+Currently the program only exits with an error if it fails to make or maintain a connection with \fBbfdd-beacon\fR(8). If the beacon rejects the command, or the command fails to execute, this still exits with an exit code of 0 (success). This could change in the future.
+.SH BUGS
+No know bugs at this time.
+.SH "SEE ALSO"
+\fBbfdd-beacon\fP(8)
+.SH AUTHOR
+Jake Montgomery for Dynamic Network Services, Inc.
+.SH COPYRIGHT
+Copyright (c) 2010, Dynamic Network Services, Inc.
+
+
+
