@@ -56,8 +56,8 @@ and tested on the following platforms:
 
 It may, or may not, be possible to build and run it on other BSD platforms
 ithout modification. If your system is not included, then we encourage you
-o make the modifications necessary and submit them to <PLACEHOLDER> for 
-inclusion in future releases.
+o make the modifications necessary and submit them to 
+http://github.com/dyninc/OpenBFDD/ for inclusion in future releases.
 
 The source currently uses the kevent() system call, which my only be 
 available on BSD systems. A release is planned, in the near future, which 

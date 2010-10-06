@@ -17,7 +17,7 @@ bfdd_control_SOURCES = $(COMMON_SRC) $(CONTROL_SRC)
 bfdd_control_LDADD =  $(INTI_LIBS)  
 bfdd_control_MANS = bfdd-control.8 
 
-EXTRA_DIST = $(bfdd_beacon_MANS) $(bfdd_control_MANS) DEVELOPERS
+EXTRA_DIST = $(bfdd_beacon_MANS) $(bfdd_control_MANS) DEVELOPERS LICENSE
 man_MANS = $(bfdd_beacon_MANS) $(bfdd_control_MANS)
 
 
