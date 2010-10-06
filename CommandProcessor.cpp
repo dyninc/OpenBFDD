@@ -288,7 +288,7 @@ namespace openbfdd
         result = select(FD_SETSIZE, &waitOn, NULL, NULL, &waitTime);
         if (result < 0)
         {
-          if (result != EINTR)
+          if (errno != EINTR)
           {
             gLog.ErrnoError(errno,  "socket wait: ");
             return Result::Error;
