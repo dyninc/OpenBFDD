@@ -1,7 +1,3 @@
-2010-09-30  Jake Montgomery
-
-    * Initial OpenBFDD code and build. 
-
 2010-10-07  Jake Montgomery Update Version to 0.2.1
    
    * Improved low memory handling. There is now, at least, a good chance  
@@ -12,4 +8,9 @@
    * Fixed small bug where a "select" error due to interrupt could 
      permanently disable a bfdd-command communications port in 
      bfdd-beacon.
+
+2010-09-30  Jake Montgomery
+
+    * Initial OpenBFDD code and build. 
+
 
