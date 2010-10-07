@@ -1,6 +1,6 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 /**
