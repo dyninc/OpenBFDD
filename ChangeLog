@@ -2,7 +2,7 @@
 
     * Initial OpenBFDD code and build. 
 
-2010-10-07  Jake Montgomery
+2010-10-07  Jake Montgomery Update Version to 0.2.1
    
    * Improved low memory handling. There is now, at least, a good chance  
      that existing sessions will continue to stay up in low memory 
