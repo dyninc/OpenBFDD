@@ -88,7 +88,9 @@ namespace openbfdd
     /** 
      * Allows us to accept connections from the given ip address. 
      * 
-     * @Note can only on the main thread.
+     * @Note can be called only on the main thread. 
+     *  
+     * @throw - yes. 
      * 
      * @param addr 
      */
@@ -100,7 +102,7 @@ namespace openbfdd
      *  
      * If there is already an active session for this IP, then it is not effected. 
      * 
-     * @Note can only on the main thread.
+     * @Note can be called only on the main thread.
      * 
      * @param addr 
      */
@@ -110,7 +112,7 @@ namespace openbfdd
     /** 
      * Allow or disallow accepting every invitation. 
      * 
-     * @Note can only on the main thread.
+     * @Note can be called only on the main thread.
      * 
      * @param allow 
      */
@@ -119,7 +121,7 @@ namespace openbfdd
     /** 
      * Find Session by discriminator or remote and local ip. 
      * 
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      *  
      * @return Session* - NULL if none found
      */
@@ -129,7 +131,9 @@ namespace openbfdd
     /** 
      * Clears and fill the vector with all the sessions.
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
+     *  
+     * @throw - yes 
      *  
      * @param outList 
      */
@@ -138,7 +142,7 @@ namespace openbfdd
     /**
      * Will delete the session. 
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      *  
      * Session must be from this beacon. 
      */
@@ -147,28 +151,28 @@ namespace openbfdd
     /**
      * Sets the DectectMulti for future sessions. 
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      */
     void SetDefMulti(uint8_t val);
 
     /**
      * Sets the 'default' DesiredMinTXInterval state variable for future sessions. 
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      */
     void SetDefMinTxInterval(uint32_t val);
 
     /**
      * Sets the 'default' RequiredMinTXInterval state variable for future sessions.
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      */
     void SetDefMinRxInterval(uint32_t val);
 
     /**
      * Changes the default C bit value on for future sessions. 
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      */
     void SetDefControlPlaneIndependent(bool cpi);
 
@@ -176,7 +180,7 @@ namespace openbfdd
      * Enables or disables a workaround that allows fast Up->AdminDown->Up 
      * transitions. 
      *  
-     * @Note can only on the main thread. 
+     * @Note can be called only on the main thread. 
      *  
      * @param enable 
      */

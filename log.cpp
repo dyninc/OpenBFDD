@@ -281,6 +281,9 @@ namespace openbfdd
         m_types[PacketContents].enabled = true;
         m_types[AppDetail].enabled = true;
         m_types[SessionDetail].enabled = true;
+        #ifdef BFD_DEBUG
+        m_types[Temp].enabled = true;
+        #endif
         // Fall through
       case Detailed:
         m_types[Discard].enabled = true;
@@ -289,9 +292,6 @@ namespace openbfdd
         m_types[Session].enabled = true;
         m_types[App].enabled = true;
         m_types[Command].enabled = true;
-        #ifdef BFD_DEBUG
-        m_types[Temp].enabled = true;
-        #endif
         // Fall through
       case Minimal:
         m_types[Critical].enabled = true;

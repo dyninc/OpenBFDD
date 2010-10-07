@@ -61,21 +61,20 @@ int main (int argc, char *argv[])
 
   srand(time(NULL));
 
-  if(!openbfdd::UtilsInit())
+  if(!openbfdd::UtilsInit() || !openbfdd::UtilsInitThread())
   {
     fprintf(stderr, "Unable to init thread local storage. Exiting.\n");
     exit(1);
   }
 
-
   // Setup logging first
   //  openbfdd::gLog.SetLogLevel(openbfdd::Log::Detail);
   openbfdd::gLog.LogToSyslog("bfdd-beacon", tee);
-  openbfdd::gLog.Message(openbfdd::Log::App,"Started %x", getpid());
+  openbfdd::gLog.Message(openbfdd::Log::App,"Started %d", getpid());
 
   ret = app.Run();
 
-  openbfdd::gLog.Message(openbfdd::Log::App,"Shutdown %x", getpid());
+  openbfdd::gLog.Message(openbfdd::Log::App,"Shutdown %d", getpid());
 }
 
 namespace openbfdd

@@ -433,7 +433,6 @@ namespace openbfdd
 
     Timer *MakeTimer(const char *name)
     {
-      // TODO .. does not return null on error. 
       m_timerCount++;
       return new TimerImpl(*this, &m_activeTimers, name);
     }
@@ -566,9 +565,7 @@ namespace openbfdd
         if (!GetMonolithicTime(startTime))
           return false;
 
-        setExpireTime(startTime, micro);
-        return true;
-
+        return setExpireTime(startTime, micro);
       }
 
 
@@ -579,8 +576,7 @@ namespace openbfdd
         if (IsStopped())
           return SetMicroTimer(micro);
 
-        setExpireTime(m_startTime, micro);
-        return true;
+        return setExpireTime(m_startTime, micro);
       }
 
 
@@ -637,9 +633,11 @@ namespace openbfdd
        * Changes the start and expire time for the timer. 
        * 
        * @param startTime - The time of the last timer start. May be m_startTime. 
-       * @param micro - Time to expire from startTime in microseconds.
+       * @param micro - Time to expire from startTime in microseconds. 
+       *  
+       * @return bool - false on failure.  
        */
-      void setExpireTime(const struct timespec &startTime,  uint64_t micro)
+      bool setExpireTime(const struct timespec &startTime,  uint64_t micro)
       {
         bool expireChange, startChange;
         struct timespec expireTime;
@@ -650,12 +648,12 @@ namespace openbfdd
         startChange = (startTime.tv_sec !=  m_startTime.tv_sec || startTime.tv_nsec !=  m_startTime.tv_nsec);
         expireChange = (m_stopped || (expireTime.tv_sec !=  m_expireTime.tv_sec || expireTime.tv_nsec !=  m_expireTime.tv_nsec));
 
-        LogOptional(Log::Temp, "Timer %s before change %zu items",m_name, m_activeTimers->size());
+        //LogOptional(Log::Temp, "Timer %s before change %zu items",m_name, m_activeTimers->size());
 
         if (!expireChange && !startChange)
         {
           LogOptional(Log::TimerDetail, "Timer %s no change.  %"PRIu64"  microseconds. Expires:%jd:%09ld", m_name, micro, (intmax_t)expireTime.tv_sec, expireTime.tv_nsec );
-          return;
+          return true;
         }
 
         LogOptional(Log::TimerDetail, "%s timer %s for %"PRIu64" microseconds from %jd:%09ld. Expires:%jd:%09ld", 
@@ -690,10 +688,22 @@ namespace openbfdd
           m_expireTime = expireTime;
 
           if (found == m_activeTimers->end())
-            m_activeTimers->insert(this);
+          {
+            try
+            {
+              m_activeTimers->insert(this);
+            }
+            catch (std::exception &e)
+            {
+              m_stopped = true;
+              gLog.Message(Log::Error, "Failed to add timer: %s.", e.what());
+              return false;
+            }
+          }
         }
 
-        LogOptional(Log::Temp, "Timer %s after change %zu items",m_name, m_activeTimers->size());
+        //LogOptional(Log::Temp, "Timer %s after change %zu items",m_name, m_activeTimers->size()); 
+        return true;
       }
 
 

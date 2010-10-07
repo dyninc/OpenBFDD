@@ -186,6 +186,13 @@ namespace openbfdd
       int flags;
       int on = 1;
 
+      // Do this so low memory will not cause distorted messages
+      if (!UtilsInitThread())
+      {
+        gLog.Message(Log::Error,  "Failed to initialize listen thread. TLS memory failure.");
+        return false;
+      }
+
       m_listenSocket = socket(AF_INET, SOCK_STREAM, 0); 
       if (!m_listenSocket.IsValid())
       {
@@ -326,7 +333,8 @@ namespace openbfdd
      * not allow listening to continue. 
      * 
      * Call only from listen thread.
-     * 
+     *  
+     * @throw - yes 
      * 
      * @return bool - false if listening should stop.
      */
@@ -397,7 +405,14 @@ namespace openbfdd
         {
           // Got a message
           gLog.Optional(Log::Command, "Message size %zu.", size); 
-          dispatchMessage(&m_inCommandBuffer.front(),  size);
+          try
+          {
+            dispatchMessage(&m_inCommandBuffer.front(),  size);
+          }
+          catch (std::exception &e)
+          {
+            messageReplyF("Unable to complete request. Exception: %s\n", e.what());
+          }
           return true;
         }
       }
@@ -480,8 +495,6 @@ namespace openbfdd
 
       // We have a valid message 
       handleMessage( message + sizeof(uint32_t), paramCount);
-
-
     }
 
     /**
@@ -529,6 +542,10 @@ namespace openbfdd
       {
         handle_Session(message);
       }
+      else if (0 == strcasecmp(message, "test"))
+      {
+        handle_Test(message);
+      }
       else
       {
         messageReplyF("Unknown command <%s>\n", message);
@@ -544,6 +561,7 @@ namespace openbfdd
       BeaconCallback callback;
       bool wasShuttingDown;
       intptr_t result;
+      bool exceptionThrown;
     };
 
     static void handleBeaconCallback(Beacon *beacon, void *userdata)
@@ -556,7 +574,15 @@ namespace openbfdd
         return;
       }
 
-      data->result = (data->me->*(data->callback))(beacon, data->userdata);
+      try
+      {
+        data->result = (data->me->*(data->callback))(beacon, data->userdata);
+      }
+      catch (std::exception &e)  // catch all exceptions .. is this too broad?
+      {
+        data->exceptionThrown = true;
+        gLog.Message(Log::Error, "Beacon callback failed due to exception: %s", e.what());
+      }
     }
 
     /**
@@ -576,9 +602,17 @@ namespace openbfdd
       data.callback = callback;
       data.wasShuttingDown = false;
       data.result = 0;
+      data.exceptionThrown = false;
+
       if(!m_beacon->QueueOperation(handleBeaconCallback, &data, true /* waitForCompletion*/))
       {
-        messageReply("Unable to complete request because the beacon is shutting down.\n");
+        messageReply("Unable to complete request (beacon is shutting down or low memory).\n");
+        return false;
+      }
+
+      if (data.exceptionThrown)
+      {
+        messageReply("Unable to complete request because an exception was thrown. Likely out of memory.\n");
         return false;
       }
 
@@ -615,12 +649,12 @@ namespace openbfdd
 
     /** 
      *  
-     * Converts a set of paramters to a local/remote ip address pair. 
+     * Converts a set of parameters to a local/remote ip address pair. 
      * 
-     * @param inOutParam [in/out] - The first parametr to examine. On sucess this 
+     * @param inOutParam [in/out] - The first parameter to examine. On success this 
      *                   will point to the last parameter used. On failure it will
      *                   remain unchanged.
-     * @param sessionId [out] - Cleared on input. On sucess will have ip addreses 
+     * @param sessionId [out] - Cleared on input. On success will have ip address 
      *                  (sessionId.HasIpAddresses() will be true).
      * @param errorMsg [out] - On error it will contain a message. 
      * 
@@ -672,7 +706,7 @@ namespace openbfdd
       local = !local;
       if (0 != strcmp(str,  local ? "local":"remote"))
       {  
-        errorMsg = FormatBigStr("Error: unknown <%s>. '%s' ip must be follwed by '%s'.", str, command, local ? "local":"remote");
+        errorMsg = FormatBigStr("Error: unknown <%s>. '%s' ip must be followed by '%s'.", str, command, local ? "local":"remote");
         return false;
       }
 
@@ -700,10 +734,10 @@ namespace openbfdd
 
     /** 
      *  
-     * Converts a paramter (or set of paramaters) to an id or ip address, or "all".
+     * Converts a parameter (or set of parameters) to an id or ip address, or "all".
      * On failure sessionId is cleared. 
      * 
-     * @param inOutParam [in/out] - The first parametr to examine. On sucess this 
+     * @param inOutParam [in/out] - The first parameters to examine. On parameters this 
      *                   will point to the last parameter used. On failure it will
      *                   remain unchanged.
      * @param sessionId [out]  
@@ -1944,6 +1978,109 @@ namespace openbfdd
           reportNoSuchSession(info.sessionId);
           return;
         }
+      }
+    }
+
+    intptr_t doHandleConsumeBeacon(Beacon * ATTR_UNUSED(beacon), void *userdata)
+    {
+      int64_t index;
+      int64_t val64 = *reinterpret_cast<int64_t *>(userdata);
+
+      try
+      {
+        for (index = 0; index < val64; index++)
+        {
+          char *unused = new char[1024];
+          memset(unused, 0xfe, 1024);
+        }
+      }
+      catch (std::exception &e)
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+
+    /**
+     * "test" command.
+     * For internal testing only. 
+     * Format 'test' 'consume'  - consumes given amount of memory in KB blocks.
+     *  
+     */
+    void handle_Test(const char *message)
+    {
+      const char *itemString;
+      static const char *itemValues = "'consume'";
+
+      itemString = getNextParam(message);
+      if(!itemString)
+      {
+        messageReplyF("Must specify: %s.\n", itemValues);
+        return;
+      }
+
+      if(0 == strcmp(itemString, "consume"))
+      {
+        int64_t val64, index;
+        const char *valueString = getNextParam(itemString);
+        if(!valueString)
+        {  
+          messageReply("Must supply number of 1K blocks to consume for 'test consume'.\n");
+          return;
+        }
+        if (!StringToInt(valueString, val64) || val64 <= 0)
+        {
+          messageReply("Must supply an non-zero integer value for 'test consume'.\n");
+          return;
+        }
+
+
+        messageReplyF("Consuming %"PRIi64"K memory.\n", val64);
+        try
+        {
+          for (index = 0; index < val64; index++)
+          {
+            char *unused = new char[1024];
+            memset(unused, 0xfe, 1024);
+          }
+        }
+        catch (std::exception &e)
+        {
+          messageReplyF("Consume completed: %s\n",  e.what());
+          return;
+        }
+
+        messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+      }
+      else if(0 == strcmp(itemString, "consume_beacon"))
+      {
+        intptr_t result;
+        int64_t val64;
+        const char *valueString = getNextParam(itemString);
+        if(!valueString)
+        {  
+          messageReply("Must supply number of 1K blocks to consume for 'test consume_beacon'.\n");
+          return;
+        }
+        if (!StringToInt(valueString, val64) || val64 <= 0)
+        {
+          messageReply("Must supply an non-zero integer value for 'test consume_beacon'.\n");
+          return;
+        }
+
+        if(doBeaconOperation(&CommandProcessorImp::doHandleConsumeBeacon, &val64, &result))
+        {  
+          if (result)
+            messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+          else
+            messageReplyF("Consumed %"PRIi64"K memory. Exception thrown.\n", val64);
+        }
+      }
+      else
+      {
+        messageReplyF("'test' must be followed by one of %s. Unknown <%s>\n", itemValues, itemString);
       }
     }
 

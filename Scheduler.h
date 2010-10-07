@@ -263,9 +263,12 @@ namespace openbfdd
      *  
      * @note Call only on main thread. See IsMainThread(). 
      *  
+     * @throw - std:bad_alloc on failure.
+     *  
      * @param name [in] - The optional logging name for the timer. 
      *  
-     * @return Timer* - NULL on failure.
+     *  
+     * @return Timer* - Never NULL.
      */
     virtual Timer *MakeTimer(const char *name) = 0;
 

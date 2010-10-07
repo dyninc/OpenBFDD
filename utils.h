@@ -26,6 +26,16 @@ namespace openbfdd
 
 
   /**
+   * Optional call to pre-allocate thread local storage for the current thread. 
+   * This calf be used to ensure that the tls functions will not fail later. 
+   *  
+   * Call after calling UtilsInit(). 
+   *  
+   * @return bool - false on failure.
+   */
+  bool UtilsInitThread();
+
+  /**
    * 
    * Checked conversion from string to  an int64_t.
    *  
@@ -175,8 +185,8 @@ namespace openbfdd
    * Formats a "large" string using thread local storage. Currently most 4096 
    * characters can be printed, anything beyond that will be truncated.  Do not 
    * permanently store the return value. 
-   * Since this function uses a signgle tls buffer, calling it again from the same
-   * thread will invaidate the previous result. 
+   * Since this function uses a single tls buffer, calling it again from the same
+   * thread will invalidate the previous result. 
    * 
    * @param format 
    * 

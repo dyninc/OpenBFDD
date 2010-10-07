@@ -48,11 +48,11 @@ See the included COPYING file for licensing information.
 + Platforms
 ================
 
-The software was originally developed on FreeBDS 7.1. It has been built, 
+The software was originally developed on FreeBSD 7.1. It has been built, 
 and tested on the following platforms:
    
-   * FreeBDS 7.1 AMD64
-   * FreeBDS 8.1 AMD64
+   * FreeBSD 7.1 AMD64
+   * FreeBSD 8.1 AMD64
 
 It may, or may not, be possible to build and run it on other BSD platforms
 ithout modification. If your system is not included, then we encourage you

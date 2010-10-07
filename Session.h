@@ -44,9 +44,11 @@ namespace openbfdd
 
     /**
      * Creates a new session. 
-     * If the maximum number ofsessions has been reached (very unlikely) then 
+     * If the maximum number of sessions has been reached (very unlikely) then 
      * GetId() will return 0. Do not use the session is that case.
-     * 
+     *  
+     * @throw - std::bad_alloc 
+     *  
      * @param scheduler 
      * @param beacon 
      * @param descriminator 
@@ -61,7 +63,7 @@ namespace openbfdd
      * 
      * @param remoteAddr [in] - remote address.
      * @param remotePort [in]- remote port.
-     * @param localAddr [in]- adress on which to recieve and send packets.
+     * @param localAddr [in]- address on which to receive and send packets.
      */
     void StartPassiveSession(in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr);
 
@@ -69,7 +71,7 @@ namespace openbfdd
      * Starts an active session for the given address. 
      * 
      * @param remoteAddr [in] - remote address.
-     * @param localAddr [in]- adress on which to recieve and send packets.
+     * @param localAddr [in]- address on which to receive and send packets.
      */
     void StartActiveSession(in_addr_t remoteAddr, in_addr_t localAddr);
 
@@ -170,7 +172,9 @@ namespace openbfdd
     };
 
     /**
-     * Fills outState with extended state information for the session.
+     * Fills outState with extended state information for the session. 
+     *  
+     * @throw - yes 
      * 
      * @param outState 
      */
@@ -367,7 +371,7 @@ namespace openbfdd
     // The number of _remote_ detection timeouts to wait after we stop sending
     // packets (passive session only)  This could be 1 if the spec was followed, and
     // there was no packet delay. It could be 2 reasonably. But an error in the
-    // JUNOS8.5S4 (and possibly others) requies that it be at least 3. (No mjor harm
+    // JUNOS8.5S4 (and possibly others) requires that it be at least 3. (No major harm
     // done though.)
     uint32_t m_remoteDestroyAfterTimeouts;
     struct TimeoutStatus
@@ -376,7 +380,7 @@ namespace openbfdd
       {
         None, // not timed out.
         TimedOut,   // Initial timeout period
-        TxSuspeded // We are no longer sending packets, and just waiting an appropriate amout of time to die. 
+        TxSuspeded // We are no longer sending packets, and just waiting an appropriate amount of time to die. 
       };
     };
 
@@ -404,9 +408,11 @@ namespace openbfdd
     // Keep last few transitions for logging.
     std::list<UptimeInfo> m_uptimeList; 
 
+
     // Timers
-    Timer *m_recieveTimeoutTimer; // Timer for the receive packet timeout.
-    Timer *m_transmitNextTimer;  // Timer for the next control packet.
+    void deleteTimer(Timer *timer);
+    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_recieveTimeoutTimer; // Timer for the receive packet timeout.
+    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_transmitNextTimer;  // Timer for the next control packet.
   };
 
   inline Session::SetValueFlags::Flag operator|(Session::SetValueFlags::Flag f1, Session::SetValueFlags::Flag f2) {return Session::SetValueFlags::Flag((int)f1 | (int)f2);}

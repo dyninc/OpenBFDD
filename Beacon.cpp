@@ -258,6 +258,8 @@ namespace openbfdd
     WaitCondition condition(false);
     PendingOperation operation;
     PendingOperation *useOperation;
+    RiaaClass<PendingOperation> allocOperation;
+
 
     if (!callback)
     {
@@ -277,23 +279,32 @@ namespace openbfdd
     }
     else
     {
-      useOperation = new PendingOperation;
+      allocOperation = useOperation = new(std::nothrow) PendingOperation;
+      if (!useOperation)
+        return false;
+
       *useOperation = operation;
     }
-
-
+    
     {
       AutoQuickLock lock(m_paramsLock);
-
+    
       if (m_shutownRequested)
+        return false;
+    
+      try
       {
-        if (!waitForCompletion)
-          delete useOperation;
+        m_operations.push_back(useOperation);
+      }
+      catch (std::exception) 
+      {
         return false;
       }
 
-      m_operations.push_back(useOperation);
-
+    
+      // Once it is in m_operations, then the operation is no longer ours to delete.
+      allocOperation.Detach();
+    
       if (waitForCompletion)
       {
         raise(SIGUSR1);
@@ -301,10 +312,10 @@ namespace openbfdd
           lock.LockWait(condition);
       }
     }
-
+    
     if (!waitForCompletion)
       raise(SIGUSR1);
-
+    
     return true;
   }
 
@@ -422,7 +433,7 @@ namespace openbfdd
    * @param outDstAddress 
    * @param outTTL 
    * 
-   * @return size_t - 0 on failure. Otherwize the number of bytes read.
+   * @return size_t - 0 on failure. Otherwise the number of bytes read.
    */
   size_t Beacon::readSocketPacket(int listenSocket, struct sockaddr_in *outSourceAddress, in_addr_t *outDstAddress, uint8_t *outTTL)
   {
@@ -583,16 +594,32 @@ namespace openbfdd
   Session *Beacon::addSession(in_addr_t remoteAddr, in_addr_t localAddr)
   {
     uint32_t newDisc = makeUniqueDiscriminator();
-    Session *session = new Session(*m_scheduler, this, newDisc, m_initialSessionParams);
-    if (0 == session->GetId())
+    RiaaClass<Session> session;
+
+    try
     {
-      delete session;
+      session = new Session(*m_scheduler, this, newDisc, m_initialSessionParams);
+      
+      if (0 == session->GetId())
+        return NULL;
+      
+      m_sourceMap[makeSourceMapKey(remoteAddr, localAddr)] = session;
+      m_discMap[newDisc] = session;
+      m_IdMap[session->GetId()] = session;
+    }
+    catch (std::exception &e)
+    {
+      if (session.IsValid())
+      {
+        m_sourceMap.erase(makeSourceMapKey(remoteAddr, localAddr));
+        m_IdMap.erase(session->GetId());
+      }
+
+      gLog.Message(Log::Error, "Add session failed: %s ", e.what());
       return NULL;
     }
-    m_sourceMap[makeSourceMapKey(remoteAddr, localAddr)] = session;
-    m_discMap[newDisc] = session;
-    m_IdMap[session->GetId()] = session;
-    return session;
+
+    return session.Detach();
   }
 
   /**
@@ -614,7 +641,15 @@ namespace openbfdd
         m_operations.pop_front();
         lock.UnLock();
 
-        operation->callback(this,  operation->userdata);
+        try
+        {
+          operation->callback(this,  operation->userdata);
+        }
+        catch (std::exception &e)
+        {
+          gLog.Message(Log::Error, "Beacon operation failed: %s ", e.what());
+        }
+
         if (!operation->waitCondition)
           delete operation;
         else

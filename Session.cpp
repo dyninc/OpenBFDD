@@ -80,8 +80,8 @@ namespace openbfdd
   m_defaultDesiredMinTxInterval(params.desiredMinTx),  // this will not take effect until we are up ... see m_useDesiredMinTxInterva
   m_wantsPollForNewRequiredMinRxInterval(false),
   _useRequiredMinRxInterval(m_requiredMinRxInterval),
-  m_recieveTimeoutTimer(NULL),
-  m_transmitNextTimer(NULL)
+  m_recieveTimeoutTimer(this),
+  m_transmitNextTimer(this)
   { 
     LogAssert(m_scheduler->IsMainThread());
 
@@ -91,8 +91,7 @@ namespace openbfdd
       gLog.LogError("Maximum session count exceeded, refusing new sessions.");
     }
     else
-      m_id = m_nextId++;
-
+      m_id = m_nextId;
 
     // It may be more efficient to wait until we need these?
     char name[32];
@@ -106,18 +105,27 @@ namespace openbfdd
     m_transmitNextTimer->SetCallback(handletTransmitNextTimerCallback,  this);
     m_transmitNextTimer->SetPriority(Timer::Priority::Hi);
 
-    logSessionTransition ();
+    logSessionTransition();
+
+    // Update this only at the end, in case an exception is thrown.
+    m_nextId++;
   }
 
   Session::~Session()
   {
     LogAssert(m_scheduler->IsMainThread());
-
-    m_scheduler->FreeTimer(m_recieveTimeoutTimer);
-    m_scheduler->FreeTimer(m_transmitNextTimer);
-    m_sendSocket.Dispose();
   }
 
+
+  void Session::deleteTimer(Timer *timer)
+  {
+    LogAssert(m_scheduler->IsMainThread());
+    if (m_scheduler && timer)  
+    {
+      gLog.Message(Log::Temp,  "Free timer %p", timer);
+      m_scheduler->FreeTimer(timer);
+    }
+  }
 
   void Session::StartPassiveSession(in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr)
   {
@@ -487,8 +495,8 @@ namespace openbfdd
    * scheduleTransmit(), or sendControlPacket(). 
    *  
    * Set the SetValueFlags::TryPoll flag is in flags to start a poll sequence if 
-   * the sate is changed. This is an 'optional'poll sequence, and will be ignored 
-   * if there is already one underway. The boll sequence may be "ambigious" (see 
+   * the sate is changed. This is an 'optional' poll sequence, and will be ignored
+   * if there is already one underway. The poll sequence may be "ambiguous" (see 
    * transitionPollState) 
    *  
    * 
@@ -549,6 +557,7 @@ namespace openbfdd
 
   /**
    * Logs a transition to the current state. 
+   * Stores the transition information for stats. 
    */
   void Session::logSessionTransition()
   {
@@ -596,7 +605,15 @@ namespace openbfdd
     uptime.endTime.tv_sec = uptime.endTime.tv_nsec = 0;
     uptime.forced = false;  // currently not using this.
 
-    m_uptimeList.push_front(uptime);
+    try
+    {
+      m_uptimeList.push_front(uptime);
+    }
+    catch  (std::exception)
+    {
+      // TODO - could mark the whole thing as "invalid"?
+      m_uptimeList.clear();
+    }
 
     if (m_uptimeList.size() > MaxUptimeCount)
       m_uptimeList.pop_back();
@@ -607,9 +624,9 @@ namespace openbfdd
    * Called to attempt to transition poll state. Enforces linear transitions.
    * 
    * @param nextState 
-   * @param allowAmbiguous - If true, then we can start a new poll sequnce even if 
+   * @param allowAmbiguous - If true, then we can start a new poll sequence even if 
    *                       the previous one just ended. The poll sequence will be
-   *                       "ambigious" as described in v10/6/8/3p9. This should be
+   *                       "ambiguous" as described in v10/6/8/3p9. This should be
    *                       used only if the caller does not need to take any
    *                       action when the poll completes. 
    *  
@@ -1010,7 +1027,7 @@ namespace openbfdd
     }
     else if ( m_timeoutStatus == TimeoutStatus::TimedOut)
     {
-      // Active sessions never get suspened and die.
+      // Active sessions never get suspended and die.
       if(m_isActive)
         return;
 
@@ -1040,7 +1057,7 @@ namespace openbfdd
     }
     else if ( m_timeoutStatus == TimeoutStatus::TxSuspeded)
     {
-      // This is it ... the dealy timeout. We have waited long enough ... goodbye
+      // This is it ... the delay timeout. We have waited long enough ... goodbye
       // cruel world.
       gLog.Optional(Log::SessionDetail, "Killing session (id=%u) after kill period elapsed.", m_id);
       m_beacon->KillSession(this);
@@ -1062,7 +1079,7 @@ namespace openbfdd
     if(m_timeoutStatus != TimeoutStatus::TxSuspeded)
       sendControlPacket();
     else
-      gLog.Optional(Log::SessionDetail,  "Not sending packet becuase we are in TxSuspend from timing out");
+      gLog.Optional(Log::SessionDetail,  "Not sending packet because we are in TxSuspend from timing out");
 
     scheduleTransmit();
   }

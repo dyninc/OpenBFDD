@@ -103,6 +103,39 @@ namespace openbfdd
     RiaaClass& operator=(RiaaClass<T> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaClass freeing the same object
     RiaaClass(const RiaaClass<T> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
   };
+
+
+  /**
+   * RIAA class for self deleting pointer types  that use NULL for empty, that 
+   * calls a delete function on a class. T Must have simple copy semantics & 
+   * compare semantics. 
+   *  
+   * (We need a separate template class, because NULL is not allowed as a template 
+   * parameter.) 
+   */
+  template <typename T, typename C, void (C::*freeFn)(T*)> class RiaaClassCall
+  {
+  public:
+    T* val;
+    C* myClass;
+    RiaaClassCall(C* myClass) : val(NULL), myClass(myClass) {}
+    RiaaClassCall(T* val, C* myClass) : val(val), myClass(myClass) {}
+    ~RiaaClassCall() {Dispose();}
+    operator T*() const  { return val;}
+    T* operator=(T* newval) {Dispose();val = newval; return newval;}
+    bool operator==(T* cmp) const {return val == cmp;}
+    T* Detach() {T* old = val; val = NULL;return old;} // detach without freeing
+    void Dispose() {if (!isNull()) (myClass->*freeFn)(val);val=NULL;} 
+    bool IsValid() {return !isNull();}
+    T* operator->()  { return val; }
+  protected:
+    bool isNull() {return val==NULL;}
+  private:
+    RiaaClassCall& operator=(RiaaClassCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaClassCall freeing the same object
+    RiaaClassCall(const RiaaClassCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+  };
+
+
 };
 
 

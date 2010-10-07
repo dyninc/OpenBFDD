@@ -1,3 +1,15 @@
-2010-09-30  Jake Montgomery
+2010-09-30  Jacob Montgomery
 
-    * Initial OpenBFDD code and bild. 
+    * Initial OpenBFDD code and build. 
+
+2010-10-07  Jacob Montgomery
+   
+   * Improved low memory handling. There is now, at least, a good chance  
+     that existing sessions will continue to stay up in low memory 
+     situations. Memory failures during setup of bfdd-beacon will still 
+     crash, since there is no real damage that can be done at that point.
+
+   * Fixed small bug where a "select" error due to interrupt could 
+     permanently disable a bfdd-command communications port in 
+     bfdd-beacon.
+

@@ -56,7 +56,9 @@ namespace openbfdd
     if (data != NULL)
       return reinterpret_cast<UtilsTLSData *>(data);
 
-    UtilsTLSData *tlsData = new UtilsTLSData;
+    UtilsTLSData *tlsData = new(std::nothrow) UtilsTLSData;
+    if (!tlsData)
+      return NULL;
 
     if (0 != pthread_setspecific(gUtilsTLSKey, tlsData))
     {
@@ -67,7 +69,6 @@ namespace openbfdd
     return tlsData;
   }
   
-
 
   bool UtilsInit()
   {
@@ -94,7 +95,14 @@ namespace openbfdd
   }
 
   
-  size_t getBigBuffer(char **outBuf)
+  /**
+   * Gets the "big" buffer from tls.
+   * 
+   * @param outBuf  [out] - Set to the buffer. Set to NULL on failure.
+   * 
+   * @return size_t - The size of the buffer. 0 on failure.
+   */
+  static size_t getBigBuffer(char **outBuf)
   {
     if (!outBuf)
       return 0;
@@ -117,6 +125,16 @@ namespace openbfdd
     return tls->bigBufferSize;
   }
 
+
+  bool UtilsInitThread()
+  {
+    char *unusedBuf;
+
+    if (!getBigBuffer(&unusedBuf))
+      return false;
+
+    return true;
+  }
 
   bool StringToInt(const char *arg, int64_t &value)
   {
@@ -244,7 +262,7 @@ namespace openbfdd
   {
     char * buf = nextFormatShortBuffer();
     if (!buf)
-      return "memerror";
+      return "<memerror>";
 
     inet_ntoa_r(address, buf, formatShortBuffersSize);
     return buf;
@@ -267,7 +285,7 @@ namespace openbfdd
   {
     char * buf = nextFormatShortBuffer();
     if (!buf)
-      return "memerror";
+      return "<memerror>";
 
     sprintf(buf, "%hhu.%hhu.%hhu.%hhu:%hu", 
             (uint8_t)((uint8_t *)&address)[0],
@@ -362,7 +380,6 @@ namespace openbfdd
    * Helper for number format routines. buf is assumes to be big enough. 
    * 
    * @param val 
-   * @param buf - must be bg enough for result. May not be null.
    * @param useCommas 
    */
   static void addUnsignedInt( char *buf, uint64_t val, bool useCommas)
