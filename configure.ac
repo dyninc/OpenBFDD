@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.62)
+AC_PREREQ(2.61)
 sinclude(acx_nlnetlabs.m4)
 
 AC_INIT(openbfdd, 0.2.1)
@@ -57,7 +57,10 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([clock_gettime memset select socket strcasecmp strdup strerror])
+AC_CHECK_FUNCS([kevent memset select socket strcasecmp strdup strerror])
+
+AC_SEARCH_LIBS([clock_gettime],[rt posix4])
+AC_CHECK_FUNCS([clock_gettime])
 
 AH_BOTTOM(
 AHX_CONFIG_FORMAT_ATTRIBUTE

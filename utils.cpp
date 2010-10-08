@@ -6,8 +6,10 @@
 // Base header for the beacon and control
 #include "common.h"
 #include "utils.h"
+#include <string.h>
 #include <errno.h>
-#include <arpa/inet.h>
+#include <stdarg.h>
+#include <time.h>
 
 using namespace std;
 
@@ -159,10 +161,10 @@ namespace openbfdd
       next++;
     }
 
-    if (!isnumber(*next))
+    if (!isdigit(*next))
       return false;
 
-    for (; isnumber(*next); next++)
+    for (; isdigit(*next); next++)
       val = val*10 + *next - '0';
 
     if (negative)
@@ -264,7 +266,13 @@ namespace openbfdd
     if (!buf)
       return "<memerror>";
 
-    inet_ntoa_r(address, buf, formatShortBuffersSize);
+    sprintf(buf, "%hhu.%hhu.%hhu.%hhu", 
+            (uint8_t)((uint8_t *)&address)[0],
+            (uint8_t)((uint8_t *)&address)[1],
+            (uint8_t)((uint8_t *)&address)[2],
+            (uint8_t)((uint8_t *)&address)[3]
+           );
+
     return buf;
   }
 

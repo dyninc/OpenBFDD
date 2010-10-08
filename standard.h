@@ -7,6 +7,7 @@
 #pragma once
 #include "config.h"
 #define __STDC_LIMIT_MACROS
+#define __STDC_FORMAT_MACROS
 #include <sys/types.h>
 #include <limits.h>
 #include <inttypes.h>

@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 
 using namespace std;
 
@@ -353,11 +354,19 @@ namespace openbfdd
     }
 
     val = 1;
+    #ifdef IP_RECVDSTADDR
     if (::setsockopt(listenSocket, IPPROTO_IP, IP_RECVDSTADDR, &val, sizeof(val)) < 0)
     {
-      gLog.ErrnoError(errno, "Can't set option to get destination address for incoming packets");
+      gLog.ErrnoError(errno, "Can't set IP_RECVDSTADDR option to get destination address for incoming packets");
       return -1;
     }
+    #elif defined IP_PKTINFO
+    if (::setsockopt(listenSocket, IPPROTO_IP, IP_PKTINFO, &val, sizeof(val)) < 0)
+    {
+      gLog.ErrnoError(errno, "Can't set IP_PKTINFO option to get destination address for incoming packets");
+      return -1;
+    }
+    #endif
     
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
@@ -413,14 +422,26 @@ namespace openbfdd
 
     for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg))
     {
+      #ifdef IP_RECVDSTADDR
       if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)
       {  
         if(cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_addr)))
           return false;
-
+      
         *outDstAddress = reinterpret_cast<struct in_addr *>(CMSG_DATA(cmsg))->s_addr;
         return true;
       }
+      #endif
+      #ifdef IP_PKTINFO
+      if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
+      {  
+        if(cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_pktinfo)))
+          return false;
+      
+        *outDstAddress = reinterpret_cast<struct in_pktinfo *>(CMSG_DATA(cmsg))->ipi_addr.s_addr;
+        return true;
+      }
+      #endif
     }
 
     return false;

@@ -13,6 +13,7 @@
 #include "bfd.h" 
 #include "SmartPointer.h" 
 #include <list> 
+#include <arpa/inet.h>
 
 namespace openbfdd
 {

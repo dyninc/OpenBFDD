@@ -6,6 +6,7 @@
 #include "common.h"
 #include "Beacon.h"
 #include "utils.h"
+#include <string.h>
 
 int main (int argc, char *argv[])
 {

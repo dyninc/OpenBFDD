@@ -5,6 +5,7 @@
 ***************************************************************/
 // Some generic utilities
 #pragma once
+#include <arpa/inet.h>
 
 struct timespec;
 struct in_addr;

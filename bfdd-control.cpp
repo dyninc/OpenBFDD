@@ -11,6 +11,8 @@
 #include <vector>
 #include <errno.h>
 #include <fstream>
+#include <string.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -206,7 +208,6 @@ namespace openbfdd
   {
     int argIndex;
     uint16_t port = PORTNUM;
-
 
     //gLog.LogToFile("/tmp/bfd.log");
     gLog.LogToSyslog("bfd-control", false);

@@ -18,7 +18,6 @@ namespace openbfdd
    * @param create - If true then the lock is created and initialized.
    */
   QuickLock::QuickLock(bool create /*false*/) :
-  m_Lock(NULL),
   m_initialized(false)
   {
     if (create)
@@ -228,7 +227,6 @@ namespace openbfdd
    * @param create - If true then the lock is created and initialized.
    */
   ReadWriteLock::ReadWriteLock(bool create /*false*/) :
-  m_Lock(NULL),
   m_initialized(false)
   {
     if (create)

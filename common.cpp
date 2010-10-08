@@ -6,11 +6,14 @@
 // Common code for beacon and control
 #include "common.h"
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 namespace openbfdd
 {
-
-  const uint32_t MagicMessageNumber = htonl(0xfeed1966);
+  static uint8_t tempMagicMessageNumber[4] = {0xfe, 0xed, 0x19, 0x66};
+  const uint32_t MagicMessageNumber = *(uint32_t *)tempMagicMessageNumber;
+//  const uint32_t MagicMessageNumber = *(uint32_t *)tempMagicMessageNumber;
+//  const uint32_t MagicMessageNumber = htonl(0xfeed1966);
   const char *SofwareVesrion = PACKAGE_VERSION;
   const char *ControlAppName = "bfdd-control";
   const char *BeaconAppName = "bfdd-beacon";
