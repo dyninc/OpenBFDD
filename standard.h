@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <limits.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #ifndef countof
   #define countof(t) (sizeof(t)/sizeof((t)[0]))

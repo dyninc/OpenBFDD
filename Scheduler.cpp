@@ -8,15 +8,15 @@
 #include "utils.h"
 #include <errno.h>
 #include <signal.h>
-#include <ext/hash_map>
 #include <string.h>
 #include <set>
 #ifdef HAVE_KEVENT
 #include <sys/event.h>
 #endif
 
+#include "hash_map.h"
+
 using namespace std;
-using namespace __gnu_cxx;  // ughh! but easier than finding a good hash implementation.
 
 #ifndef HAVE_KEVENT
 #warning TEMPORARY to compile without kevent ... will not actually run!
@@ -102,7 +102,7 @@ namespace openbfdd
       Scheduler::SignalCallback callback;
       void * userdata;
     };
-    typedef  hash_map<int, schedulerSignalCallback> signal_hash_map;
+    typedef  hash_map<int, schedulerSignalCallback>::Type signal_hash_map;
 
     pthread_t m_mainThread; // This is the thread under which Run was called.
 

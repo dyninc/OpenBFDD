@@ -7,9 +7,6 @@
 #pragma once  
 #include "standard.h"
 #include "log.h"
-#if defined(BFD_DEBUG) && !defined (BFD_SAFE_ASSERT)
-#include <stdlib.h>
-#endif
 
 // TODO: These static port numbers are arbitrary, and can be changed if needed.
 // A system should be put into place to allow these to be set.

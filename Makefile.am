@@ -1,6 +1,6 @@
 bin_PROGRAMS = bfdd-beacon bfdd-control
 
-AM_CXXFLAGS = $(INTI_CFLAGS) $(WARNINGCXXFLAGS)
+AM_CXXFLAGS = $(INTI_CFLAGS) $(WARNINGCXXFLAGS) $(OTHERCXXFLAGS)
 
 COMMON_INC = common.h utils.h log.h SmartPointer.h threads.h bfd.h standard.h
 COMMON_SRC = $(COMMON_INC) common.cpp utils.cpp log.cpp SmartPointer.cpp threads.cpp bfd.cpp

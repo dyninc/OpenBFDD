@@ -13,8 +13,10 @@
 #include "Session.h"
 #include "threads.h"
 #include <deque>
+#include <vector>
 #include <set>
-#include <ext/hash_map>
+
+#include "hash_map.h"
 
 struct sockaddr_in;
 
@@ -202,11 +204,11 @@ namespace openbfdd
     Session *findInSourceMap(in_addr_t remoteAddr, in_addr_t localAddr);
 
   private:
-    typedef  __gnu_cxx::hash_map<uint32_t, class Session *> DiscMap; 
+    typedef  hash_map<uint32_t, class Session *>::Type DiscMap; 
     typedef  DiscMap::iterator DiscMapIt; 
-    typedef  __gnu_cxx::hash_map<uint64_t, class Session *> SourceMap; 
+    typedef  hash_map<uint64_t, class Session *>::Type SourceMap; 
     typedef  SourceMap::iterator SourceMapIt; 
-    typedef  __gnu_cxx::hash_map<uint32_t, class Session *> IdMap; 
+    typedef  hash_map<uint32_t, class Session *>::Type IdMap; 
     typedef  IdMap::iterator IdMapIt; 
 
     // Used to queue up operation

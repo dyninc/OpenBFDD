@@ -9,20 +9,27 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([BeaconMain.cpp])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 
-
-
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
+AC_LANG(C++)
+
+AC_CHECK_FUNCS([vector])
+
 AC_SUBST(WARNINGCXXFLAGS)
+AC_SUBST(OTHERCXXFLAGS)
+                    
+ACD_CHECK_CPP_FLAG(Wall, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wall"])
+ACD_CHECK_CPP_FLAG(Wextra, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wextra"])
 
-ACX_CHECK_COMPILER_FLAG(Wall, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wall"])
-ACX_CHECK_COMPILER_FLAG(Wextra, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wextra"])
+AC_MSG_RESULT($OTHERCXXFLAGS)
+                                            
+AHX_CONFIG_UNORDERED_MAP
 
-# debug mode flags warnings
+# debug mode
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Enable debug warnings and asserts]))
 debug_enabled="$enable_debug"
 AC_SUBST(debug_enabled)
@@ -44,7 +51,6 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h sys/socke
 ACX_CHECK_FORMAT_ATTRIBUTE
 ACX_CHECK_UNUSED_ATTRIBUTE
 AC_HEADER_STDBOOL
-AC_C_INLINE
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_SIZE_T
