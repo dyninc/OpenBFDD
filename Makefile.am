@@ -5,7 +5,7 @@ AM_CXXFLAGS = $(INTI_CFLAGS) $(WARNINGCXXFLAGS) $(OTHERCXXFLAGS)
 COMMON_INC = common.h utils.h log.h SmartPointer.h threads.h bfd.h standard.h
 COMMON_SRC = $(COMMON_INC) common.cpp utils.cpp log.cpp SmartPointer.cpp threads.cpp bfd.cpp
 CONTROL_SRC = bfdd-control.cpp
-BEACON_INC = Beacon.h CommandProcessor.h Scheduler.h Session.h
+BEACON_INC = Beacon.h CommandProcessor.h Scheduler.h Session.h hash_map.h
 BEACON_SRC = $(BEACON_INC) BeaconMain.cpp Beacon.cpp CommandProcessor.cpp Scheduler.cpp Session.cpp
 
 bfdd_beacon_SOURCES = $(COMMON_SRC) $(BEACON_SRC)
