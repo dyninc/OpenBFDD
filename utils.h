@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 struct timespec;
+struct timeval;
 struct in_addr;
 
 /**
@@ -113,8 +114,24 @@ namespace openbfdd
    * 
    * @return bool 
    */
-  bool timespecIsNegative(struct timespec &check);
+  bool timespecIsNegative(const struct timespec &check);
 
+  /**
+   * Attempts to convert the timespec to a number of seconds.
+   * 
+   * @param ts 
+   * 
+   * @return double 
+   */
+  double timespecToDouble(const struct timespec &ts);
+
+  /**
+   * Converts timespec to timeval
+   * 
+   * @param src 
+   * @param dst 
+   */
+  void timespecToTimeval(const struct timespec &src, struct timeval &dst);
 
   /**
    * Gets the CLOCK_MONOTONIC time. On failure logs a critical message. 

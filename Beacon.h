@@ -9,14 +9,12 @@
     
  */
 #pragma once
-#include "bfd.h"
 #include "Session.h"
 #include "threads.h"
+#include "hash_map.h"
 #include <deque>
 #include <vector>
 #include <set>
-
-#include "hash_map.h"
 
 struct sockaddr_in;
 
@@ -79,7 +77,7 @@ namespace openbfdd
      * @Note can only on the main thread.
      *  
      * @param remoteAddr [in] - remote address.
-     * @param localAddr [in]- adress on which to recieve and send packets.
+     * @param localAddr [in]- address on which to receive and send packets.
      * 
      * @return bool - false on failure. If there is already a session, then this 
      *         returns true.
@@ -198,6 +196,7 @@ namespace openbfdd
     static void handleSelfMessageCallback(int sigId, void *userdata) {reinterpret_cast<Beacon *>(userdata)->handleSelfMessage(sigId);}
     void handleSelfMessage(int sigId);
     uint32_t makeUniqueDiscriminator();
+    bool triggerSelfMessage();
 
     Session *addSession(in_addr_t remoteAddr, in_addr_t localAddr); 
 
@@ -239,12 +238,16 @@ namespace openbfdd
     bool m_strictPorts; // Should incoming ports be limited as described in draft-ietf-bfd-v4v6-1hop-11.txt
     Session::InitialParams m_initialSessionParams;
     
+    // These items are set at startup, so no locking is needed.
+    int m_selfSignalId;
+
     // m_paramsLock locks the parameters that can be adjusted externally. All items
     // in this block are protected by this lock.
     // 
     QuickLock m_paramsLock;
     bool m_shutownRequested;
     OperationQueue m_operations;
+
 
 
   };

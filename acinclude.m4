@@ -38,36 +38,6 @@ AC_DEFUN(
    ]
 )
 
-# ACD_HEADER_EXT_HASH_MAP
-#Checks for use of hash_map without warnings.
-AC_DEFUN(
-   [ACD_HEADER_EXT_HASH_MAP], 
-   [
-      AC_CACHE_CHECK(
-        for ext/hash_map,
-        dyn_cv_cxx_ext_hash_map,
-        [
-           AC_LANG_PUSH(C++)
-           ac_save_CXXFLAGS="$CXXFLAGS"
-           CXXFLAGS="$CXXFLAGS -Werror"
-           AC_COMPILE_IFELSE(
-              AC_LANG_PROGRAM(
-                 [#include <ext/hash_map>],
-                 [using __gnu_cxx::hash_map;]
-              ),
-              dyn_cv_cxx_ext_hash_map=yes, 
-              dyn_cv_cxx_ext_hash_map=no
-           )
-           CXXFLAGS="$ac_save_CXXFLAGS"
-           AC_LANG_POP(C++)
-        ]
-      )
-      if test "$dyn_cv_cxx_ext_hash_map" = yes; then
-         AC_DEFINE(HAVE_EXT_HASH_MAP,,[Define if ext/hash_map is present. ])
-      fi
-   ]
-)
-
 
 # AHX_CONFIG_UNORDERED_MAP
 # Sets up for use of the c++0x unordered_map class.

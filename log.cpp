@@ -7,7 +7,6 @@
 #include "log.h"
 #include <syslog.h>
 #include <errno.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
@@ -424,7 +423,7 @@ namespace openbfdd
     time_t now;
     struct timespec extendedNow;
 
-    // Use CLOCK_MONOTONIC, which wil be better for "timing" but will not be useful
+    // Use CLOCK_MONOTONIC, which will be better for "timing" but will not be useful
     // for determining the real time of events. 
     if(m_extendedTimeInfo)
     {

@@ -6,10 +6,9 @@
 // Base header for the beacon and control
 #include "common.h"
 #include "utils.h"
-#include <string.h>
 #include <errno.h>
+#include <string.h>
 #include <stdarg.h>
-#include <time.h>
 
 using namespace std;
 
@@ -245,10 +244,23 @@ namespace openbfdd
   }
 
 
-  bool timespecIsNegative(struct timespec &check)
+  bool timespecIsNegative(const struct timespec &check)
   {
     return(check.tv_sec < 0 || (check.tv_sec == 0 && check.tv_nsec < 0));
   }
+
+  double timespecToDouble(const struct timespec &ts)
+  {
+    return ts.tv_sec + (double(ts.tv_nsec)/NSEC_PER_SEC);
+  }
+
+  void timespecToTimeval(const struct timespec &src, struct timeval &dst)
+  {
+    dst.tv_sec = src.tv_sec;
+    dst.tv_usec = src.tv_nsec/1000L;
+  }
+
+
 
   void MilliSleep(uint32_t ms)
   {

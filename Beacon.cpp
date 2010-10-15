@@ -7,13 +7,12 @@
 #include "Beacon.h"
 #include "utils.h"
 #include "CommandProcessor.h"
-#include "Scheduler.h"
+#include "SelectScheduler.h"
+#include "KeventScheduler.h"
+#include <errno.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <errno.h>
-#include <signal.h>
-#include <string.h>
-#include <stdlib.h>
 
 using namespace std;
 
@@ -28,16 +27,17 @@ namespace openbfdd
   m_allowAnyPassiveIP(false),
   m_strictPorts(false),
   m_initialSessionParams(),
+  m_selfSignalId(-1),
   m_paramsLock(true),
   m_shutownRequested (false)
   {
     // Do as little as possible. Logging not even initialized.   
-    
+
     // This must be big enough to include ttl and dest address 
     m_messageBuffer.resize(CMSG_SPACE(sizeof(uint32_t))
                            + CMSG_SPACE(sizeof(struct in_addr))
                            + 8 /*just in case*/ 
-                             );
+                          );
   }
 
   Beacon::~Beacon()
@@ -68,7 +68,12 @@ namespace openbfdd
       return 1;
     }
 
-    m_scheduler = Scheduler::MakeScheduler();
+#ifdef USE_SELECT_SCHEDULER
+    m_scheduler = new SelectScheduler();
+#else
+    m_scheduler = new KeventScheduler();
+#endif 
+
     int socket = makeListenSocket();
     if (socket < 0)
     {
@@ -77,16 +82,17 @@ namespace openbfdd
 
     }
 
-    if (!m_scheduler->SetSocketCallback(socket, handleListenSocketCallback, this))
+    // We use this "signal channel" to communicate back to ourself in the Scheduler
+    // thread.
+    if (!m_scheduler->CreateSignalChannel(&m_selfSignalId, handleSelfMessageCallback, this))
     {
-      gLog.LogError("Failed to set m_scheduler socket processing thread. Aborting.");
+      gLog.LogError("Failed to create  self signal handling. Aborting.");
       return 1;
     }
 
-    // We use SIGUSR1 to communicate back to ourself in the Scheduler thread. 
-    if (!m_scheduler->SetSignalCallback(SIGUSR1, handleSelfMessageCallback, this, true /*disable normal signal handling*/))
+    if (!m_scheduler->SetSocketCallback(socket, handleListenSocketCallback, this))
     {
-      gLog.LogError("Failed to set SIGUSER1 signal handling. Aborting.");
+      gLog.LogError("Failed to set m_scheduler socket processing thread. Aborting.");
       return 1;
     }
 
@@ -105,7 +111,7 @@ namespace openbfdd
     // callbacks, which end when Scheduler::Run() ends
     Scheduler *oldScheduler = m_scheduler;
     m_scheduler = NULL;
-    Scheduler::FreeScheduler(oldScheduler);
+    delete oldScheduler;
 
     return returnVal;
   }
@@ -129,7 +135,7 @@ namespace openbfdd
                   session->GetId());
     }
 
-    if(session->IsActiveSession())
+    if (session->IsActiveSession())
       return true;
 
     session->StartActiveSession(remoteAddr, localAddr);
@@ -138,7 +144,7 @@ namespace openbfdd
                 session->GetId(), 
                 Ip4ToString(localAddr),
                 Ip4ToString(remoteAddr)  
-                );
+               );
     return true;
   }
 
@@ -170,7 +176,7 @@ namespace openbfdd
 
     AutoQuickLock lock(m_paramsLock);
     m_shutownRequested = true;
-    raise(SIGUSR1);
+    triggerSelfMessage();
   }
 
   bool Beacon::IsShutdownRequested()
@@ -198,7 +204,7 @@ namespace openbfdd
 
   static inline uint64_t makeSourceMapKey(in_addr_t remoteAddr, in_addr_t localAddr)
   {
-    return (static_cast<uint64_t>(remoteAddr) << 32) + localAddr;
+    return(static_cast<uint64_t>(remoteAddr) << 32) + localAddr;
   }
 
   /**
@@ -287,37 +293,37 @@ namespace openbfdd
 
       *useOperation = operation;
     }
-    
+
     {
       AutoQuickLock lock(m_paramsLock);
-    
+
       if (m_shutownRequested)
         return false;
-    
+
       try
       {
         m_operations.push_back(useOperation);
       }
-      catch (std::exception) 
+      catch (std::exception)
       {
         return false;
       }
 
-    
+
       // Once it is in m_operations, then the operation is no longer ours to delete.
       allocOperation.Detach();
-    
+
       if (waitForCompletion)
       {
-        raise(SIGUSR1);
+        triggerSelfMessage();
         while (!useOperation->completed)
           lock.LockWait(condition);
       }
     }
-    
+
     if (!waitForCompletion)
-      raise(SIGUSR1);
-    
+      triggerSelfMessage();
+
     return true;
   }
 
@@ -355,20 +361,20 @@ namespace openbfdd
     }
 
     val = 1;
-    #ifdef IP_RECVDSTADDR
+#ifdef IP_RECVDSTADDR
     if (::setsockopt(listenSocket, IPPROTO_IP, IP_RECVDSTADDR, &val, sizeof(val)) < 0)
     {
       gLog.ErrnoError(errno, "Can't set IP_RECVDSTADDR option to get destination address for incoming packets");
       return -1;
     }
-    #elif defined IP_PKTINFO
+#elif defined IP_PKTINFO
     if (::setsockopt(listenSocket, IPPROTO_IP, IP_PKTINFO, &val, sizeof(val)) < 0)
     {
       gLog.ErrnoError(errno, "Can't set IP_PKTINFO option to get destination address for incoming packets");
       return -1;
     }
-    #endif
-    
+#endif
+
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(bfd::ListenPort);
@@ -400,15 +406,15 @@ namespace openbfdd
       // return the ttl. Specifically, FreeBSD uses IP_RECVTTL and Debian uses
       // IP_TTL. We work around this by checking both (until that breaks some system.)
       if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
-      {  
-        if(LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(uint32_t))))
-        {  
+      {
+        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(uint32_t))))
+        {
           *outTTL = (uint8_t)*(uint32_t *)CMSG_DATA(cmsg);
           return true;
         }
       }
       else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVTTL)
-      {  
+      {
         *outTTL = *(uint8_t *)CMSG_DATA(cmsg);
         return true;
       }
@@ -423,26 +429,26 @@ namespace openbfdd
 
     for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg))
     {
-      #ifdef IP_RECVDSTADDR
+#ifdef IP_RECVDSTADDR
       if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)
-      {  
-        if(cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_addr)))
+      {
+        if (cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_addr)))
           return false;
-      
+
         *outDstAddress = reinterpret_cast<struct in_addr *>(CMSG_DATA(cmsg))->s_addr;
-        return true;
+                         return true;
       }
-      #endif
-      #ifdef IP_PKTINFO
+#endif
+#ifdef IP_PKTINFO
       if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
-      {  
-        if(cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_pktinfo)))
+      {
+        if (cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_pktinfo)))
           return false;
-      
+
         *outDstAddress = reinterpret_cast<struct in_pktinfo *>(CMSG_DATA(cmsg))->ipi_addr.s_addr;
-        return true;
+                         return true;
       }
-      #endif
+#endif
     }
 
     return false;
@@ -499,13 +505,13 @@ namespace openbfdd
       gLog.LogError("Could not get ttl for packet from %s:%hu.", Ip4ToString(sin->sin_addr), outSourceAddress->sin_port);
       return 0;
     }
-       
+
     if (!getDstAddr(&message, outDstAddress))
     {
       gLog.LogError("Could not get destination address for packet from %s:%hu.", Ip4ToString(sin->sin_addr), outSourceAddress->sin_port);
       return 0;
     }
-       
+
     return msgLength;
   }
 
@@ -531,7 +537,7 @@ namespace openbfdd
     //
 
     // Port
-    if(m_strictPorts)
+    if (m_strictPorts)
     {
       if (sourceAddr.sin_port < bfd::MinSourcePort) // max port is max value, so no need to check
       {
@@ -560,8 +566,8 @@ namespace openbfdd
       if (found == m_discMap.end())
       {
         if (gLog.LogTypeEnabled(Log::DiscardDetail))
-            Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
-            
+          Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
+
         gLog.Optional(Log::Discard, "Discard packet: no session found for yourDisc <%u>.", packet.header.yourDisc);
         return;
       }
@@ -569,7 +575,7 @@ namespace openbfdd
       if (session->GetRemoteAddress() != sourceAddr.sin_addr.s_addr)
       {
         if (gLog.LogTypeEnabled(Log::DiscardDetail))
-            Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
+          Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
 
         LogOptional(Log::Discard, "Discard packet: mismatched yourDisc <%u> and ip <from %s to %s>.", packet.header.yourDisc, Ip4ToString(sourceAddr.sin_addr), Ip4ToString(destAddr));
         return;
@@ -585,7 +591,7 @@ namespace openbfdd
         if (!m_allowAnyPassiveIP && m_allowedPassiveIP.find(sourceAddr.sin_addr.s_addr) == m_allowedPassiveIP.end())
         {
           if (gLog.LogTypeEnabled(Log::DiscardDetail))
-              Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
+            Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
 
           LogOptional(Log::Discard, "Ignoring unauthorized bfd packets from %s",  Ip4ToString(sourceAddr.sin_addr));
           return;
@@ -621,10 +627,10 @@ namespace openbfdd
     try
     {
       session = new Session(*m_scheduler, this, newDisc, m_initialSessionParams);
-      
+
       if (0 == session->GetId())
         return NULL;
-      
+
       m_sourceMap[makeSourceMapKey(remoteAddr, localAddr)] = session;
       m_discMap[newDisc] = session;
       m_IdMap[session->GetId()] = session;
@@ -645,6 +651,20 @@ namespace openbfdd
   }
 
   /**
+   * Call from any thread to trigger handleSelfMessage on main thread.
+   * 
+   * 
+   * @return bool 
+   */
+  bool Beacon::triggerSelfMessage()
+  {
+    if (!LogVerify(m_selfSignalId != -1) || !LogVerify(m_scheduler))
+      return false;
+    return m_scheduler->Signal(m_selfSignalId);
+  }
+
+
+  /**
    * Called on the m_scheduler main thread when we have signaled ourselves.
    * 
    * @param sigId 
@@ -652,43 +672,40 @@ namespace openbfdd
   void Beacon::handleSelfMessage(int sigId)
   {
     (void)sigId;
+    AutoQuickLock lock(m_paramsLock);
 
-    LogAssert(sigId == SIGUSR1);
+    while (!m_operations.empty())
     {
-      AutoQuickLock lock(m_paramsLock);
-      while (!m_operations.empty())
+      PendingOperation *operation;
+      operation = m_operations.front();
+      m_operations.pop_front();
+      lock.UnLock();
+
+      try
       {
-        PendingOperation *operation;
-        operation = m_operations.front();
-        m_operations.pop_front();
-        lock.UnLock();
+        operation->callback(this,  operation->userdata);
+      }
+      catch (std::exception &e)
+      {
+        gLog.Message(Log::Error, "Beacon operation failed: %s ", e.what());
+      }
 
-        try
-        {
-          operation->callback(this,  operation->userdata);
-        }
-        catch (std::exception &e)
-        {
-          gLog.Message(Log::Error, "Beacon operation failed: %s ", e.what());
-        }
-
-        if (!operation->waitCondition)
-          delete operation;
-        else
-        {
-          lock.Lock();
-          operation->completed=true;
-          lock.SignalAndUnlock(*operation->waitCondition);
-        }
-
+      if (!operation->waitCondition)
+        delete operation;
+      else
+      {
         lock.Lock();
+        operation->completed=true;
+        lock.SignalAndUnlock(*operation->waitCondition);
       }
 
-      if (m_shutownRequested)
-      {
-        lock.UnLock();
-        m_scheduler->RequestShutdown();
-      }
+      lock.Lock();
+    }
+
+    if (m_shutownRequested)
+    {
+      lock.UnLock();
+      m_scheduler->RequestShutdown();
     }
   }
 
@@ -723,7 +740,7 @@ namespace openbfdd
   void Beacon::SetDefMulti(uint8_t val)
   {
     LogAssert(m_scheduler->IsMainThread());
-    if(!LogVerify(val != 0)) // v10/4.1
+    if (!LogVerify(val != 0)) // v10/4.1
       return;
 
     m_initialSessionParams.detectMulti = val;
@@ -732,7 +749,7 @@ namespace openbfdd
   void Beacon::SetDefMinTxInterval(uint32_t val)
   {
     LogAssert(m_scheduler->IsMainThread());
-    if(!LogVerify(val != 0)) // v10/4.1
+    if (!LogVerify(val != 0)) // v10/4.1
       return;
 
     m_initialSessionParams.desiredMinTx = val;

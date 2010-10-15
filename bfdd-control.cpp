@@ -5,14 +5,13 @@
 ***************************************************************/
 #include "common.h"
 #include "SmartPointer.h"
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <vector>
 #include <errno.h>
 #include <fstream>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <string.h>
-#include <stdlib.h>
 
 using namespace std;
 

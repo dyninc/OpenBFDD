@@ -1,3 +1,15 @@
+2010-10-15  Jake Montgomery 
+
+   * Now builds and runs on Linux (Debian).
+
+   * Systems that do not have ::kevent() will use a ::select() based  
+     scheduler.
+
+   * No longer uses signals (SIGUSR1) for self notification, since this 
+     was problematic when porting from kevent to select. 
+
+   * Formatting and other small changes and improvements.
+
 2010-10-07  Jake Montgomery Update Version to 0.2.1
    
    * Improved low memory handling. There is now, at least, a good chance  

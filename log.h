@@ -5,7 +5,7 @@
 ***************************************************************/
 // Logging routines
 #pragma once
-#include<string>
+#include <string>
 
 namespace openbfdd
 {
@@ -38,7 +38,7 @@ namespace openbfdd
       Session, // Session creation and state change.
       SessionDetail, // Session creation and state change.
       Discard, // Packet discards and errors
-      DiscardDetail, // Contenets of (some) discarded packets.
+      DiscardDetail, // Contents of (some) discarded packets.
       Packet, // Detailed packet info
       PacketContents, // Log every non-discarded packet.
       Command, // Commands
@@ -120,7 +120,7 @@ namespace openbfdd
     void SetLogLevel(Log::Level level);
 
     /**
-     * Turns on or off extened time info.
+     * Turns on or off extended time info.
      * 
      * @param useExtendedTime 
      */
@@ -203,7 +203,7 @@ namespace openbfdd
     std::string m_logFilePath; // The path of the current m_logFile.
     bool m_useSyslog; // Use syslog
     std::string m_ident; // Used with syslog
-    bool m_extendedTimeInfo; // Include full timestamp on every messgae.
+    bool m_extendedTimeInfo; // Include full timestamp on every message.
     struct TypeInfo
     {
       bool enabled;

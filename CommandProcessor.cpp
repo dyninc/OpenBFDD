@@ -7,13 +7,12 @@
 #include "CommandProcessor.h"
 #include "utils.h"
 #include "Beacon.h"
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdarg.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <string.h>
+#include <stdarg.h>
 
 using namespace std;
 
@@ -294,7 +293,7 @@ namespace openbfdd
 
         FD_ZERO(&waitOn);
         FD_SET(fd, &waitOn);
-        result = select(FD_SETSIZE, &waitOn, NULL, NULL, &waitTime);
+        result = select(fd+1, &waitOn, NULL, NULL, &waitTime);
         if (result < 0)
         {
           if (errno != EINTR)
