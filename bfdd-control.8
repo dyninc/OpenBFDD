@@ -95,10 +95,10 @@ Used to set certain attributes for the session specified by \fIid\fR or \fIip-pa
 .RS 
 .TP
 \fBmintx\fR
-Sets the "Desired Minimum Transmit Interval" that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the "Required Minimum Receive Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 is not allowed. 
+Sets the "Desired Minimum Transmit Interval" that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the "Required Minimum Receive Interval" received from the remote session. The \fIvalue\fR parameter should be a \fItimeval\fR as described above. 0 is not allowed. 
 .TP
 \fBminrx\fR
-Sets the "Required Minimum Receive Interval" that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the "Desired Minimum Transmit Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
+Sets the "Required Minimum Receive Interval" that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the "Desired Minimum Transmit Interval" received from the remote session. The \fIvalue\fR parameter should be a \fItimeval\fR as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
 .TP
 \fBmulti\fR
 Sets the "Detection Multiplier" that the local session sends to the remote session in the control packet. This is (approximately) the number of periodic packets, from this session to the remote session, that can be lost before the remote system declares the link down due to timeout. The \fIvalue\fR parameter should be number between 1 and 255. 

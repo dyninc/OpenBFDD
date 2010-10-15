@@ -17,15 +17,11 @@ AC_PROG_MAKE_SET
 
 AC_LANG(C++)
 
-AC_CHECK_FUNCS([vector])
-
 AC_SUBST(WARNINGCXXFLAGS)
 AC_SUBST(OTHERCXXFLAGS)
                     
 ACD_CHECK_CPP_FLAG(Wall, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wall"])
 ACD_CHECK_CPP_FLAG(Wextra, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wextra"])
-
-AC_MSG_RESULT($OTHERCXXFLAGS)
                                             
 AHX_CONFIG_UNORDERED_MAP
 
@@ -44,26 +40,17 @@ esac
 
 # Checks for libraries.
 
+
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h sys/socket.h syslog.h unistd.h])
+AC_CHECK_HEADERS([syslog.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 ACX_CHECK_FORMAT_ATTRIBUTE
 ACX_CHECK_UNUSED_ATTRIBUTE
-AC_HEADER_STDBOOL
-AC_TYPE_INT32_T
-AC_TYPE_INT64_T
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT64_T
-AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([kevent memset select socket strcasecmp strdup strerror])
+AC_CHECK_FUNCS([kevent select])
 
 AC_SEARCH_LIBS([clock_gettime],[rt posix4])
 AC_CHECK_FUNCS([clock_gettime])
