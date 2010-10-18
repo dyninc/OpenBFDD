@@ -4,7 +4,7 @@
 AC_PREREQ(2.61)
 sinclude(acx_nlnetlabs.m4)
 
-AC_INIT(openbfdd, 0.2.1)
+AC_INIT(openbfdd, 0.3.0)
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([BeaconMain.cpp])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
@@ -38,6 +38,21 @@ case "$enable_debug" in
 		;;
 esac
 
+# no kevent mode
+AC_ARG_ENABLE(kevent, AC_HELP_STRING([--disable-kevent], [Use select() instead of kevent() based scheduler, even on systems that support kevent.]))
+kevent_enabled="$enable_kevent"
+AC_SUBST(kevent_enabled)
+case "$kevent_enabled" in
+        no)
+		AC_DEFINE([NO_KEVENT_SCHEDULER], 1, [define this to disable use of the kevent scheduler.])
+		;;
+	yes|*)
+		# nothing to do.
+		;;
+esac
+
+
+
 # Checks for libraries.
 
 
@@ -59,8 +74,8 @@ AH_BOTTOM(
 AHX_CONFIG_FORMAT_ATTRIBUTE
 AHX_CONFIG_UNUSED_ATTRIBUTE
 
-#ifndef HAVE_KEVENT
-#    define USE_SELECT_SCHEDULER
+#if defined(HAVE_KEVENT) && !(defined NO_KEVENT_SCHEDULER)
+#    define USE_KEVENT_SCHEDULER
 #endif
 
 )

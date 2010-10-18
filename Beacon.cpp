@@ -68,10 +68,10 @@ namespace openbfdd
       return 1;
     }
 
-#ifdef USE_SELECT_SCHEDULER
-    m_scheduler = new SelectScheduler();
-#else
+#ifdef USE_KEVENT_SCHEDULER
     m_scheduler = new KeventScheduler();
+#else
+    m_scheduler = new SelectScheduler();
 #endif 
 
     int socket = makeListenSocket();

@@ -1,4 +1,4 @@
-2010-10-15  Jake Montgomery 
+2010-10-18  Jake Montgomery  Update Version to 0.3.0
 
    * Now builds and runs on Linux (Debian).
 
@@ -9,6 +9,8 @@
      was problematic when porting from kevent to select. 
 
    * Formatting and other small changes and improvements.
+
+   * Fixed accept bug that only manifested in 32 bit systems. 
 
 2010-10-07  Jake Montgomery Update Version to 0.2.1
    

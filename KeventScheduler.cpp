@@ -4,7 +4,7 @@
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "config.h"
-#ifdef HAVE_KEVENT
+#ifdef USE_KEVENT_SCHEDULER
 
 #include "common.h"
 #include "KeventScheduler.h"
@@ -133,7 +133,7 @@ namespace openbfdd
 
 }
 
-#endif  // HAVE_KEVENT
+#endif  // USE_KEVENT_SCHEDULER
 
 
 

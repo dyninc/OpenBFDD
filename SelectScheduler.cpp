@@ -4,10 +4,10 @@
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "config.h"
-#ifdef USE_SELECT_SCHEDULER
+#ifndef USE_KEVENT_SCHEDULER
 
   #include "common.h"
-  #include "selectable.h"
+  #include "SelectScheduler.h"
   #include "utils.h"
   #include <sys/select.h>
   #include <errno.h>
@@ -118,7 +118,7 @@ namespace openbfdd
   }
 
   /**
-   * resizes m_foundation's. 
+   * resizes m_foundSockets. 
    *  
    * Note that m_foundSockets is maintained a vector big enough to hold all 
    * events so that resizing would occur only when adding or removing sockets. 
@@ -137,7 +137,7 @@ namespace openbfdd
   }
 
 }
-#endif  // USE_SELECT_SCHEDULER
+#endif  // !USE_KEVENT_SCHEDULER
 
 
 

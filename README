@@ -51,18 +51,16 @@ See the included COPYING file for licensing information.
 The software was originally developed on FreeBSD 7.1. It has been built, 
 and tested on the following platforms:
    
-   * FreeBSD 7.1 AMD64
-   * FreeBSD 8.1 AMD64
+   * FreeBSD 7.1 amd64
+   * FreeBSD 8.1 amd64
+   * Debian 2.6.26-2-amd64
+   * Debian 2.6.26-2-686 (i386)
 
-It may, or may not, be possible to build and run it on other BSD platforms
-ithout modification. If your system is not included, then we encourage you
-o make the modifications necessary and submit them to 
+It may, or may not, be possible to build and run it on other BSD and Linux 
+platforms without modification. If your system is not included, then we  
+encourage you o make the modifications necessary and submit them to 
 http://github.com/dyninc/OpenBFDD/ for inclusion in future releases.
 
-The source currently uses the kevent() system call, which my only be 
-available on BSD systems. A release is planned, in the near future, which 
-will remove this dependency, and should make it easier to port OpenBFD to 
-other systems.
 
 ================
 + About bfdd-beacon
@@ -136,8 +134,6 @@ repeated bfdd-control calls, such as a "monitoring" script. Use the
    designed and tested to work with the Juniper line of routers. It has 
    currently been tested with JUNOS 8.5.
 
-   * The bfdd-beacon may behave improperly or even crash in low memory 
-   situations. A fix is expected soon. 
 
 ================
 + Notes on Remote BFD Platforms

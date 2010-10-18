@@ -12,7 +12,7 @@
 
 #include "config.h"
 
-#ifdef USE_SELECT_SCHEDULER
+#ifndef USE_KEVENT_SCHEDULER
 
   #include "SchedulerBase.h"
   #include <vector>
@@ -54,4 +54,4 @@ namespace openbfdd
 
 }
 
-#endif  // USE_SELECT_SCHEDULER
+#endif  // !USE_KEVENT_SCHEDULER

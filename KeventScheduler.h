@@ -12,7 +12,7 @@
 
 #include "config.h"
 
-#ifdef HAVE_KEVENT
+#ifdef USE_KEVENT_SCHEDULER
 
 #include "SchedulerBase.h"
 #include <sys/event.h>
@@ -54,4 +54,4 @@ namespace openbfdd
 
 }
 
-#endif  // HAVE_KEVENT
+#endif  // USE_KEVENT_SCHEDULER
