@@ -355,6 +355,7 @@ namespace openbfdd
         return false;
 
       // accept a connection
+      fromlen = sizeof(faddr);
       connectedSocket = accept(m_listenSocket, (sockaddr*)&faddr, &fromlen);
       if (!connectedSocket.IsValid())
       {
