@@ -266,17 +266,12 @@ namespace openbfdd
       int waits = 0;
       fd_set waitOn; 
       struct timespec  maxTime;
-      struct timeval waitTime;
 
       if (maxWaitInMs)
       {
         GetMonolithicTime(maxTime);
         timespecAddMs(maxTime, maxWaitInMs);
       }
-
-      // setup fd_set and wait time 
-      waitTime.tv_sec = pollTimeInMs/1000;
-      waitTime.tv_usec = (pollTimeInMs % 1000)*1000;
 
       while (!isStopListeningRequested())
       {
@@ -290,6 +285,12 @@ namespace openbfdd
             return Result::Timeout;
           }
         }
+
+        struct timeval waitTime;
+
+        // setup fd_set and wait time 
+        waitTime.tv_sec = pollTimeInMs/1000;
+        waitTime.tv_usec = (pollTimeInMs % 1000)*1000;
 
         FD_ZERO(&waitOn);
         FD_SET(fd, &waitOn);
