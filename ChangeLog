@@ -1,3 +1,11 @@
+2011-1-14  Jake Montgomery Update Version to 0.3.2
+   
+   * Small bug fixes.
+
+   * Compiles on Ubuntu without warning.
+
+   * Beacon can now be controled from system with opposite endianess.
+
 2010-12-3  Jake Montgomery Update Version to 0.3.1
    
    * Fixed high cpu usage when idle.

@@ -55,6 +55,8 @@ and tested on the following platforms:
    * FreeBSD 8.1 amd64
    * Debian 2.6.26-2-amd64
    * Debian 2.6.26-2-686 (i386)
+   * Ubuntu 10.10 (amd64)
+
 
 It may, or may not, be possible to build and run it on other BSD and Linux 
 platforms without modification. If your system is not included, then we  
