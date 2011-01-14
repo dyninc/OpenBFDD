@@ -64,7 +64,7 @@ namespace openbfdd
     saddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     saddr.sin_port = htons(port);             
 
-    if (!connect(sendSocket, (sockaddr*)&saddr, sizeof(struct sockaddr)) < 0)
+    if (connect(sendSocket, (sockaddr*)&saddr, sizeof(saddr)) < 0)
     {
       perror("Error connecting to beacon: ");
       return false;
