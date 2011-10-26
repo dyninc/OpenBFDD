@@ -113,6 +113,8 @@ namespace openbfdd
     m_scheduler = NULL;
     delete oldScheduler;
 
+    ::close(socket);
+
     return returnVal;
   }
 

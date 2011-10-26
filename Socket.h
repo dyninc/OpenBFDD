@@ -18,6 +18,7 @@ namespace openbfdd
   public:
 
     Socket();
+    /** This is explicit to avoid  it being a copy constructor. */
     explicit Socket(int sock);
     ~Socket();
 
