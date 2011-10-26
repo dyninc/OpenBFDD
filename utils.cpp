@@ -9,22 +9,29 @@
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 using namespace std;
 
+static const size_t formatShortBuffersSize = 256;  
+static const size_t formatShortBuffersCount = 12;  
+ 
+static const size_t formatMediumBuffersSize = 1024;  // must be big enough for full, escaped, domain name. 
+static const size_t formatMediumBuffersCount = 4;  
+static pthread_key_t gUtilsTLSKey;
+static bool gHasUtilsTLSKey = false;
+static const size_t bigBufferMaxSize = 4096;
+
 namespace openbfdd 
 {
-  static const size_t formatShortBuffersSize = 256;
-  static pthread_key_t gUtilsTLSKey;
-  static bool gHasUtilsTLSKey = false;
-  static const size_t bigBufferMaxSize = 4096;
-
   struct UtilsTLSData
   {
     UtilsTLSData() : 
-      nextFormatShortBuffer(0),
-      bigBuffer(NULL),
-      bigBufferSize(0)
+    nextFormatShortBuffer(0),
+    nextFormatMediumBuffer(0),
+    bigBuffer(NULL),
+    bigBufferSize(0)
     {}
 
     ~UtilsTLSData()
@@ -32,8 +39,11 @@ namespace openbfdd
       delete[] bigBuffer;
     }
 
-    char formatShortBuffers[20][formatShortBuffersSize]; // For "human readable" numbers. Big enough for a signed int64_t with commas.
+    char formatShortBuffers[formatShortBuffersCount][formatShortBuffersSize]; // For "human readable" numbers. Big enough for a signed int64_t with commas.
     uint32_t nextFormatShortBuffer; 
+
+    char formatMediumBuffers[formatMediumBuffersCount][formatMediumBuffersSize]; // Big Enough for domain name as text 
+    uint32_t nextFormatMediumBuffer; 
 
     char *bigBuffer;
     size_t bigBufferSize;
@@ -69,7 +79,7 @@ namespace openbfdd
 
     return tlsData;
   }
-  
+
 
   bool UtilsInit()
   {
@@ -86,16 +96,31 @@ namespace openbfdd
   static char *nextFormatShortBuffer()
   {
     UtilsTLSData *tls = getUtilsTLS();
-    if(!tls)
+    if (!tls)
       return NULL;
 
     char *nextBuf = tls->formatShortBuffers[tls->nextFormatShortBuffer++];
-    if(tls->nextFormatShortBuffer >= countof(tls->formatShortBuffers))
+    if (tls->nextFormatShortBuffer >= countof(tls->formatShortBuffers))
       tls->nextFormatShortBuffer = 0;
     return nextBuf;
   }
 
-  
+
+  static char *nextFormatMeduimBuffer()
+  {
+    UtilsTLSData *tls = getUtilsTLS();
+    if (!tls)
+      return NULL;
+
+    char *nextBuf = tls->formatMediumBuffers[tls->nextFormatMediumBuffer++];
+    if (tls->nextFormatMediumBuffer >= countof(tls->formatMediumBuffers))
+      tls->nextFormatMediumBuffer = 0;
+    return nextBuf;
+  }
+
+
+
+
   /**
    * Gets the "big" buffer from tls.
    * 
@@ -110,13 +135,13 @@ namespace openbfdd
     *outBuf = NULL;
 
     UtilsTLSData *tls = getUtilsTLS();
-    if(!tls)
+    if (!tls)
       return 0;
 
-    if(tls->bigBufferSize == 0)
+    if (tls->bigBufferSize == 0)
     {
       tls->bigBuffer = new(std::nothrow) char[bigBufferMaxSize];
-      if(!tls->bigBuffer)
+      if (!tls->bigBuffer)
         return 0;
 
       tls->bigBufferSize = bigBufferMaxSize;
@@ -125,7 +150,6 @@ namespace openbfdd
     *outBuf = tls->bigBuffer;
     return tls->bigBufferSize;
   }
-
 
   bool UtilsInitThread()
   {
@@ -137,7 +161,34 @@ namespace openbfdd
     return true;
   }
 
+  size_t GetBigTLSBuffer(char **outBuf)
+  {
+    return getBigBuffer(outBuf);
+  }
+
+  size_t GetMediumTLSBuffer(char **outBuf)
+  {
+    if (!outBuf)
+      return 0;
+
+    *outBuf = nextFormatMeduimBuffer();
+    if (*outBuf == NULL)
+      return 0;
+    return formatMediumBuffersSize;
+  }
+
   bool StringToInt(const char *arg, int64_t &value)
+  {
+    const char *next;
+    if (!StringToInt(arg, value, &next))
+      return false;
+
+    next = SkipWhite(next);
+
+    return(*next == '\0');
+  }
+
+  bool StringToInt(const char *arg, int64_t &value, const char **outNext)
   {
     int64_t val = 0;
     bool negative = false;
@@ -170,13 +221,63 @@ namespace openbfdd
       val *= -1;
     value = val;
 
+    if (!::isspace(*next) && *next != '\0')
+      return false;
+
+    if (outNext)
+      *outNext = next;
+
+    return true;
+  }
+
+
+  bool StringToInt(const char *arg, uint64_t &value)
+  {
+    const char *next;
+    if (!StringToInt(arg, value, &next))
+      return false;
+
     next = SkipWhite(next);
 
     return(*next == '\0');
   }
 
+  bool StringToInt(const char *arg, uint64_t &value, const char **outNext)
+  {
+    uint64_t val = 0;
+    const char *next;
 
-  /** skip whitespace, return new pointer into string */
+    value = 0;
+    if (!arg)
+      return false;
+
+    next = SkipWhite(arg);
+
+    if (*next == '+')
+      next++;
+    else if (*next == '-')
+      return false;
+
+    if (!isdigit(*next))
+      return false;
+
+    for (; isdigit(*next); next++)
+      val = val*10 + *next - '0';
+
+    value = val;
+
+    if (!::isspace(*next) && *next != '\0')
+      return false;
+
+    if (outNext)
+      *outNext = next;
+
+    return true;
+  }
+
+
+
+
   const char*  SkipWhite(const char* str)
   {
     /* EOS \0 is not a space */
@@ -185,7 +286,26 @@ namespace openbfdd
     return str;
   }
 
-#define NSEC_PER_SEC 1000000000L
+  char*  SkipWhite(char* str)
+  {
+    return const_cast<char *>(SkipWhite((const char *)str));
+  }
+
+  const char*  SkipNonWhite(const char* str)
+  {
+    /* EOS \0 is not a space */
+    while ( !::isspace(*str) )
+      str++;
+    return str;
+  }
+
+  char*  SkipNonWhite(char* str)
+  {
+    return const_cast<char *>(SkipNonWhite((const char *)str));
+  }
+
+
+  #define NSEC_PER_SEC 1000000000L
 
   static inline void timespecNormalize(struct timespec &ts)
   {
@@ -243,15 +363,17 @@ namespace openbfdd
     timespecNormalize(result);
   }
 
+  struct timespec timespecSubtract(const struct timespec &tsl, const struct timespec &tsr)
+  {
+    struct timespec result;
+    timespecSubtract(result, tsl, tsr);
+    return result;
+  }
+
 
   bool timespecIsNegative(const struct timespec &check)
   {
     return(check.tv_sec < 0 || (check.tv_sec == 0 && check.tv_nsec < 0));
-  }
-
-  double timespecToDouble(const struct timespec &ts)
-  {
-    return ts.tv_sec + (double(ts.tv_nsec)/NSEC_PER_SEC);
   }
 
   void timespecToTimeval(const struct timespec &src, struct timeval &dst)
@@ -260,7 +382,25 @@ namespace openbfdd
     dst.tv_usec = src.tv_nsec/1000L;
   }
 
+  struct timeval timespecToTimeval(const struct timespec &src)
+  {
+    struct timeval dst;
 
+    timespecToTimeval(src, dst);
+    return dst;
+  }
+
+
+  void timevalToTimespec(const struct timeval &src, struct timespec &dst)
+  {
+    dst.tv_sec = src.tv_sec;
+    dst.tv_nsec = src.tv_usec * 1000L;
+  }
+
+  bool isTimespecEmpty(const struct timespec &src)
+  {
+    return src.tv_sec == 0 && src.tv_nsec == 0;
+  }          
 
   void MilliSleep(uint32_t ms)
   {
@@ -270,6 +410,11 @@ namespace openbfdd
     sleepTime.tv_nsec = (ms %1000)*1000*1000;
 
     nanosleep(&sleepTime, NULL);
+  }
+
+  double timespecToSeconds(struct timespec time)
+  {
+    return(double(time.tv_sec) + double(time.tv_nsec)/NSEC_PER_SEC);
   }
 
   const char *Ip4ToString(struct in_addr &address)
@@ -294,7 +439,7 @@ namespace openbfdd
     temp.s_addr = address;
     return Ip4ToString(temp);
   }
-       
+
   const char *Ip4ToString(struct in_addr &address, uint16_t port)
   {
     return Ip4ToString(address.s_addr,  port);
@@ -307,11 +452,14 @@ namespace openbfdd
     if (!buf)
       return "<memerror>";
 
+    uint8_t *data = (uint8_t *)&address;
+
+
     sprintf(buf, "%hhu.%hhu.%hhu.%hhu:%hu", 
-            (uint8_t)((uint8_t *)&address)[0],
-            (uint8_t)((uint8_t *)&address)[1],
-            (uint8_t)((uint8_t *)&address)[2],
-            (uint8_t)((uint8_t *)&address)[3],
+            (uint8_t)data[0],
+            (uint8_t)data[1],
+            (uint8_t)data[2],
+            (uint8_t)data[3],
             (unsigned int)port
            );
 
@@ -389,17 +537,31 @@ namespace openbfdd
       return true;
 
     LogAssertFalse("clock_gettime failed");
-    gLog.Message(Log::Critical, "clock_gettime failed. BFD may not function correctly : %s", strerror(errno));
+    gLog.Optional(Log::Critical, "clock_gettime failed.%s", strerror(errno));
+    now.tv_sec = 0;
+    now.tv_nsec = 0;
+    return false;
+  }
+
+  bool GetRealTime(struct timespec &now)
+  {
+    if (0 == clock_gettime( CLOCK_REALTIME, &now))
+      return true;
+
+    LogAssertFalse("clock_gettime failed");
+    gLog.Optional(Log::Critical, "clock_gettime failed.%s", strerror(errno));
     now.tv_sec = 0;
     now.tv_nsec = 0;
     return false;
   }
 
 
+
   /**
    * Helper for number format routines. buf is assumes to be big enough. 
    * 
    * @param val 
+   * @param buf - must be big enough for result. May not be null.
    * @param useCommas 
    */
   static void addUnsignedInt( char *buf, uint64_t val, bool useCommas)
@@ -412,8 +574,8 @@ namespace openbfdd
     // do in reverse, since that is easiest
     do    
     {
-      if(useCommas && digits != 0 && (digits%3 == 0))
-         buf[index++] = ',';
+      if (useCommas && digits != 0 && (digits%3 == 0))
+        buf[index++] = ',';
 
       buf[index++] = val % 10 + '0';   
       digits++;
@@ -454,9 +616,9 @@ namespace openbfdd
     if (!buf)
       return "error";
 
-    if(val< 0)
+    if (val< 0)
     {
-      if(val == INT64_MIN)
+      if (val == INT64_MIN)
       {
         // Special case since the positive of this is an overflow.
         if (useCommas)
@@ -471,10 +633,200 @@ namespace openbfdd
     return buf;
   }
 
+  bool CheckArg(const char *check, const char *arg, const char **outParam)
+  {
+    size_t len = strlen(check);     
+
+    *outParam = NULL;
+
+    if (0 != strncmp(check, arg, len))
+      return false;
+    if (arg[len] == '\0')
+      return true;
+    if (arg[len] != '=')
+      return false;
+    *outParam = &arg[len]+1;
+
+    return true;
+  }
+
+  /**
+   * Parses a dotted quad and stops on first non-number. 
+   * 
+   * @param next [out] - On success, this will point to the character after the 
+   *        last ip address character.
+   * 
+   * @param str 
+   * @param out_addr 
+   * @param next 
+   * 
+   * @return bool - false on parsing error. 
+   */
+  static bool parseIPv4Start(const char *str, uint32_t *out_addr, const char **next )
+  {
+    uint32_t realAddr;
+    uint8_t *addr = (uint8_t *)&realAddr;
+    int saw_digit, octets, ch;
+    uint8_t *tp;
+
+    saw_digit = 0;
+    octets = 0;
+    *(tp = addr) = 0;
+    while ((ch = *str++) != '\0')
+    {
+      if (ch >= '0' && ch <= '9')
+      {
+        u_int next = *tp * 10 + (ch  - '0');
+        if (saw_digit && *tp == 0)
+          return(0);
+        if (next > 255)
+          return(0);
+        *tp = next;
+        if (!saw_digit)
+        {
+          if (++octets > 4)
+            return(false);
+          saw_digit = 1;
+        }
+      }
+      else if (ch == '.' && saw_digit)
+      {
+        if (octets == 4)
+          return(false);
+        *++tp = 0;
+        saw_digit = 0;
+      }
+      else
+      {
+        break;
+      }
+    }
+    if (octets < 4)
+      return(false);
+
+    *out_addr = realAddr;
+
+    if (next)
+      *next = str-1;
+
+    return(true);
+  }
+
+
+  bool ParseIPv4(const char *str, uint32_t *out_addr, const char **next /*NULL*/ )
+  {
+    const char *localNext;
+
+    if(!parseIPv4Start(str, out_addr, &localNext))
+      return false;
+    if (localNext[0] != '\0' && !::isspace(localNext[0]))
+      return false;
+    if (next)
+      *next = localNext;
+    return true;
+  }
+
+  bool ParseIPv4Port(const char *str, uint32_t *out_addr, uint16_t *outPort)
+  {
+    const char *localNext;
+    uint64_t port;
+
+    if(!parseIPv4Start(str, out_addr, &localNext))
+      return false;
+    if (localNext[0] != ':' || ::isspace(localNext[1]))
+      return false;
+    localNext++;
+    if (!StringToInt(localNext, port))
+      return false;
+    if (port > UINT16_MAX)
+      return false;
+    *outPort = (uint16_t)port;
+    return true;
+  }
+
+  bool ParseIPv4Block(const char *str, uint32_t *out_addr, uint8_t *out_bits )
+  {
+    const char *localNext;
+    uint64_t bits;
+
+    if(!parseIPv4Start(str, out_addr, &localNext))
+      return false;
+    if (localNext[0] != '/' || ::isspace(localNext[1]))
+      return false;
+    localNext++;
+    if (!StringToInt(localNext, bits))
+      return false;
+    if (bits > 255)
+      return false;
+    *out_bits = (uint8_t)bits;
+    return true;
+  }
+
+
+  bool CheckDir(const char *dir,  int *outErrno)
+  {
+    if (!dir || dir[0] == '\0')
+    {
+      if (outErrno)
+        *outErrno = ENOENT;
+      return false;
+    }
+
+    struct stat st;
+
+    if (0 != stat(dir,  &st))
+    {
+      if (outErrno)
+        *outErrno = errno;
+      return false;
+    }
+
+    if (!S_ISDIR(st.st_mode))
+    {
+      if (outErrno)
+        *outErrno = ENOTDIR;
+      return false;
+    }
+    return true;
+  }
+
+  bool FileExists(const char *path, int *outErrno)
+  {
+    if (!path || path[0] == '\0')
+    {
+      if (outErrno)
+        *outErrno = ENOENT;
+      return false;
+    }
+
+    struct stat st;
+
+    if (0 != stat(path,  &st))
+    {
+      if (outErrno)
+        *outErrno = errno;
+      return false;
+    }
+
+    if (!S_ISREG(st.st_mode))
+    {
+      if (outErrno)
+        *outErrno = ENOENT;
+      return false;
+    }
+    return true;
+  }
+
+
+  bool IsExplicitRelativePath(const char *path)
+  {
+    if (!path || !*path || path[0] != '.') 
+      return false;
+    return (path[1] == '/' 
+        || (path[1] == '.' && path[2] == '/'));
+  }
+
 }
-
-
-
 
 
 

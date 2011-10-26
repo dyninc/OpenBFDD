@@ -491,7 +491,7 @@ namespace openbfdd
         timespecSubtract(dif, now, timer->GetExpireTime());
         gLog.Optional(Log::Temp, "Timer %s is off by %.4f ms",
                       timer->Name(), 
-                      timespecToDouble(dif) * 1000.0);
+                      timespecToSeconds(dif) * 1000.0);
 #endif
 
         // Expire the timer, which will run the action.
