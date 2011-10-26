@@ -563,7 +563,7 @@ namespace openbfdd
   void Session::logSessionTransition()
   {
     UptimeInfo *last = NULL;
-    struct timespec now;
+    TimeSpec now(TimeSpec::MonoNow());
 
     // We only log state change when we are fully up.
     // The state machine does not allow up->init transition, so we must have been
@@ -603,7 +603,6 @@ namespace openbfdd
 
     uptime.state = m_sessionState;
     uptime.startTime = now;
-    uptime.endTime.tv_sec = uptime.endTime.tv_nsec = 0;
     uptime.forced = false;  // currently not using this.
 
     try
@@ -1120,7 +1119,7 @@ namespace openbfdd
 
     outState.uptimeList.assign(m_uptimeList.begin(), m_uptimeList.end());
     if(!outState.uptimeList.empty())
-      GetMonolithicTime(outState.uptimeList.front().endTime);
+      outState.uptimeList.front().endTime = TimeSpec::MonoNow();
   }
 
   uint32_t Session::GetLocalDiscriminator()
@@ -1219,12 +1218,12 @@ namespace openbfdd
   {
     if(gLog.LogTypeEnabled(Log::PacketContents))
     {
-      struct timespec time;
+      TimeSpec time;
       const BfdPacketHeader &header = packet.header;
 
       // Since we use multiple log lines, this is inefficient, and could get
       // "confused" if more than one session was running??
-      GetMonolithicTime(time);
+      time  = TimeSpec::MonoNow();
 
       gLog.Message(Log::PacketContents, "%s [%jd:%09ld] from %s to %s, myDisc=%u yourDisc=%u", 
                    outPacket ?"Send":"Receive",

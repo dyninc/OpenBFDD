@@ -11,6 +11,7 @@
 #pragma once
 
 #include "Scheduler.h"
+#include "TimeSpec.h"
 #include "hash_map.h"
 #include <set>
 
@@ -99,7 +100,7 @@ namespace openbfdd
 
   private:
 
-    void getNextTimerTimeout(struct timespec &timeout);
+    TimeSpec getNextTimerTimeout();
     bool expireTimer(Timer::Priority::Value minPri);
     static bool compareTimers(const TimerImpl * lhs, const TimerImpl * rhs);
 

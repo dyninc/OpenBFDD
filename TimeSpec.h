@@ -16,10 +16,12 @@ namespace openbfdd
   {
     static const long NSecPerSec = 1000000000L;
     static const long NSecPerMs =  1000000L;
+    static const long USecPerMs =  1000L;
 
     enum Unit
     {
       None,
+      Microsec,
       Millisec,
       Seconds,
       Minutes
@@ -52,6 +54,21 @@ namespace openbfdd
      * Test for time is 0 seconds.
      */
     bool empty() {return tv_sec == 0 && tv_nsec == 0;}
+
+    /** 
+     * Test for negative time value. Does not need to be normalized   
+     */
+    bool IsNegative() 
+    {
+      if (tv_sec > 0 && tv_nsec > 0)
+        return false;
+      if (tv_sec < 0 && tv_nsec < 0)
+        return true;
+
+      // Use compare, which normalizes, so is a bit more expensive
+      return *this < TimeSpec();
+    }
+
 
     /**
      * Set to 0 seconds.

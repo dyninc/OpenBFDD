@@ -7,6 +7,7 @@
 #include "SchedulerBase.h"
 #include "utils.h"
 #include "SmartPointer.h"
+#include "TimeSpec.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -28,8 +29,8 @@ namespace openbfdd
     SchedulerBase::timer_set *m_activeTimers;  // Use only from main thread. The active timer list that this is part of when active.
     Timer::Callback m_callback;
     void *m_userdata;
-    struct timespec m_expireTime;
-    struct timespec m_startTime;  // only valid when not stopped.
+    TimeSpec m_expireTime;
+    TimeSpec m_startTime;  // only valid when not stopped.
     bool m_stopped;
     char *m_name;  // for logging
     Timer::Priority::Value m_priority;
@@ -105,9 +106,9 @@ namespace openbfdd
     {
       LogAssert(m_scheduler->IsMainThread());
 
-      struct timespec startTime;
+      TimeSpec startTime(TimeSpec::MonoNow());
 
-      if (!GetMonolithicTime(startTime))
+      if (startTime.empty())
         return false;
 
       return setExpireTime(startTime, micro);
@@ -149,9 +150,9 @@ namespace openbfdd
      *  
      * @note Call only on main thread. See IsMainThread(). 
      * 
-     * @return const struct timespec& 
+     * @return const struct TimeSpec& 
      */
-    const struct timespec& GetExpireTime() const
+    const TimeSpec& GetExpireTime() const
     {
       return m_expireTime;
     }
@@ -194,13 +195,12 @@ namespace openbfdd
     bool setExpireTime(const struct timespec &startTime,  uint64_t micro)
     {
       bool expireChange, startChange;
-      struct timespec expireTime;
+      TimeSpec expireTime(startTime);
 
-      expireTime = startTime;
-      timespecAddMicro(expireTime, micro);
+      expireTime += TimeSpec(TimeSpec::Microsec, micro);
 
-      startChange = (startTime.tv_sec !=  m_startTime.tv_sec || startTime.tv_nsec !=  m_startTime.tv_nsec);
-      expireChange = (m_stopped || (expireTime.tv_sec !=  m_expireTime.tv_sec || expireTime.tv_nsec !=  m_expireTime.tv_nsec));
+      startChange = (m_startTime != startTime);
+      expireChange = (m_stopped || m_expireTime != expireTime);
 
       //LogOptional(Log::Temp, "Timer %s before change %zu items",m_name, m_activeTimers->size());
 
@@ -315,8 +315,8 @@ namespace openbfdd
   bool SchedulerBase::Run()
   {
     uint32_t iter=0;
-    struct timespec timeout;
-    struct timespec immediate = {0,0};
+    TimeSpec timeout;
+    TimeSpec immediate;
     bool gotEvents;
 
     if (!LogVerify(IsMainThread()))
@@ -414,7 +414,7 @@ namespace openbfdd
       if (!gotEvents && !expireTimer(Timer::Priority::Low))
       {
         // No events and no more timers, so we are ready to sleep again. 
-        getNextTimerTimeout(timeout);
+        timeout = getNextTimerTimeout();
       }
 
       if (m_wantsShutdown)
@@ -430,38 +430,30 @@ namespace openbfdd
    *  
    * Gets the timeout period between now and the next timer. 
    * 
-   * @param timeout 
+   * @return - The timeout value 
    */
-  void SchedulerBase::getNextTimerTimeout(struct timespec &timeout)
+  TimeSpec SchedulerBase::getNextTimerTimeout()
   {
-    struct timespec now;
-
     // 
     //  Calculate next scheduled timer time. 
     // 
-    if (!m_activeTimers.empty())
-    {
-      if (!GetMonolithicTime(now))
-        timeout.tv_nsec = 200000000;  // 200 ms?
-      else
-      {
-        timespecSubtract(timeout,  (*m_activeTimers.begin())->GetExpireTime(),  now);
-        if (timespecIsNegative(timeout))
-        {
-          timeout.tv_sec = 0;
-          timeout.tv_nsec = 0;
-        }
-      }
-    }
-    else
+    if (m_activeTimers.empty())
     {
       // Just for laughs ... and because we do not run on low power machines, wake up
       // every few seconds.
-      timeout.tv_sec = 3;
-      timeout.tv_nsec = 0;
+      return TimeSpec(3,0);
     }
-  }
+    
+    TimeSpec now(TimeSpec::MonoNow());
 
+    if (now.empty())
+      return TimeSpec(TimeSpec::Millisec, 200); // 200 ms?
+
+    TimeSpec result = (*m_activeTimers.begin())->GetExpireTime() - now;
+    if (result.IsNegative())
+      return TimeSpec();
+    return result;
+  }
 
   /** 
    *  
@@ -472,9 +464,9 @@ namespace openbfdd
    */
   bool SchedulerBase::expireTimer(Timer::Priority::Value minPri)
   {
-    struct timespec now;
+    TimeSpec now(TimeSpec::MonoNow());
 
-    if (!GetMonolithicTime(now))
+    if (now.empty())
       return false;
 
     for (timer_set_it nextTimer = m_activeTimers.begin(); nextTimer != m_activeTimers.end(); nextTimer++)
@@ -487,8 +479,7 @@ namespace openbfdd
       if (timer->GetPriority() >= minPri)
       {
 #ifdef BFD_TEST_TIMERS
-        struct timespec dif;
-        timespecSubtract(dif, now, timer->GetExpireTime());
+        TimeSpec dif = now -  timer->GetExpireTime();
         gLog.Optional(Log::Temp, "Timer %s is off by %.4f ms",
                       timer->Name(), 
                       timespecToSeconds(dif) * 1000.0);

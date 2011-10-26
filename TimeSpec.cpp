@@ -25,7 +25,11 @@ namespace openbfdd
         tv_sec = value / NSecPerSec; 
         tv_nsec = value % NSecPerSec;  
         break;
-
+      case Microsec:
+        // Assuming C99 compliance for % operator.
+        tv_sec = value / 1000000; 
+        tv_nsec = (value % 1000000) * USecPerMs;  
+        break;
       case Millisec:
         // Assuming C99 compliance for % operator.
         tv_sec = value / 1000; 
@@ -98,6 +102,10 @@ namespace openbfdd
         || TestString("ms",  str))
       return Millisec;
 
+    if (TestString("microseconds",  str) 
+        || TestString("us",  str))
+      return Microsec;
+
     if (TestString("seconds",  str) 
         || TestString("sec",  str)
         || TestString("s",  str))
@@ -122,6 +130,9 @@ namespace openbfdd
       case Millisec:
         return (1.0/1000.0);
 
+      case Microsec:
+        return (1.0/1000000.0);
+        
       case Seconds:
         return 1.0;
 
@@ -136,6 +147,9 @@ namespace openbfdd
     {
       default:
         return NULL;
+
+      case Microsec:
+        return shortName ? "us": "microseconds";
 
       case Millisec:
         return shortName ? "ms": "milliseconds";

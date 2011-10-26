@@ -265,21 +265,16 @@ namespace openbfdd
       int result; 
       int waits = 0;
       fd_set waitOn; 
-      struct timespec  maxTime;
+      TimeSpec maxTime;
 
       if (maxWaitInMs)
-      {
-        GetMonolithicTime(maxTime);
-        timespecAddMs(maxTime, maxWaitInMs);
-      }
+        maxTime = TimeSpec::MonoNow() + TimeSpec(TimeSpec::Millisec, maxWaitInMs);
 
       while (!isStopListeningRequested())
       {
         if (maxWaitInMs)
         {
-          struct timespec  nowMonolithic;
-          GetMonolithicTime(nowMonolithic);
-          if (timespecCompare(nowMonolithic, maxTime) > 0)
+          if (TimeSpec::MonoNow() > maxTime) 
           {
             gLog.Optional(Log::Command, "Waiting timed out after %d polls.", waits);
             return Result::Timeout;
@@ -1303,7 +1298,7 @@ namespace openbfdd
      */
     static void addTimeString(string &strout, Session::UptimeInfo &uptime)
     {
-      struct timespec elapsed;
+      TimeSpec elapsed;
       char buf[25];
 
       strout.append(bfd::StateName(uptime.state));
@@ -1312,7 +1307,7 @@ namespace openbfdd
       else
         strout.append("(");
 
-      timespecSubtract(elapsed, uptime.endTime, uptime.startTime);
+      elapsed = uptime.endTime - uptime.startTime;
 
       snprintf(buf, sizeof(buf), "%02u:%02u:%06.3f) ", 
                uint32_t(elapsed.tv_sec/3600),

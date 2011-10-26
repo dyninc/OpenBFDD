@@ -12,6 +12,7 @@
 #pragma once
 #include "bfd.h" 
 #include "SmartPointer.h" 
+#include "TimeSpec.h" 
 #include <list> 
 #include <arpa/inet.h>
 
@@ -139,8 +140,8 @@ namespace openbfdd
     struct UptimeInfo
     {
       bfd::State::Value state;  // only up, down, or admin down
-      struct timespec startTime; // Start-time
-      struct timespec endTime;   // EndTime-time
+      TimeSpec startTime; // Start-time
+      TimeSpec endTime;   // EndTime-time
       bool forced;  // True if held down (or admin down).
     };
 
