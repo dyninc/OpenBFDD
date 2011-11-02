@@ -28,9 +28,9 @@ namespace openbfdd
     bool operator==(T cmp) const {return val == cmp;}
     T Detach() {T old = val; val = nullval;return old;} // detach without freeing
     void Dispose() {if (!isNull()) freeFn(val);val=nullval;} 
-    bool IsValid() {return !isNull();}
+    bool IsValid() const {return !isNull();}
   protected:
-    bool isNull() {return val==nullval;}
+    bool isNull() const {return val==nullval;}
   private:
     RiaaBase& operator=(RiaaBase<T, nullval, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaBase freeing the same object
     RiaaBase(const RiaaBase<T, nullval, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
@@ -49,17 +49,17 @@ namespace openbfdd
   public:
     T* val;
     RiaaNullBase() : val(NULL) {}
-    RiaaNullBase(T* val) : val(val) {}
+    RiaaNullBase( T *val) : val(val) {}
     ~RiaaNullBase() {Dispose();}
     operator T*() const  { return val;}
     T* operator=(T* newval) {Dispose();val = newval; return newval;}
     bool operator==(T* cmp) const {return val == cmp;}
     T* Detach() {T* old = val; val = NULL;return old;} // detach without freeing
     void Dispose() {if (!isNull()) freeFn(val);val=NULL;} 
-    bool IsValid() {return !isNull();}
-    T* operator->()  { return val; }
+    bool IsValid() const {return !isNull();}
+    T* operator->()  { return val;}
   protected:
-    bool isNull() {return val==NULL;}
+    bool isNull() const {return val==NULL;}
   private:
     RiaaNullBase& operator=(RiaaNullBase<T, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaNullBase freeing the same object
     RiaaNullBase(const RiaaNullBase<T, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
@@ -79,29 +79,18 @@ namespace openbfdd
   void CloseFileHandle(FILE *val);
   typedef RiaaNullBase<FILE, CloseFileHandle> FileHandle;
 
-  /**
-   * RIAA base class for class pointers that use delete.
-   */
-  template <typename T> class RiaaClass
-  {
-  public:
-    T* val;
-    RiaaClass() : val(NULL) {}
-    RiaaClass(T* val) : val(val) {}
-    ~RiaaClass() {Dispose();}
-    operator T*() const  { return val;}
-    T* operator=(T* newval) {Dispose();val = newval; return newval;}
-    bool operator==(T* cmp) const {return val == cmp;}
-    T* Detach() {T* old = val; val = NULL;return old;} // detach without freeing
-    void Dispose() {if (!isNull()) delete val;val=NULL;} 
-    bool IsValid() {return !isNull();}
-    T* operator->()  { return val; }
-  protected:
-    bool isNull() {return val==NULL;}
 
-  private:
-    RiaaClass& operator=(RiaaClass<T> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaClass freeing the same object
-    RiaaClass(const RiaaClass<T> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+  /**
+   * RIAA class for simple array allocated with new or new[]
+   */
+  template <typename T> void FreeFree(T *val) {free(val);}
+  template <typename T> void FreeArray(T *val) {delete[] val;}
+  template <typename T> void FreeDelete(T *val) {delete val;}
+  template <typename T> struct Riaa 
+  {
+    typedef RiaaNullBase<T, FreeArray<T> >  DeleteArray;
+    typedef RiaaNullBase<T, FreeDelete<T> >  Delete;
+    typedef RiaaNullBase<T, FreeFree<T> >  Free;
   };
 
 
@@ -119,22 +108,50 @@ namespace openbfdd
     T* val;
     C* myClass;
     RiaaClassCall(C* myClass) : val(NULL), myClass(myClass) {}
-    RiaaClassCall(T* val, C* myClass) : val(val), myClass(myClass) {}
+    RiaaClassCall(const T* val, C* myClass) : val(val), myClass(myClass) {}
     ~RiaaClassCall() {Dispose();}
     operator T*() const  { return val;}
     T* operator=(T* newval) {Dispose();val = newval; return newval;}
     bool operator==(T* cmp) const {return val == cmp;}
     T* Detach() {T* old = val; val = NULL;return old;} // detach without freeing
     void Dispose() {if (!isNull()) (myClass->*freeFn)(val);val=NULL;} 
-    bool IsValid() {return !isNull();}
-    T* operator->()  { return val; }
+    bool IsValid() const {return !isNull();}
+    T* operator->()  { return val;}
   protected:
-    bool isNull() {return val==NULL;}
+    bool isNull() const {return val==NULL;}
   private:
     RiaaClassCall& operator=(RiaaClassCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaClassCall freeing the same object
     RiaaClassCall(const RiaaClassCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
   };
 
+  /**
+   * RIAA class for self deleting NON pointer type, that calls a function on a 
+   * class. T Must have simple copy semantics & compare semantics. 
+   *  
+   * (We need a separate template class, because NULL is not allowed as a template 
+   * parameter.) 
+   */
+  template <typename T, typename C, void (C::*freeFn)(T)> class RiaaObjCall
+  {
+  public:
+    T val;
+    bool valid;
+    C* myClass;
+    //RiaaObjCall(C* myClass) : valid(false), myClass(myClass) { /*for warning ... hopefully not damaging*/}
+    RiaaObjCall(T val, C* myClass) : val(val), valid(true), myClass(myClass) {}
+    ~RiaaObjCall() {Dispose();}
+    operator T&() { return val;}
+    T& operator=(T newval) {Dispose();val = newval; valid=true; return val;}
+    bool operator==(T cmp) const {return val == cmp;}
+    T& Detach() {valid = false; return val;} // detach without freeing
+    void Dispose() {if (valid) (myClass->*freeFn)(val);valid=false;} 
+    bool IsValid() const {return valid;}
+    //T& operator->()  { return val; }  //??
+  protected:
+  private:
+    RiaaObjCall& operator=(RiaaObjCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCall freeing the same object
+    RiaaObjCall(const RiaaObjCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+  };
 
 };
 

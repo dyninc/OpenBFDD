@@ -12,6 +12,8 @@
 #include "Session.h"
 #include "threads.h"
 #include "hash_map.h"
+#include "Socket.h"
+#include "SockAddr.h"
 #include <deque>
 #include <vector>
 #include <set>
@@ -76,14 +78,13 @@ namespace openbfdd
      *  
      * @Note can only on the main thread.
      *  
-     * @param remoteAddr [in] - remote address.
-     * @param localAddr [in]- address on which to receive and send packets.
+     * @param remoteAddr [in] - remote address. 
+     * @param localAddr [in]- address on which to receive and send packets. .
      * 
      * @return bool - false on failure. If there is already a session, then this 
      *         returns true.
      */
-    bool StartActiveSession(in_addr_t remoteAddr, in_addr_t localAddr);
-
+    bool StartActiveSession(const IpAddr &remoteAddr, const IpAddr &localAddr);
 
     /** 
      * Allows us to accept connections from the given ip address. 
@@ -92,9 +93,8 @@ namespace openbfdd
      *  
      * @throw - yes. 
      * 
-     * @param addr 
      */
-    void AllowPassiveIP(in_addr_t addr);
+    void AllowPassiveIP(const IpAddr &addr);
 
     /** 
      * Stops us from accepting new connections from the given ip address. 
@@ -104,10 +104,8 @@ namespace openbfdd
      * 
      * @Note can be called only on the main thread.
      * 
-     * @param addr 
      */
-    void BlockPassiveIP(in_addr_t addr);
-
+    void BlockPassiveIP(const IpAddr &addr);
 
     /** 
      * Allow or disallow accepting every invitation. 
@@ -119,14 +117,25 @@ namespace openbfdd
     void AllowAllPassiveConnections(bool allow);
 
     /** 
-     * Find Session by discriminator or remote and local ip. 
+     * Find Session by discriminator. 
      * 
      * @Note can be called only on the main thread. 
      *  
-     * @return Session* - NULL if none found
+     * @return Session* - NULL on failure 
      */
     Session *FindSessionId(uint32_t id);
-    Session *FindSessionIp(in_addr_t remoteAddr, in_addr_t localAddr);
+
+    /** 
+     * Find Session by remote and local ip. 
+     * 
+     * @Note can be called only on the main thread. 
+     *  
+     * @param remoteAddr [in] - Port ignored 
+     * @param localAddr [in] - Port ignored 
+     *  
+     * @return Session* - NULL on failure 
+     */
+    Session *FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr);
 
     /** 
      * Clears and fill the vector with all the sessions.
@@ -188,24 +197,38 @@ namespace openbfdd
 
   private:
 
-    int makeListenSocket();
-    static void handleListenSocketCallback(int socket, void *userdata) {reinterpret_cast<Beacon *>(userdata)->handleListenSocket(socket);}
-    void handleListenSocket(int socket);
-    size_t readSocketPacket(int listenSocket, struct sockaddr_in *outSourceAddress, in_addr_t *outDstAddress, uint8_t *outTTL);
+    void makeListenSocket(Addr::Type type, Socket &outSocket);
+    static void handleListenSocketCallback(int socket, void *userdata);
+    void handleListenSocket(Socket *socket);
 
     static void handleSelfMessageCallback(int sigId, void *userdata) {reinterpret_cast<Beacon *>(userdata)->handleSelfMessage(sigId);}
     void handleSelfMessage(int sigId);
     uint32_t makeUniqueDiscriminator();
     bool triggerSelfMessage();
 
-    Session *addSession(in_addr_t remoteAddr, in_addr_t localAddr); 
+    Session *addSession(const IpAddr &remoteAddr, const IpAddr &localAddr); 
 
-    Session *findInSourceMap(in_addr_t remoteAddr, in_addr_t localAddr);
+    Session *findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr);
 
   private:
+    struct listenCallbackData
+    {
+      Beacon *beacon;
+      Socket *socket;
+    };
+
+    struct  SourceMapKey
+    {
+      SourceMapKey(IpAddr remoteAddr, IpAddr localAddr) :  remoteAddr(remoteAddr), localAddr(localAddr) {}
+      IpAddr remoteAddr;
+      IpAddr localAddr;
+      bool operator==(const SourceMapKey &other) const {return remoteAddr == other.remoteAddr &&  localAddr == other.localAddr;}
+      struct hasher {size_t operator()(const SourceMapKey &me) const {return me.remoteAddr.hash() + me.localAddr.hash();}};
+    };
+
     typedef  hash_map<uint32_t, class Session *>::Type DiscMap; 
     typedef  DiscMap::iterator DiscMapIt; 
-    typedef  hash_map<uint64_t, class Session *>::Type SourceMap; 
+    typedef  hash_map<SourceMapKey, class Session *, SourceMapKey::hasher>::Type SourceMap; 
     typedef  SourceMap::iterator SourceMapIt; 
     typedef  hash_map<uint32_t, class Session *>::Type IdMap; 
     typedef  IdMap::iterator IdMapIt; 
@@ -227,13 +250,12 @@ namespace openbfdd
     // locking needed
     //
     Scheduler *m_scheduler; // This is only valid after Run() is called.
-    std::vector<uint8_t> m_packetBuffer; // main message buffer.
-    std::vector<uint8_t> m_messageBuffer;  // for iovec buffer.
-    uint8_t m_msgbuf[bfd::MaxPacketSize];
+    Socket::RecvMsg m_packet; 
+
     DiscMap m_discMap; // Your Discriminator -> Session
     IdMap m_IdMap; // Human readable session id -> Session
     SourceMap m_sourceMap; // ip/ip -> Session
-    std::set<in_addr_t> m_allowedPassiveIP;
+    std::set<IpAddr, IpAddr::LessClass> m_allowedPassiveIP;
     bool m_allowAnyPassiveIP;
     bool m_strictPorts; // Should incoming ports be limited as described in draft-ietf-bfd-v4v6-1hop-11.txt
     Session::InitialParams m_initialSessionParams;

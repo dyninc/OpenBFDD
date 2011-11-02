@@ -7,6 +7,8 @@
 #include "CommandProcessor.h"
 #include "utils.h"
 #include "Beacon.h"
+#include "SockAddr.h"
+#include "Socket.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -28,9 +30,9 @@ namespace openbfdd
     // 
     // These are only accessed from thread. 
     // 
-    FileDescriptor m_listenSocket;
-    int m_replySocket;
-    vector<char> m_inCommandBuffer;
+    Socket m_listenSocket;
+    Socket m_replySocket;
+    Socket::RecvMsg m_inCommand;
     vector<char> m_inReplyBuffer;  // only use  messageReply and friends.
     string m_inCommandLogStr;
 
@@ -51,8 +53,8 @@ namespace openbfdd
   public:
     CommandProcessorImp(Beacon &beacon) :  CommandProcessor(beacon),
     m_beacon(&beacon),
-    m_replySocket(-1),
-    m_inCommandBuffer(MaxCommandSize),
+    m_replySocket(),
+    m_inCommand(MaxCommandSize, 0),
     m_inReplyBuffer(MaxReplyLineSize + 1),
     m_mainLock(true),
     m_isThreadRunning(false),
@@ -183,10 +185,6 @@ namespace openbfdd
      */
     bool initListening()
     {
-      struct sockaddr_in saddr; 
-      int flags;
-      int on = 1;
-
       // Do this so low memory will not cause distorted messages
       if (!UtilsInitThread())
       {
@@ -194,47 +192,23 @@ namespace openbfdd
         return false;
       }
 
-      m_listenSocket = socket(AF_INET, SOCK_STREAM, 0); 
-      if (!m_listenSocket.IsValid())
-      {
-        gLog.ErrnoError(errno, "Error opening listen socket: "); 
+      if (!m_listenSocket.OpenTCP(Addr::IPv4))
         return false;
-      }
 
-      // We do not want to get blocked up ever, so make this a non-blocking socket
-      flags = fcntl(m_listenSocket, F_GETFL);
-      flags = flags | O_NONBLOCK;
-      if (-1 == fcntl(m_listenSocket, F_SETFL, flags))
-      {
-        gLog.LogError("Failed to set socket to non-blocking.");
+      if (!m_listenSocket.SetBlocking(false))
         return false;
-      }
 
-      // In case we had to restart ... reuse port
-      if (0 > setsockopt(m_listenSocket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
-      {
-        gLog.LogError("Failed to configure socket to SO_REUSEADDR.");
+      if (!m_listenSocket.SetReusePort(true))
         return false;
-      }
 
       // TODO: listen address should be settable.
-      memset(&saddr, 0, sizeof(saddr)); 
-      saddr.sin_family = AF_INET;
-      saddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
-      saddr.sin_port = htons(m_port);             
+      SockAddr addr("127.0.0.1", m_port);
 
-
-      if (bind(m_listenSocket, (sockaddr*)&saddr, sizeof(saddr)) < 0)
-      {
-        gLog.ErrnoError(errno, "Error binding listen socket: "); 
+      if (!m_listenSocket.Bind(addr))
         return false;
-      }
 
-      if (listen(m_listenSocket, 3) < 0)
-      {
-        gLog.ErrnoError(errno, "Error listening on listen socket: "); 
+      if (!m_listenSocket.Listen(3))
         return false;
-      }
 
       return true;
     }
@@ -319,7 +293,7 @@ namespace openbfdd
     static void closeSyncReplySocket(CommandProcessorImp *me)
     {
       if (me)
-        me->m_replySocket = -1;
+        me->m_replySocket.Close();
     }
 
     /** 
@@ -338,10 +312,8 @@ namespace openbfdd
     bool processMessage()
     {
 
-      socklen_t fromlen;
-      struct sockaddr_in faddr ; 
       Result::Type waitResult;
-      FileDescriptor connectedSocket;
+      Socket connectedSocket;
       RiaaNullBase<CommandProcessorImp, closeSyncReplySocket> syncConnectedSocket(this);
 
 
@@ -351,22 +323,12 @@ namespace openbfdd
         return false;
 
       // accept a connection
-      fromlen = sizeof(faddr);
-      connectedSocket = accept(m_listenSocket, (sockaddr*)&faddr, &fromlen);
-      if (!connectedSocket.IsValid())
+      if (!m_listenSocket.Accept(connectedSocket))
       {
-        // No command
-        if (errno == EWOULDBLOCK)
-          gLog.LogError("Unable to accept listening socket");
-        else if (errno == ECONNABORTED)
-          gLog.LogError("Unable to accept listening socket due to abort");
-        else
-          gLog.ErrnoError(errno, "Unable to accept listening socket: ");
-
-        // We do not quit on any of these?
+         // We do not quit on error?
         return true;
       }
-      m_replySocket = connectedSocket;
+      m_replySocket = connectedSocket; // note connectedSocket still 'owns' the socket.
 
       // Got a connection for the command. Now wait for a command. Since we are
       // non-blocking, we use select again.
@@ -380,21 +342,20 @@ namespace openbfdd
         if (isStopListeningRequested())
           return false;
 
-        ssize_t size = recv(connectedSocket, &m_inCommandBuffer.front(),  (int)m_inCommandBuffer.size(), MSG_DONTWAIT);
-        if (size < 0)
+        if (!m_inCommand.DoRecv(connectedSocket, MSG_DONTWAIT))
         {
           // Errors
-          if (errno == EAGAIN)
+          if (m_inCommand.GetLastError() == EAGAIN)
             gLog.Optional(Log::Command, "Incomplete message ... waiting."); // Must not have the full message. Wait for it?
-          else if (errno == EINTR)
+          else if (m_inCommand.GetLastError() == EINTR)
             gLog.Optional(Log::Command, "Interrupted message ... trying again.");
-          else if (errno== ECONNRESET)
+          else if (m_inCommand.GetLastError()== ECONNRESET)
           {
             gLog.Message(Log::Command, "Communication connection reset."); 
             return true;
           }
         }
-        else if (size == 0)
+        else if (m_inCommand.GetDataSize() == 0)
         {
           gLog.LogError("Empty communication message."); 
           return true;
@@ -402,10 +363,10 @@ namespace openbfdd
         else
         {
           // Got a message
-          gLog.Optional(Log::Command, "Message size %zu.", size); 
+          gLog.Optional(Log::Command, "Message size %zu.", m_inCommand.GetDataSize() ); 
           try
           {
-            dispatchMessage(&m_inCommandBuffer.front(),  size);
+            dispatchMessage((char *)m_inCommand.GetData(),  m_inCommand.GetDataSize() );
           }
           catch (std::exception &e)
           {
@@ -633,20 +594,19 @@ namespace openbfdd
      */
     struct SessionID
     {
-      SessionID() : allSessions(false), whichId(0), whichRemoteAddr(INADDR_NONE), whichLocalAddr(INADDR_NONE) {}
-      void Clear() {allSessions =false; whichId = 0; whichRemoteAddr = whichLocalAddr = INADDR_NONE;}
+      SessionID() : allSessions(false), whichId(0), whichRemoteAddr(), whichLocalAddr() {}
+      void Clear() {allSessions =false; whichId = 0; whichRemoteAddr.clear(); whichLocalAddr.clear();}
       bool IsValid() const {return allSessions || whichId != 0 || HasIpAddresses();}
-      bool HasIpAddresses() const {return  whichRemoteAddr != INADDR_NONE && whichLocalAddr != INADDR_NONE;}
-      void SetAddress(bool local, in_addr_t addr) {if (local) whichLocalAddr = addr; else whichRemoteAddr = addr;}
+      bool HasIpAddresses() const {return  whichRemoteAddr.IsValid() && whichLocalAddr.IsValid();}
+      void SetAddress(bool local, const IpAddr &addr) {if (local) whichLocalAddr = addr; else whichRemoteAddr = addr;}
 
       bool allSessions;
       uint32_t whichId; 
-      in_addr_t whichRemoteAddr; 
-      in_addr_t whichLocalAddr; 
+      IpAddr whichRemoteAddr; 
+      IpAddr whichLocalAddr; 
     };
 
     /** 
-     *  
      * Converts a set of parameters to a local/remote ip address pair. 
      * 
      * @param inOutParam [in/out] - The first parameter to examine. On success this 
@@ -664,7 +624,7 @@ namespace openbfdd
       const char *str = *inOutParam;
       bool local;
       SessionID temp;
-      in_addr_t addrVal;
+      IpAddr addrVal;
 
       sessionId.Clear();
 
@@ -681,14 +641,13 @@ namespace openbfdd
       str = getNextParam(str); 
       if(!str)
       {  
-        errorMsg = FormatBigStr("Error: '%s' should be followed by an ip address.", command);
+        errorMsg = FormatBigStr("Error: '%s' should be followed by an Pv4 or IPv6 address.", command);
         return false;
       }
 
-      addrVal = inet_addr (str);
-      if(addrVal == INADDR_NONE)
+      if (!addrVal.FromString(str))
       {  
-        errorMsg = FormatBigStr("Error: <%s> is not an ip address.", str);
+        errorMsg = FormatBigStr("Error: <%s> is not an IPv4 or IPv6 address.", str);
         return false;
       }
 
@@ -716,10 +675,9 @@ namespace openbfdd
         return false;
       }
 
-      addrVal = inet_addr (str);
-      if(addrVal == INADDR_NONE)
+      if (!addrVal.FromString(str))
       {  
-        errorMsg = FormatBigStr("Error: <%s> is not an ip address.", str);
+        errorMsg = FormatBigStr("Error: <%s> is not an IPv4 or IPv6 address.", str);
         return false;
       }
 
@@ -842,7 +800,7 @@ namespace openbfdd
       if(sessionId.whichId != 0)
         messageReplyF("No session with id=%u.\n", sessionId.whichId);
       else if (sessionId.HasIpAddresses())
-        messageReplyF("No session with local ip=%s and remote ip=%s.\n", Ip4ToString(sessionId.whichLocalAddr), Ip4ToString(sessionId.whichRemoteAddr));
+        messageReplyF("No session with local ip=%s and remote ip=%s.\n", sessionId.whichLocalAddr.ToString(), sessionId.whichRemoteAddr.ToString());
       else
         messageReply("Unknown session specifier.\n");
     }
@@ -1030,9 +988,9 @@ namespace openbfdd
       if(doBeaconOperation(&CommandProcessorImp::doHandleConnect, &address, &result))
       {  
         if (result)
-          messageReplyF("Opened connection from local %s to remote %s\n", Ip4ToString(address.whichLocalAddr), Ip4ToString(address.whichRemoteAddr));
+          messageReplyF("Opened connection from local %s to remote %s\n", address.whichLocalAddr.ToString(), address.whichRemoteAddr.ToString());
         else
-          messageReplyF("Failed to open connection from local %s to remote %s\n", Ip4ToString(address.whichLocalAddr), Ip4ToString(address.whichRemoteAddr));
+          messageReplyF("Failed to open connection from local %s to remote %s\n", address.whichLocalAddr.ToString(), address.whichRemoteAddr.ToString());
       }
     }
 
@@ -1052,7 +1010,7 @@ namespace openbfdd
      */
     void handle_Allow( const char *message)
     {
-      in_addr address;
+      IpAddr address;
       const char *addressString;
 
       addressString = getNextParam(message);
@@ -1062,20 +1020,19 @@ namespace openbfdd
         return;
       }
 
-      address.s_addr = inet_addr (addressString);
-      if(address.s_addr == INADDR_NONE)
+      if(!address.FromString(addressString))
       {
-        messageReplyF("Invalid ip address <%s>.\n", addressString);
+        messageReplyF("Invalid IPv4 or IPv6 address <%s>.\n", addressString);
         return;
       }
 
-      if(doBeaconOperation(&CommandProcessorImp::doHandleAllow, &address.s_addr))
-        messageReplyF("Allowing connections from %s\n", Ip4ToString(address));
+      if(doBeaconOperation(&CommandProcessorImp::doHandleAllow, &address))
+        messageReplyF("Allowing connections from %s\n", address.ToString());
     }
 
     intptr_t doHandleAllow(Beacon *beacon, void *userdata)
     {
-      in_addr_t *addr = (in_addr_t *)userdata;
+      IpAddr *addr = reinterpret_cast<IpAddr *>(userdata);
       beacon->AllowPassiveIP(*addr);
       return 0;
     }
@@ -1087,30 +1044,29 @@ namespace openbfdd
      */
     void handle_Block( const char *message)
     {
-      in_addr address;
+      IpAddr address;
       const char *addressString;
 
       addressString = getNextParam(message);
       if(!addressString)
       {
-        messageReply("Must supply ip address.\n");
+        messageReply("Must supply an IPv4 or IPv6 address.\n");
         return;
       }
 
-      address.s_addr = inet_addr (addressString);
-      if(address.s_addr == INADDR_NONE)
+      if (!address.FromString(addressString))
       {
-        messageReplyF("Invalid ip address <%s>.\n", addressString);
+        messageReplyF("Invalid IPv4 or IPv6 address <%s>.\n", addressString);
         return;
       }
 
-      if(doBeaconOperation(&CommandProcessorImp::doHandleBlock, &address.s_addr))
-        messageReplyF("Blocking connections from %s. This will not terminate any ongoing session.\n", Ip4ToString(address));
+      if(doBeaconOperation(&CommandProcessorImp::doHandleBlock, &address))
+        messageReplyF("Blocking connections from %s. This will not terminate any ongoing session.\n", address.ToString());
     }
 
     intptr_t doHandleBlock(Beacon *beacon, void *userdata)
     {
-      in_addr_t *addr = (in_addr_t *)userdata;
+      IpAddr *addr = reinterpret_cast<IpAddr *>(userdata);
       beacon->BlockPassiveIP(*addr);
       return 0;
     }
@@ -1120,8 +1076,8 @@ namespace openbfdd
       uint32_t id;  
       uint32_t localDisc;  
       uint32_t remoteDisc;  
-      in_addr_t remoteAddress;
-      in_addr_t localAddress;
+      IpAddr remoteAddress;
+      IpAddr localAddress;
       bool isActiveSession; //active or passive role.
       Session::ExtendedStateInfo extState;
     };
@@ -1164,9 +1120,9 @@ namespace openbfdd
         messageReplyF(" id=%u %slocal=%s %sremote=%s %sstate=%s\n", 
                       info.id, 
                       sep,
-                      Ip4ToString(info.localAddress),
+                      info.localAddress.ToString(),
                       sep,
-                      Ip4ToString(info.remoteAddress),
+                      info.remoteAddress.ToString(),
                       sep,                                            
                       bfd::StateName(info.extState.localState));
       }
@@ -1175,10 +1131,10 @@ namespace openbfdd
         messageReplyF(" id=%u %slocal=%s %s %sremote=%s %sstate=%s%s %s\n", 
                       info.id, 
                       sep,
-                      Ip4ToString(info.localAddress),
+                      info.localAddress.ToString(),
                       info.isActiveSession ? "(a)":"(p)",
                       sep,
-                      Ip4ToString(info.remoteAddress),
+                      info.remoteAddress.ToString(),
                       sep,
                       bfd::StateName(info.extState.localState),
                       info.extState.isHoldingState ? "<Forced>":"",
@@ -1191,10 +1147,10 @@ namespace openbfdd
         messageReplyF(" id=%u %slocal=%s %s %sremote=%s %sLocalState=%s<%s%s%s> %sRemoteState=%s<%s> %sLocalId=%u %sRemoteId=%u %s", 
                       info.id, 
                       sep,
-                      Ip4ToString(info.localAddress),
+                      info.localAddress.ToString(),
                       info.isActiveSession ? (brief ? "(a)":"(active)"): (brief ? "(p)":"(passive)"),
                       sep,
-                      Ip4ToString(info.remoteAddress),
+                      info.remoteAddress.ToString(),
                       sep,
                       bfd::StateName(info.extState.localState),
                       info.extState.isHoldingState ? "Forced: ":"",
@@ -1565,12 +1521,12 @@ namespace openbfdd
         else if (info->action == SessionCallbackInfo::Reset)
         {
           bool active = session->IsActiveSession();
-          in_addr_t remoteAddr = session->GetRemoteAddress();
-          in_addr_t localAddr = session->GetLocalAddress();
+          IpAddr remoteAddr = session->GetRemoteAddress();
+          IpAddr localAddr = session->GetLocalAddress();
 
           beacon->KillSession(session);
           session = NULL; // warning session now invalid
-          gLog.Optional(Log::SessionDetail, "Reset session id=%u for local %s to remote %s.", *idIt, Ip4ToString(localAddr), Ip4ToString(remoteAddr));
+          gLog.Optional(Log::SessionDetail, "Reset session id=%u for local %s to remote %s.", *idIt, localAddr.ToString(), remoteAddr.ToString());
           if(active)
             beacon->StartActiveSession(remoteAddr, localAddr);
         }
@@ -2088,10 +2044,8 @@ namespace openbfdd
     void doMessageReply(const char *reply, size_t length)
     {
       // TODO timeout? Check for shutdown?
-      if (send(m_replySocket, reply, length, 0) < 0)
-      {
+      if (!m_replySocket.Send(reply, length))
         gLog.ErrnoError(errno, "Failed to complete message reply.");
-      }
     }
 
 

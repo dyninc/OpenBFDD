@@ -273,8 +273,8 @@ namespace openbfdd
    */
   const char *Ip4ToString(in_addr_t address);
   const char *Ip4ToString(in_addr_t address, uint16_t port);
-  const char *Ip4ToString(struct in_addr &address);
-  const char *Ip4ToString(struct in_addr &address, uint16_t port);
+  const char *Ip4ToString(const struct in_addr &address);
+  const char *Ip4ToString(const struct in_addr &address, uint16_t port);
 
 
   /**
@@ -334,7 +334,7 @@ namespace openbfdd
 
 
   /**
-   * Gets a mediumthread local storage buffer. Currently at most 1024 characters
+   * Gets a medium thread local storage buffer. Currently at most 1024 characters
    * Do not permanently store the return value. There are at least 4 buffers 
    * per thread. Do not permanently store the return value. 
    * 
@@ -343,6 +343,17 @@ namespace openbfdd
    * @return size_t - The size of the buffer. 0 on failure.
    */
   size_t GetMediumTLSBuffer(char **outBuf);
+
+  /**
+   * Gets a small thread local storage buffer. Currently at most 256 characters
+	 * Do not permanently store the return value. There are at least 12 buffers per 
+	 * thread. Do not permanently store the return value. 
+   * 
+   * @param outBuf  [out] - Set to the buffer. Set to NULL on failure.
+   * 
+   * @return size_t - The size of the buffer. 0 on failure.
+   */
+  size_t GetSmallTLSBuffer(char **outBuf);
 
   /**
    * Prints the integer. If useCommas is true, then it will comma separate 
@@ -425,7 +436,7 @@ namespace openbfdd
   bool CheckDir(const char *dir, int *outErrno = NULL);
 
   /**
-   * Checks if the given file exixts, and is a "regular" file.
+   * Checks if the given file exists, and is a "regular" file.
    * 
    * @param path 
    * @param outErrno 

@@ -177,6 +177,18 @@ namespace openbfdd
     return formatMediumBuffersSize;
   }
 
+  size_t GetSmallTLSBuffer(char **outBuf)
+  {
+    if (!outBuf)
+      return 0;
+
+    *outBuf = nextFormatShortBuffer();
+    if (*outBuf == NULL)
+      return 0;
+    return formatShortBuffersSize;
+  }
+
+
   bool StringToInt(const char *arg, int64_t &value)
   {
     const char *next;
@@ -417,17 +429,17 @@ namespace openbfdd
     return(double(time.tv_sec) + double(time.tv_nsec)/NSEC_PER_SEC);
   }
 
-  const char *Ip4ToString(struct in_addr &address)
+  const char *Ip4ToString(const struct in_addr &address)
   {
     char * buf = nextFormatShortBuffer();
     if (!buf)
       return "<memerror>";
 
     sprintf(buf, "%hhu.%hhu.%hhu.%hhu", 
-            (uint8_t)((uint8_t *)&address)[0],
-            (uint8_t)((uint8_t *)&address)[1],
-            (uint8_t)((uint8_t *)&address)[2],
-            (uint8_t)((uint8_t *)&address)[3]
+            ((uint8_t *)&address)[0],
+            ((uint8_t *)&address)[1],
+            ((uint8_t *)&address)[2],
+            ((uint8_t *)&address)[3]
            );
 
     return buf;
@@ -440,7 +452,7 @@ namespace openbfdd
     return Ip4ToString(temp);
   }
 
-  const char *Ip4ToString(struct in_addr &address, uint16_t port)
+  const char *Ip4ToString(const struct in_addr &address, uint16_t port)
   {
     return Ip4ToString(address.s_addr,  port);
   }

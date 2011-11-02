@@ -5,6 +5,7 @@
 ***************************************************************/
 #include "common.h"
 #include "SmartPointer.h"
+#include "SockAddr.h"
 #include <arpa/inet.h>
 #include <vector>
 #include <errno.h>
@@ -12,6 +13,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
+#include "utils.h"
 
 using namespace std;
 
@@ -209,6 +211,7 @@ namespace openbfdd
     uint16_t port = PORTNUM;
 
     //gLog.LogToFile("/tmp/bfd.log");
+    UtilsInit();
     gLog.LogToSyslog("bfd-control", false);
     gLog.Optional(Log::App, "Startup %x", getpid());
 

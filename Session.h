@@ -13,6 +13,8 @@
 #include "bfd.h" 
 #include "SmartPointer.h" 
 #include "TimeSpec.h" 
+#include "SockAddr.h"
+#include "Socket.h"
 #include <list> 
 #include <arpa/inet.h>
 
@@ -22,7 +24,6 @@ namespace openbfdd
   class Scheduler;
   class Timer;
   struct BfdPacket;
-
 
   /**
    * Session class, handles a single BFD session. 
@@ -63,35 +64,56 @@ namespace openbfdd
      * Starts a passive session receiving packets from the given address and 
      * port. 
      * 
-     * @param remoteAddr [in] - remote address.
-     * @param remotePort [in]- remote port.
-     * @param localAddr [in]- address on which to receive and send packets.
+     * @param remoteAddr [in] - remote address. Must include a port, that will be 
+     *                   the source port used by the remote machine for sending us
+     *                   packets.
+     * @param localAddr [in]- address on which to receive and send packets. May not 
+     *                  be 'any'
+     *  
+     * @return - False on failure. 
      */
-    void StartPassiveSession(in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr);
+    bool StartPassiveSession(const SockAddr &remoteAddr, const IpAddr &localAddr);
 
     /**
      * Starts an active session for the given address. 
+     *  
+     * This must not already be a working session.
      * 
-     * @param remoteAddr [in] - remote address.
-     * @param localAddr [in]- address on which to receive and send packets.
-     */
-    void StartActiveSession(in_addr_t remoteAddr, in_addr_t localAddr);
+     * @param remoteAddr [in] - remote address. 
+     * @param localAddr [in]- address on which to receive and send packets. May not 
+     *                  be 'any'
+     *  
+     * @return - False on failure. 
+     **/ 
+    bool StartActiveSession(const IpAddr &remoteAddr, const IpAddr &localAddr);
+
+    /** 
+     * Upgrades a passive to active session. 
+     *  
+     * The session must be a passive session. It is converted to an active one. If
+     * the session is passive, and this returns false, then it is still a valid 
+     * passive session. 
+     * 
+     * @return - False on failure. 
+     **/ 
+    bool UpgradeToActiveSession();
+
 
     /**
      * Gets the last remote address set with StartActiveSession() or 
      * StartPassiveSession() 
      * 
-     * @return in_addr_t - or INADDR_NONE if never set.
+     * @return - The address, or an Invalid address if never set. 
      */
-    in_addr_t GetRemoteAddress();
+    const IpAddr &GetRemoteAddress();
 
     /**
      * Gets the last local address set with StartActiveSession() or 
      * StartPassiveSession() 
      * 
-     * @return in_addr_t - or INADDR_NONE if never set.
+     * @return - The address, or an Invalid address if never set. 
      */
-    in_addr_t GetLocalAddress();
+    const IpAddr &GetLocalAddress();
 
     /**
      * Checks if the session is active (StartActiveSession)
@@ -277,11 +299,9 @@ namespace openbfdd
      * @param outPacket 
      * @param inHostOrder 
      * @param remoteAddr 
-     * @param remotePort  - 0 for no port specified. 
      * @param localAddr 
-     * @param localPort - 0 for no port specified.
      */
-    static void LogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr, in_port_t localPort);
+    static void LogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const SockAddr &remoteAddr, const IpAddr &localAddr);
 
     struct SetValueFlags {enum Flag{None=0x0000, PreventTxReschedule = 0x0001, TryPoll = 0x0002};}; 
 
@@ -324,6 +344,8 @@ namespace openbfdd
     void setDesiredMinTxInterval(uint32_t newValue, SetValueFlags::Flag flags = SetValueFlags::None);  
     void setRequiredMinRxInterval(uint32_t newValue, SetValueFlags::Flag flags = SetValueFlags::None);  
 
+    static void logPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const IpAddr &remoteAddr, in_port_t remotePort, const IpAddr &localAddr, in_port_t localPort);
+    static void doLogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const SockAddr &remoteAddr, const SockAddr &localAddr);
 
   private:
 
@@ -334,16 +356,16 @@ namespace openbfdd
 
     Beacon *m_beacon;      //For lifetime management only. 
     Scheduler *m_scheduler;
-    in_addr_t m_remoteAddr;  
+    IpAddr m_remoteAddr; 
     in_port_t m_remoteSourcePort;    
-    in_addr_t m_localAddr; // The ip local address for the session, from which packets are sent.
+    IpAddr m_localAddr; // The ip local address for the session, from which packets are sent. 
     in_port_t m_sendPort; // The port we are using to send to the remote machine for this session.
     bool m_isActive;  // are we taking an active role ... that is, we start sending periodic packets until session comes up. 
     uint32_t m_id;  //Human readable id.
 
 
     // For sending data back to the source
-    FileDescriptor m_sendSocket;
+    Socket m_sendSocket;
 
     // State variables from spec
     bfd::State::Value m_sessionState;
@@ -413,7 +435,7 @@ namespace openbfdd
 
     // Timers
     void deleteTimer(Timer *timer);
-    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_recieveTimeoutTimer; // Timer for the receive packet timeout.
+    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_receiveTimeoutTimer; // Timer for the receive packet timeout.
     RiaaClassCall<Timer, Session, &Session::deleteTimer> m_transmitNextTimer;  // Timer for the next control packet.
   };
 
