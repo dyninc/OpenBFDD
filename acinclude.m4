@@ -20,7 +20,7 @@ AC_DEFUN(
            ac_save_CXXFLAGS="$CXXFLAGS"
            CXXFLAGS="$CXXFLAGS -$1"
            AC_COMPILE_IFELSE(
-              AC_LANG_PROGRAM,
+              AC_LANG_SOURCE,
               eval "dyn_cv_prog_cpp_flag_$cachename=yes",
               eval "dyn_cv_prog_cpp_flag_$cachename=no",
            )
@@ -60,13 +60,13 @@ AC_DEFUN(
       if test $dyn_has_unordered_map = no; then
          AC_MSG_CHECKING(whether the unordered_map class is available by default)
          AC_COMPILE_IFELSE(
-            AC_LANG_PROGRAM(
+            [AC_LANG_PROGRAM(
                [#include <unordered_map>],
-               [[[
+               [[
                   std::unordered_map<int, int> map; 
                   map[10]=0;
-               ]]]
-            ),   
+               ]]
+            )],   
             dyn_has_unordered_map=yes
          )
          if test $dyn_has_unordered_map = yes; then
@@ -79,13 +79,13 @@ AC_DEFUN(
          ac_save2_CXXFLAGS=$CXXFLAGS
          CXXFLAGS="$CXXFLAGS -std=c++0x"
          AC_COMPILE_IFELSE(
-            AC_LANG_PROGRAM(
+            [AC_LANG_PROGRAM(
                [#include <unordered_map>],
-               [[[
+               [[
                   std::unordered_map<int, int> map; 
                   map[10]=0;
-               ]]]
-            ),   
+               ]]
+            )],   
             dyn_has_unordered_map=yes
          )
          CXXFLAGS="$ac_save2_CXXFLAGS"
@@ -98,13 +98,13 @@ AC_DEFUN(
       if test $dyn_has_unordered_map = no; then
          AC_MSG_CHECKING(whether the std::tr1::unordered_map class is available)
          AC_COMPILE_IFELSE(
-            AC_LANG_PROGRAM(
+            [AC_LANG_PROGRAM(
                [#include <tr1/unordered_map>],
-               [[[
+               [[
                   std::tr1::unordered_map<int, int> map; 
                   map[10]=0;
-               ]]]
-            ),   
+               ]]
+            )],   
             dyn_has_unordered_map=yes
          )
          if test $dyn_has_unordered_map = yes; then
@@ -116,13 +116,13 @@ AC_DEFUN(
       if test $dyn_has_unordered_map = no; then
          AC_MSG_CHECKING(whether the __gnu_cxx::hash_map class is available as an unordered_map)
          AC_COMPILE_IFELSE(
-            AC_LANG_PROGRAM(
+            [AC_LANG_PROGRAM(
                [#include <ext/hash_map>],
-               [[[
+               [[
                   __gnu_cxx::hash_map<int, int> map; 
                   map[10]=0;
-               ]]]
-            ),   
+               ]]
+            )],   
             dyn_has_unordered_map=yes
          )
          if test $dyn_has_unordered_map = yes; then
