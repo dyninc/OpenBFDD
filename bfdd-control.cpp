@@ -46,7 +46,7 @@ namespace openbfdd
   static bool SendData(const char *message, size_t message_size, uint16_t port, const char *outPrefix = NULL)
   {
     size_t totalLength;
-    struct sockaddr_in saddr; 
+    sockaddr_in saddr; 
     vector<char> buffer(max(MaxReplyLineSize,  MaxCommandSize));
     FileDescriptor sendSocket;
     FileHandle fileHandle;

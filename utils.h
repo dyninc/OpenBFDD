@@ -273,8 +273,8 @@ namespace openbfdd
    */
   const char *Ip4ToString(in_addr_t address);
   const char *Ip4ToString(in_addr_t address, uint16_t port);
-  const char *Ip4ToString(const struct in_addr &address);
-  const char *Ip4ToString(const struct in_addr &address, uint16_t port);
+  const char *Ip4ToString(const in_addr &address);
+  const char *Ip4ToString(const in_addr &address, uint16_t port);
 
 
   /**

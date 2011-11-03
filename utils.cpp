@@ -429,7 +429,7 @@ namespace openbfdd
     return(double(time.tv_sec) + double(time.tv_nsec)/NSEC_PER_SEC);
   }
 
-  const char *Ip4ToString(const struct in_addr &address)
+  const char *Ip4ToString(const in_addr &address)
   {
     char * buf = nextFormatShortBuffer();
     if (!buf)
@@ -452,7 +452,7 @@ namespace openbfdd
     return Ip4ToString(temp);
   }
 
-  const char *Ip4ToString(const struct in_addr &address, uint16_t port)
+  const char *Ip4ToString(const in_addr &address, uint16_t port)
   {
     return Ip4ToString(address.s_addr,  port);
   }

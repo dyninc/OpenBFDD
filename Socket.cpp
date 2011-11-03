@@ -103,7 +103,7 @@ namespace openbfdd
     m_owned = owned;
   }
 
-  void Socket::Attach(int sock, const struct sockaddr *addr, socklen_t addrlen, bool owned /*false*/)
+  void Socket::Attach(int sock, const sockaddr *addr, socklen_t addrlen, bool owned /*false*/)
   {
     Close();
     m_socket = sock;
@@ -387,7 +387,7 @@ namespace openbfdd
 
     outResult.Close();
 
-    struct sockaddr_storage faddr;
+    sockaddr_storage faddr;
     socklen_t fromlen = sizeof(faddr);
     int sock = ::accept(m_socket, (sockaddr*)&faddr, &fromlen);
     if (sock == -1)
@@ -419,12 +419,12 @@ namespace openbfdd
 		// We could assume that in6_pktinfo is going to be the largest, but the
 		// following actually models what we do.
 		size_t size = 0;
-		size = max(size, CMSG_SPACE(sizeof(struct in6_pktinfo))); 
+		size = max(size, CMSG_SPACE(sizeof(in6_pktinfo))); 
 #ifdef IP_RECVDSTADDR
-		size = max(size, CMSG_SPACE(sizeof(struct in_addr))); 
+		size = max(size, CMSG_SPACE(sizeof(in_addr))); 
 #endif
 #ifdef IP_PKTINFO
-		size = max(size, CMSG_SPACE(sizeof(struct in6_pktinfo))); 
+		size = max(size, CMSG_SPACE(sizeof(in6_pktinfo))); 
 #endif
 		return size;
 	}
@@ -483,7 +483,7 @@ namespace openbfdd
     msgiov.iov_base = m_dataBuffer.val;
     msgiov.iov_len =  m_dataBufferSize;
 
-    struct sockaddr_storage msgaddr;
+    sockaddr_storage msgaddr;
     struct msghdr message; 
     message.msg_name =&msgaddr;
     message.msg_namelen = sizeof(msgaddr);
@@ -502,7 +502,7 @@ namespace openbfdd
     }
 
 
-		m_sourceAddress = SockAddr(reinterpret_cast<struct sockaddr *>(message.msg_name), message.msg_namelen);
+		m_sourceAddress = SockAddr(reinterpret_cast<sockaddr *>(message.msg_name), message.msg_namelen);
 		if (!m_sourceAddress.IsValid())
 		{
 			m_error = EILSEQ; //??
@@ -532,21 +532,26 @@ namespace openbfdd
 #ifdef IP_RECVDSTADDR
       else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)
       {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(struct in_addr))))
-				  m_destAddress = IpAddr(reinterpret_cast<struct in_addr *>(CMSG_DATA(cmsg)));
+        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in_addr))))
+				  m_destAddress = IpAddr(reinterpret_cast<in_addr *>(CMSG_DATA(cmsg)));
       }
 #endif
 #ifdef IP_PKTINFO
       else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
       {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(struct in_pktinfo))))
-						m_destAddress = IpAddr(&reinterpret_cast<struct in_pktinfo *>(CMSG_DATA(cmsg))->ipi_addr);
+        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in_pktinfo))))
+						m_destAddress = IpAddr(&reinterpret_cast<in_pktinfo *>(CMSG_DATA(cmsg))->ipi_addr);
       }
 #endif
       else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
       {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(struct in6_pktinfo))))
-						m_destAddress = IpAddr(&reinterpret_cast<struct in6_pktinfo *>(CMSG_DATA(cmsg))->ipi6_addr);
+        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in6_pktinfo))))
+				{
+					in6_pktinfo *info = reinterpret_cast<in6_pktinfo *>(CMSG_DATA(cmsg));
+					m_destAddress = IpAddr(&info->ipi6_addr);
+					if (info->ipi6_ifindex != 0)
+						m_destAddress.SetScopIdIfLinkLocal(info->ipi6_ifindex);
+				}
       }
     }
 

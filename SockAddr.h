@@ -47,7 +47,7 @@ namespace openbfdd
    *  
    * Class that can holds an IPv4 or IPv6 socket address, and optionally a port, 
    * and other information. This is essentially a "struct sockaddr" a.k.a. "struct 
-   * sockaddr_in6" or "struct sockaddr_in". 
+   * sockaddr_in6" or "sockaddr_in". 
    */
   class sockAddrBase
   {
@@ -80,6 +80,12 @@ namespace openbfdd
      */
     void SetPort(in_port_t port);
 
+    /**
+     * Sets the ScopeId (sin6_scope_id) only if the address is already a 
+     * Link Local address.  
+     */
+    void SetScopIdIfLinkLocal(uint32_t id); 
+
     /** 
      * This will be invalid only if the default constructor was used, or the
      * constructor failed, or it is a copy of another invalid address. 
@@ -101,6 +107,11 @@ namespace openbfdd
      * @return bool 
      */
     bool IsIPv4() const;
+
+    /**
+     * Checks for IPv4 or IPv6 link local address.
+     */
+    bool IsLinkLocal() const;
 
     /**
      * Gets the type.
@@ -146,7 +157,7 @@ namespace openbfdd
      * 
      * @return const struct sockaddr& 
      */
-    const struct sockaddr &GetSockAddr() const {return *(struct sockaddr *)&m_addr;}
+    const sockaddr &GetSockAddr() const {return *(sockaddr *)&m_addr;}
 
     /**
      * Gets the size of the data returned by GetSockAddr() 
@@ -179,11 +190,16 @@ namespace openbfdd
      *  
      * Allowable IPv6:
      *  * x:x:x:x:x:x:x:x
-     *  * x::x:x  (any number of ::
+     *  * x::x:x  (any number of ::)
      *  * [x:x:x:x:x:x:x:x]:port
      *  * [x::x:x]:port
      *  * [x::x:x]
-     *  (May add %interface at some point in the future.)
+     * Also IPv6 allowable ONLY if address is link local (iface is interface name): 
+     *  * x:x:x:x:x:x:x:x%iface
+     *  * x::x:x%iface  (any number of ::)
+     *  * [x:x:x:x:x:x:x:x%iface]:port
+     *  * [x::x:x%iface]:port
+     *  * [x::x:x%iface]
      *  
      * Allowable IPv4: 
      *  * xxx.xxx.xxx.xxx
@@ -233,23 +249,23 @@ namespace openbfdd
      * Assumes all information is filled out and valid. 
      * That means there is a port. 
      */
-    sockAddrBase(bool allowPort, const struct sockaddr *addr, socklen_t addrlen);
+    sockAddrBase(bool allowPort, const sockaddr *addr, socklen_t addrlen);
 
     /**
      * Assumes all information is filled out and valid. 
      * That means there is a port. 
      */
-    sockAddrBase(bool allowPort, const struct sockaddr_in6 *addr);
+    sockAddrBase(bool allowPort, const sockaddr_in6 *addr);
 
     /**
      * Assumes all information is filled out and valid.
      * That means there is a port. 
      */
-    sockAddrBase(bool allowPort, const struct sockaddr_in *addr);
+    sockAddrBase(bool allowPort, const sockaddr_in *addr);
 
-    sockAddrBase(bool allowPort, const struct in6_addr *addr);
+    sockAddrBase(bool allowPort, const in6_addr *addr);
 
-    sockAddrBase(bool allowPort, const struct in_addr *addr);
+    sockAddrBase(bool allowPort, const in_addr *addr);
 
     /**
      * Creates a socket with the "Any" address. 
@@ -264,14 +280,13 @@ namespace openbfdd
     void init(Addr::Type type);   
     void copy(const sockAddrBase& src);
     void clearPort();
-    bool parseIPv6(const char *str);
 
-    struct sockaddr_in6 *getIPv6Storage();
-    const struct sockaddr_in6 *getIPv6Storage() const;
-    struct sockaddr_in *getIPv4Storage();
-    const struct sockaddr_in *getIPv4Storage() const;
+    sockaddr_in6 *getIPv6Storage();
+    const sockaddr_in6 *getIPv6Storage() const;
+    sockaddr_in *getIPv4Storage();
+    const sockaddr_in *getIPv4Storage() const;
 
-    struct sockaddr_storage m_addr;
+    sockaddr_storage m_addr;
     bool m_isValid;   
     const bool m_allowPort; 
   };
@@ -281,7 +296,7 @@ namespace openbfdd
   /**
    * Class that can holds an IPv4 or IPv6 socket address, and optionally a port, 
    * and other information. This is essentially a "struct sockaddr" a.k.a. "struct 
-   * sockaddr_in6" or "struct sockaddr_in" 
+   * sockaddr_in6" or "sockaddr_in" 
    */
   class SockAddr : public sockAddrBase
   {
@@ -306,22 +321,22 @@ namespace openbfdd
      * Assumes all information is filled out and valid. 
      * That means there is a port. 
      */
-    SockAddr(const struct sockaddr *addr, socklen_t addrlen) : sockAddrBase(true, addr, addrlen) {}
+    SockAddr(const sockaddr *addr, socklen_t addrlen) : sockAddrBase(true, addr, addrlen) {}
 
     /**
      * Assumes all information is filled out and valid. 
      * That means there is a port. 
      */
-    explicit SockAddr(const struct sockaddr_in6 *addr) : sockAddrBase (true, addr) {}
+    explicit SockAddr(const sockaddr_in6 *addr) : sockAddrBase (true, addr) {}
 
     /**
      * Assumes all information is filled out and valid.
      * That means there is a port. 
      */
-    explicit SockAddr(const struct sockaddr_in *addr) : sockAddrBase (true, addr) {}
+    explicit SockAddr(const sockaddr_in *addr) : sockAddrBase (true, addr) {}
 
-    explicit SockAddr(const struct in6_addr *addr) : sockAddrBase (true, addr) {}
-    explicit SockAddr(const struct in_addr *addr) : sockAddrBase (true, addr) {}
+    explicit SockAddr(const in6_addr *addr) : sockAddrBase (true, addr) {}
+    explicit SockAddr(const in_addr *addr) : sockAddrBase (true, addr) {}
 
     SockAddr(const SockAddr &src) : sockAddrBase(true,  src) {}
 
@@ -385,20 +400,20 @@ namespace openbfdd
     /**
      * Assumes all information is filled out and valid. 
      */
-    IpAddr(const struct sockaddr *addr, socklen_t addrlen) : sockAddrBase(false, addr, addrlen) {}
+    IpAddr(const sockaddr *addr, socklen_t addrlen) : sockAddrBase(false, addr, addrlen) {}
 
     /**
      * Assumes all information is filled out and valid. 
      */
-    explicit IpAddr(const struct sockaddr_in6 *addr) : sockAddrBase (false, addr) {}
+    explicit IpAddr(const sockaddr_in6 *addr) : sockAddrBase (false, addr) {}
 
     /**
      * Assumes all information is filled out and valid. of course, port is ignored. 
                                                             */
-    explicit IpAddr(const struct sockaddr_in *addr) : sockAddrBase (false, addr) {}
+    explicit IpAddr(const sockaddr_in *addr) : sockAddrBase (false, addr) {}
 
-    explicit IpAddr(const struct in6_addr *addr) : sockAddrBase (false, addr) {}
-    explicit IpAddr(const struct in_addr *addr) : sockAddrBase (false, addr) {}
+    explicit IpAddr(const in6_addr *addr) : sockAddrBase (false, addr) {}
+    explicit IpAddr(const in_addr *addr) : sockAddrBase (false, addr) {}
 
     /**
      * Creates a socket with the "Any" address.

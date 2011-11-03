@@ -870,7 +870,8 @@ namespace openbfdd
 
     poll = (!m_pollRecieved && (m_pollState == PollState::Requested || m_pollState == PollState::Polling ));
 
-    memset(&packet, 0, sizeof(packet));
+    packet = BfdPacket();
+
     header.SetVersion(bfd::Version);
     header.length = sizeof(header);
 

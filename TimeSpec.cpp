@@ -49,7 +49,7 @@ namespace openbfdd
 
   TimeSpec TimeSpec::MonoNow()
   {
-    struct TimeSpec now;
+    TimeSpec now;
 
     if (0 == clock_gettime(CLOCK_MONOTONIC, &now))
       return now;
@@ -61,7 +61,7 @@ namespace openbfdd
 
   TimeSpec TimeSpec::RealNow()
   {
-    struct TimeSpec now;
+    TimeSpec now;
 
     if (0 == clock_gettime(CLOCK_REALTIME, &now))
       return now;

@@ -50,11 +50,6 @@ namespace openbfdd
     Riaa<CommandProcessor>::Delete altCommandProcessor(MakeCommandProcessor(*this));
     int returnVal = 1;
 
-    #warning test
-    SockAddr addr("fd0f:1::1", 10);
-    gLog.LogError ("%s", addr.ToString());
-
-
     Socket socketIPv4, socketIPv6;
     listenCallbackData socketIPv4data, socketIPv6data;
 

@@ -93,7 +93,7 @@ namespace openbfdd
      * @param sock 
      * @param addr 
      */
-    void Attach(int sock, const struct sockaddr *addr, socklen_t addrlen, bool owned = false);
+    void Attach(int sock, const sockaddr *addr, socklen_t addrlen, bool owned = false);
 
 
     /** 
