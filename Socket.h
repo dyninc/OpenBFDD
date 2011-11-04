@@ -14,7 +14,8 @@ namespace openbfdd
   /**
    * Class for socket. It can perform some basic socket tasks as well. All 
    * functions will log to Log::Error on failure. 
-   * It has optional ::close() semantics.
+   * It has optional ::close() semantics. 
+   * Call UtilsInit() before using. 
    */
   class Socket
   {
@@ -33,7 +34,7 @@ namespace openbfdd
     Socket(int sock, Addr::Type family, bool owned = false);
 
     /** 
-     * Copies socket.
+     * Copies socket. The LogName and Quiet values are not copied.
      * 
      * @note The new socket is NOT owned.
      */
@@ -45,30 +46,36 @@ namespace openbfdd
     /**
      * Attempts to create a socket. 
      * Will be owned by default. 
+     *  
+     * @note Use GetLastError() for error code on failure. 
      * 
      * @param family [in] - The address family that the socket uses
      * @param type 
      * @param protocol 
      * 
-     * @return bool 
+     * @return bool - false on failure.
      */
     bool Open(Addr::Type family, int type, int protocol);
 
     /**
      * Same as open, with (family, SOCK_DGRAM, IPPROTO_UDP)
      *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param family [in] - The address family that the socket uses
      *  
-     * @return bool 
+     * @return bool - false on failure.
      */
     bool OpenUDP(Addr::Type family);
 
     /**
      * Same as open, with (family, SOCK_STREAM, IPPROTO_TCP)
      *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param family [in] - The address family that the socket uses
      *  
-     * @return bool 
+     * @return bool - false on failure.
      */
     bool OpenTCP(Addr::Type family);
 
@@ -116,9 +123,33 @@ namespace openbfdd
     /** 
      * Makes this a copy of src. This will own the socket if src did, and src will
      * loose ownership (if it had it) 
+     * The LogName and Quiet values are not copied.
      */
     void Transfer(Socket &src);
 
+    /**
+     * Sets the name used for logging of errors. 
+     * 
+     * @param str [in] - NULL or empty for no name.
+     */
+    void SetLogName(const char *str);
+
+    /**
+     * Gets the log name.
+     * 
+     * @return const char* - Do not store. Never NULL. 
+     */
+    const char *LogName() {return m_logName.c_str();}
+
+
+    /**
+     * Disables logging of errors.
+     *  
+     * @param quiet 
+     * 
+     * @return bool - The old quiet value.
+     */
+    bool SetQuiet(bool quiet);
 
     /**
      * Returns the socket.
@@ -126,6 +157,14 @@ namespace openbfdd
      * @return int 
      */
     int GetSocket() {return m_socket;}
+
+    /**
+     * @return - The error from the last call. 0 if it succeeded. 
+     * @note only calls that specificaly state that they set the error are 
+     *       guaranteed to do so. Others may, or may not.
+     *  
+     */
+    int GetLastError() {return m_error;}
 
     /** 
      *  
@@ -152,6 +191,7 @@ namespace openbfdd
     /**
      * Sets the socket to be blocking or non-blocking. 
      * See O_NONBLOCK. 
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetBlocking(bool block);
 
@@ -159,34 +199,40 @@ namespace openbfdd
     /**
      * Sets whether port can be reused. 
      * See SO_REUSEADDR.
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetReusePort(bool reuse);
 
     /**
      * Sets whether receive timestamp is included. 
      * See SO_TIMESTAMP. 
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetUseTimestamp(bool timestamp);
 
     /**
      * Sets send buffer size. 
      * See SO_SNDBUF. 
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetSendBufferSize(int bufsize);
 
     /**
      * Gets send buffer size. 
      * See SO_SNDBUF. 
+     * @note Use GetLastError() for error code on failure. 
      */
     bool GetSendBufferSize(int &out_bufsize);
 
     /**
      * Sets socket option IP_TTL or IPV6_UNICAST_HOPS depending on the type.
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetTTLOrHops(int hops);
 
     /**
      * Sets IP_RECVTTL, or IPV6_RECVHOPLIMIT depending on the type.
+     * @note Use GetLastError() for error code on failure. 
      */
     bool SetRecieveTTLOrHops(bool receive);
 
@@ -198,6 +244,8 @@ namespace openbfdd
     /**
      * Sets IPPROTO_IPV6::IPV6_V6ONLY
      * 
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param ipv6Only 
      * 
      * @return bool 
@@ -208,6 +256,8 @@ namespace openbfdd
     /**
      * Will attempt to enable (or disable) receiving of destination packet address.
      * 
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param receive 
      * 
      * @return bool 
@@ -221,13 +271,17 @@ namespace openbfdd
 
     /** 
      * See socket bind().
-     * 
+     *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @return bool - False on failure
      */
     bool Bind(const SockAddr &address);
 
     /** 
-     * See socket ::connect().
+     * See socket ::connect(). 
+     *  
+     * @note Use GetLastError() for error code on failure. 
      * 
      * @return bool - False on failure
      */
@@ -235,7 +289,9 @@ namespace openbfdd
 
     /**
      * See socket listen()
-     * 
+     *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param backlog 
      * 
      * @return bool - False on failure.
@@ -244,7 +300,9 @@ namespace openbfdd
     
     /**
      * Like sendto()
-     * 
+     *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param buffer 
      * @param bufferLen 
      * @param toAddress 
@@ -256,7 +314,9 @@ namespace openbfdd
 
     /**
      * Like send()
-     * 
+     *  
+     * @note Use GetLastError() for error code on failure. 
+     *  
      * @param buffer 
      * @param bufferLen 
      * @param flags 
@@ -271,6 +331,8 @@ namespace openbfdd
      * On success, use GetAddress() on source to check source address. 
      *  
      * outResult will be owned by default.
+     *  
+     * @note Use GetLastError() for error code on failure. 
      *  
      * 
      * @param outResult [out] -  On success, this is the socket. On failure, this is 
@@ -300,6 +362,7 @@ namespace openbfdd
 
     /** 
      * Copies socket.
+     * The LogName and Quiet values are not copied.
      * 
      * @note The new socket is NOT owned.
      */
@@ -312,136 +375,16 @@ namespace openbfdd
     void clear();
     void copy(const Socket &src);
 
+    bool ensureSocket();
+    bool logAndSetError(int error, const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+    bool logError(const char* format, ...) ATTR_FORMAT(printf, 2, 3);
+
 
     int m_socket;
     SockAddr m_address;
     int m_owned;  // Close when destroyed.
-
-
-  public:
-    /**
-     * A container for recv or recvmsg results.
-     */
-    class RecvMsg
-    {
-    public:
-
-      /**
-       * Creates an empty RecvMsgData. 
-       *  
-       * Must call AllocBuffers() before calling RecvMsg(). 
-       */
-      RecvMsg();
-
-      /**
-       * Creates a RecvMsg and allocates storage. 
-       *  
-       * @throw - yes 
-       * 
-       * @param bufferSize [in] - The size of the buffer for receiving data. 
-       *  
-       * @param controlSize [in] - The size of the buffer for receiving control 
-       *                   messages. This should be large enough for all enabled
-       *                   messages. Use CMSG_SPACE to calculate desired size. May be
-       *                   0 when used for recv.
-       */
-      RecvMsg(size_t bufferSize, size_t controlSize);
-
-      /**
-       * Allocates storage. 
-       *  
-       * @throw - yes 
-       * 
-       * @param bufferSize [in] - The size of the buffer for receiving data. 
-       *  
-       * @param controlSize [in] - The size of the buffer for receiving control 
-       *                   messages. This should be large enough for all enabled
-       *                   messages. Use CMSG_SPACE to calculate desired size. May be
-       *                   0 when used for recv.
-       */
-      void AllocBuffers(size_t bufferSize, size_t controlSize);
-
-      /**
-       * Call recvmsg for the given socket. 
-       * Call GetLastError() on failure to get the errno.
-       * 
-       * @param socket 
-       * 
-       * @return bool - false on failure. 
-       */
-      bool DoRecvMsg(const Socket &socket);
-
-      /**
-       * Call recv for the given socket. Call GetLastError() on failure to get the 
-       * errno. 
-       * 
-       * @param socket 
-       * @param flags - Flags for recv. 
-       * 
-       * @return bool - false on failure. 
-       */
-      bool DoRecv(const Socket &socket, int flags);
-
-      /**
-       * @return - The error from the last DoRecvMsg call. 0 if it succeeded. 
-       */
-      int GetLastError() {return m_error;}
-
-      /**
-       * Gets the TTL or Hops (for IPv6). 
-       *  
-       * 
-       * @param success [out] - False on failure.
-       * 
-       * @return uint8_t - The ttl or hops. 0 on failure. (Note 0 is also a valid 
-       *         value, use success to determine failure).
-       */
-      uint8_t GetTTLorHops(bool *success = NULL);
-
-      /**
-       * Gets the destination address.
-       * 
-       * @return IpAddr - IsValid() will return false on failure.
-       */
-      const IpAddr &GetDestAddress() {return m_destAddress;}
-
-      /**
-       * The source address.
-       * 
-       * @return SockAddr - IsValid() will return true on failure.
-       */
-      const SockAddr &GetSrcAddress() {return m_sourceAddress;}
-
-      /**
-       * Gets the data from the last DoRecvMsg(), if successful. 
-       * 
-       * 
-       * @return - Data from the last DoRecvMsg(), if successful. NULL if DoRecvMsg 
-       *         was never called, or it failed.
-       */
-      uint8_t *GetData() {return m_dataBufferValidSize ? m_dataBuffer.val:NULL;}
-
-      /**
-       * Gets the size of the data from the last DoRecvMsg(), if successful. 
-       * 
-       * 
-       * @return - The size of valid data from the last DoRecvMsg(), if 
-       *         successful. 0 if DoRecvMsg was never called, or it failed.
-       */
-      size_t GetDataSize() {return m_dataBufferValidSize;}
-
-    private:
-      void clear();
-    private:
-      Riaa<uint8_t>::DeleteArray m_controlBuffer; // Not using vector, because we do not want initialization.
-      size_t m_controlBufferSize;
-      Riaa<uint8_t>::DeleteArray m_dataBuffer; // Not using vector, because we do not want initialization.
-      size_t m_dataBufferSize;
-      size_t m_dataBufferValidSize;  // Only valid after successful DoRecvMsg 
-      SockAddr m_sourceAddress;
-      IpAddr m_destAddress;
-      int16_t m_ttlOrHops; // -1 for invalid
-      int m_error;
-    };
+    int m_error;
+    std::string m_logName;
+    bool m_quiet;
   };
 }

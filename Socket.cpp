@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <cstdarg>
 
 using namespace std;
 
@@ -22,14 +23,19 @@ namespace openbfdd
     m_socket = -1; 
     m_address.clear();
     m_owned = false;
+		m_error = 0;
   }
 
-  Socket::Socket()
+  Socket::Socket() :
+	m_logName(),
+	m_quiet(false)
   { 
     clear();
   }
 
-  Socket::Socket(int sock, Addr::Type family, bool owned /*false*/)
+  Socket::Socket(int sock, Addr::Type family, bool owned /*false*/) :
+	m_logName(),
+	m_quiet(false)
   {
     clear();
     m_socket = sock;
@@ -37,14 +43,17 @@ namespace openbfdd
     m_owned = owned;
   }
 
-  Socket::Socket(const Socket &src)
+  Socket::Socket(const Socket &src) :
+	m_logName(),
+	m_quiet(false)
   {
     clear();
     copy(src);
   }
 
   /**
-   * Copies the socket. This will NOT own the socket. 
+	 * Copies the socket. This will NOT own the socket. 
+	 * Does not copy quiet or log name settings. 
    * 
    * @param src 
    */
@@ -53,6 +62,7 @@ namespace openbfdd
     Close();
     m_socket = src.m_socket;
     m_address = src.m_address;
+		m_error = src.m_error;
   }
 
   Socket::~Socket()
@@ -73,10 +83,7 @@ namespace openbfdd
     Close();
     m_socket = ::socket(Addr::TypeToFamily(family), type, protocol);
     if (empty())
-    {
-      gLog.LogError("Failed create socket. family %d, type %d proto %d : %s", family, type, protocol, strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed create socket. family %d, type %d proto %d", family, type, protocol);
 
     m_address.SetAny(family);
     m_owned = true;
@@ -121,6 +128,21 @@ namespace openbfdd
 		}
 		else
 			copy(src);
+	} 	
+
+	void Socket::SetLogName(const char *str)
+	{
+		if (!str || !*str)
+			m_logName.clear();
+		else
+			m_logName = str;
+	}
+
+	bool Socket::SetQuiet(bool quiet)
+	{
+		bool old = m_quiet;
+		m_quiet = quiet;
+		return old;
 	}
 
 
@@ -141,30 +163,27 @@ namespace openbfdd
 
   bool Socket::SetBlocking(bool block)
   {
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     int flags;
     flags = ::fcntl(m_socket, F_GETFL);
-    if (flags == -1) 
-    {
-      gLog.LogError("Failed to get socket flags to set to %sblocking : %s", block ? "":"non-", strerror(errno));
-      return false;
-    }
+    if (flags == -1)
+			return logAndSetError(errno, "Failed to get socket flags to set to %sblocking", block ? "":"non-");
+
     if (block)
       flags &= ~(int)O_NONBLOCK;
     else
       flags |= O_NONBLOCK;
     if (-1 == ::fcntl(m_socket, F_SETFL, flags))
-    {
-      gLog.LogError("Failed to set socket to %sblocking : %s", block ? "":"non-", strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to set socket to %sblocking", block ? "":"non-");
     return true;
   }
 
   /**
-   * Calls setsockopt.
+	 * Calls setsockopt. 
+	 *  
+	 * will set m_error 
    * 
    * @param level 
    * @param optname 
@@ -176,16 +195,13 @@ namespace openbfdd
   bool Socket::setIntSockOpt(int level, int optname, const char *name, int value)
   {
 
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     int on = value;
 
     if (0 > ::setsockopt(m_socket, level, optname, &on, sizeof(on)))
-    {
-      gLog.LogError("Failed to set socket %s to %d: %s", name, value, strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to set socket %s to %d",  name, value);
     return true;
   }
 
@@ -202,17 +218,14 @@ namespace openbfdd
   bool Socket::getIntSockOpt(int level, int optname, const char *name, int &out_value)
   {
 
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     socklen_t out_len = sizeof(int);  
     out_value = 0;
 
     if (0 > ::getsockopt(m_socket, level, optname, &out_value, &out_len))
-    {
-      gLog.LogError("Failed to get socket %s: %s", name, strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to get socket %s",  name);
     return true;
   }
 
@@ -241,79 +254,76 @@ namespace openbfdd
 
   bool Socket::SetTTLOrHops(int hops)
   {
+    if (!ensureSocket())
+		  return false;
+
     if (GetAddress().IsIPv4())
     {
       // Is there a 255 limit?
       return setIntSockOpt(IPPROTO_IP, IP_TTL, "IP_TTL", hops);
     }
-    else if (GetAddress().IsIPv6())
-    {   
-      return setIntSockOpt(IPPROTO_IPV6, IPV6_UNICAST_HOPS, "IPV6_UNICAST_HOPS", hops);
-    }
     else 
-      return false;
+      return setIntSockOpt(IPPROTO_IPV6, IPV6_UNICAST_HOPS, "IPV6_UNICAST_HOPS", hops);
   }
 
   bool Socket::SetRecieveTTLOrHops(bool receive)
   {
     int val = receive ? 1:0;
 
-    if (GetAddress().IsIPv4())
+    if (!ensureSocket())
+		  return false;
+    else if (GetAddress().IsIPv4())
     {
       // Is there a 255 limit?
       return setIntSockOpt(IPPROTO_IP, IP_RECVTTL, "IP_RECVTTL", val);
     }
-    else if (GetAddress().IsIPv6())
-    {   
+    else
       return setIntSockOpt(IPPROTO_IPV6, IPV6_RECVHOPLIMIT, "IPV6_RECVHOPLIMIT", val);
-    }
-    else 
-      return false;
   }
 
   bool Socket::SetReceiveDestinationAddress(bool receive)
   {
     int val = receive ? 1:0;
-    if (GetAddress().IsIPv4())
+    if (!ensureSocket())
+		  return false;
+		else if (GetAddress().IsIPv4())
     {
     #ifdef IP_RECVDSTADDR
       return setIntSockOpt(IPPROTO_IP, IP_RECVDSTADDR, "IP_RECVDSTADDR", val);
     #elif defined IP_PKTINFO
       return setIntSockOpt(IPPROTO_IP, IP_PKTINFO, "IP_PKTINFO", val);
     #endif
-      return false;
+			m_error = ENOTSUP;
+			return logError("Platform does not support IP_RECVDSTADDR or IP_PKTINFO");
     }
-    else if (GetAddress().IsIPv6())
-    {   
+    else
       return setIntSockOpt(IPPROTO_IPV6, IPV6_RECVPKTINFO, "IPV6_RECVPKTINFO", val);
-    }
-    else 
-      return false;
   }
 
 
   bool Socket::SetIPv6Only(bool ipv6Only)
   {
+    if (!ensureSocket())
+		  return false;
+
     if (GetAddress().IsIPv6())
-    {
       return setIntSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, "IPV6_V6ONLY", ipv6Only ? 1:0);
-    }
     else
-      return false;
+		{
+			m_error = ENOTSUP;
+			return logError("IPV6_V6ONLY not supported on IPv4 socket");
+		}
   }
 
   bool Socket::Bind(const SockAddr &address)
   {
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     m_address.clear();
 
     if (::bind(m_socket, &address.GetSockAddr(), address.GetSize()) < 0)
-    {
-      gLog.LogError("Failed to bind socket to %s : %s", address.ToString(), strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to bind socket to %s",  address.ToString());
 
     m_address = address;
     return true;
@@ -323,16 +333,13 @@ namespace openbfdd
 
   bool Socket::Connect(const SockAddr &address)
   {
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     m_address.clear();
 
     if (::connect(m_socket, &address.GetSockAddr(), address.GetSize()) < 0)
-    {
-      gLog.LogError("Failed to connect socket to %s : %s", address.ToString(), strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to connect socket to %s",  address.ToString());
 
     m_address = address;
     return true;
@@ -340,41 +347,32 @@ namespace openbfdd
 
   bool Socket::Listen(int backlog)
   {
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     if (::listen(m_socket, backlog) < 0)
-    {
-      gLog.LogError("Failed to listen on socket : %s",  strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to listen on socket");
     return true;
   }
 
 	bool Socket::SendTo(const void *buffer, size_t bufferLen, const SockAddr &toAddress, int flags /*0*/)
 	{
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     if (::sendto(m_socket, buffer, bufferLen, flags, &toAddress.GetSockAddr(), toAddress.GetSize()) < 0)
-    {
-      gLog.LogError("Error sending packet using sendto : %s", strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Error sending packet using sendto to %s", toAddress.ToString());
 
 		return true;
 	}
 
 	bool Socket::Send(const void *buffer, size_t bufferLen, int flags /*0*/)
 	{
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     if (::send(m_socket, buffer, bufferLen, flags) < 0)
-    {
-      gLog.LogError("Error sending packet using send : %s", strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Error sending packet using send");
 
 		return true;
 	}
@@ -382,8 +380,8 @@ namespace openbfdd
 
   bool Socket::Accept(Socket &outResult)
   {
-    if (empty())
-      return false;
+    if (!ensureSocket())
+		  return false;
 
     outResult.Close();
 
@@ -391,10 +389,7 @@ namespace openbfdd
     socklen_t fromlen = sizeof(faddr);
     int sock = ::accept(m_socket, (sockaddr*)&faddr, &fromlen);
     if (sock == -1)
-    {
-      gLog.LogError("Failed to accept on socket : %s",  strerror(errno));
-      return false;
-    }
+			return logAndSetError(errno, "Failed to accept on socket");
 
     // It is always success, when if we can not read from addr
     outResult.m_socket = sock;
@@ -429,172 +424,74 @@ namespace openbfdd
 		return size;
 	}
 
-	Socket::RecvMsg::RecvMsg() :
-		m_controlBufferSize(0),
-		m_dataBufferSize(0)
+	/**
+	 * Same as !empty(), but sets m_error and logs a message on failure. 
+	 * 
+	 * @return bool 
+	 */
+	bool Socket::ensureSocket()
 	{
-		clear();
-	}
-
-	Socket::RecvMsg::RecvMsg(size_t bufferSize, size_t controlSize) :
-	  m_controlBufferSize(0),
-		m_dataBufferSize(0)
-
-	{
-		clear();
-		AllocBuffers(bufferSize, controlSize); 
+		if (!empty())
+			return true;
+		m_error = EBADF;
+		return logError("Socket is invalid");
 	}
 
 	/**
-	 * Clears everything except the buffers.
+	 * Sets m_error to error, and logs the message, if settings allow. 
+	 * Will prepend the socket name, if any. Will append the error string.  
 	 * 
+	 * @param error 
+	 * @param format 
+	 *  
+	 * @return - false always! 
 	 */
-	void Socket::RecvMsg::clear()
+	bool Socket::logAndSetError(int error, const char* format, ...)
 	{
-		m_dataBufferValidSize = 0;
-		m_sourceAddress.clear();
-		m_destAddress.clear();
-		m_ttlOrHops = -1;
-		m_error = 0;
-	}
+		m_error = error;
 
-	void Socket::RecvMsg::AllocBuffers(size_t bufferSize, size_t controlSize)
-	{
-		m_controlBuffer = new uint8_t[controlSize];
-		m_controlBufferSize = controlSize;
-
-		m_dataBuffer = new uint8_t[bufferSize];
-		m_dataBufferSize = bufferSize;
-		m_dataBufferValidSize = 0;
-	}
-
-	bool Socket::RecvMsg::DoRecvMsg(const Socket &socket)
-	{
-
-		if (m_dataBufferSize == 0)
-		{
-			m_error = EINVAL;
+		if (m_quiet)
 			return false;
-		}
 
-		clear();
+    va_list args;
+    va_start(args, format);
 
-    struct iovec msgiov;
-    msgiov.iov_base = m_dataBuffer.val;
-    msgiov.iov_len =  m_dataBufferSize;
+		const char *str = FormatMediumStrVa(format, args);
 
-    sockaddr_storage msgaddr;
-    struct msghdr message; 
-    message.msg_name =&msgaddr;
-    message.msg_namelen = sizeof(msgaddr);
-    message.msg_iov = &msgiov;
-    message.msg_iovlen = 1;  // ??
-    message.msg_control = m_controlBuffer;
-    message.msg_controllen = m_controlBufferSize;
-    message.msg_flags = 0;
+		va_end(args);
 
-    // Get packet
-    ssize_t msgLength = recvmsg(socket, &message, 0);
-    if (msgLength < 0)
-    {
-			m_error = errno;
-      return false;
-    }
-
-
-		m_sourceAddress = SockAddr(reinterpret_cast<sockaddr *>(message.msg_name), message.msg_namelen);
-		if (!m_sourceAddress.IsValid())
-		{
-			m_error = EILSEQ; //??
-			return false;
-		}
-
-		// Walk control messages, and see what we can see.
-    for (struct cmsghdr* cmsg = CMSG_FIRSTHDR(&message); cmsg != NULL; cmsg = CMSG_NXTHDR(&message, cmsg))
-    {
-      // It appears that  some systems use IP_TTL and some use IP_RECVTTL to
-      // return the ttl. Specifically, FreeBSD uses IP_RECVTTL and Debian uses
-      // IP_TTL. We work around this by checking both (until that breaks some system.)
-      if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
-      {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(int))))
-          m_ttlOrHops = (uint8_t)*(int *)CMSG_DATA(cmsg);
-      }
-      else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVTTL)
-      {
-        m_ttlOrHops = *(uint8_t *)CMSG_DATA(cmsg);
-      }
-      else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_HOPLIMIT)
-			{
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(int))))
-          m_ttlOrHops = (uint8_t)*(int *)CMSG_DATA(cmsg);
-			}
-#ifdef IP_RECVDSTADDR
-      else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)
-      {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in_addr))))
-				  m_destAddress = IpAddr(reinterpret_cast<in_addr *>(CMSG_DATA(cmsg)));
-      }
-#endif
-#ifdef IP_PKTINFO
-      else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
-      {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in_pktinfo))))
-						m_destAddress = IpAddr(&reinterpret_cast<in_pktinfo *>(CMSG_DATA(cmsg))->ipi_addr);
-      }
-#endif
-      else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
-      {
-        if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(in6_pktinfo))))
-				{
-					in6_pktinfo *info = reinterpret_cast<in6_pktinfo *>(CMSG_DATA(cmsg));
-					m_destAddress = IpAddr(&info->ipi6_addr);
-					if (info->ipi6_ifindex != 0)
-						m_destAddress.SetScopIdIfLinkLocal(info->ipi6_ifindex);
-				}
-      }
-    }
-
-		m_dataBufferValidSize = size_t(msgLength);
-		return true;
+		if (!m_logName.empty())
+			gLog.LogError("%s : %s : (%d) %s", m_logName.c_str(), str, error, strerror(error));
+		else
+			gLog.LogError("%s : (%d) %s", str, error, strerror(error));
+		return false;
 	}
 
-	bool Socket::RecvMsg::DoRecv(const Socket &socket, int flags)
+	/**
+	 * Logs the message, if settings allow. Will prepend the socket name, if any. 
+	 * 
+	 * @param error 
+	 * @param format 
+	 *  
+	 * @return - false always! 
+	 */
+	bool Socket::logError(const char* format, ...)
 	{
-
-		if (m_dataBufferSize == 0)
-		{
-			m_error = EINVAL;
+		if (m_quiet)
 			return false;
-		}
 
-		clear();
-
-		ssize_t msgLength = recv(socket, m_dataBuffer,  (int)m_dataBufferSize, flags);
-    if (msgLength < 0)
-    {
-			m_error = errno;
-      return false;
-    }
-
-		m_dataBufferValidSize = size_t(msgLength);
-		return true;
-	}
-
-
-
-	uint8_t Socket::RecvMsg::GetTTLorHops(bool *success)
-	{
-		if (m_ttlOrHops < 0 || m_ttlOrHops > 255)
+    va_list args;
+    va_start(args, format);
+		if (!m_logName.empty())
 		{
-			if (success)
-				*success = false;
-			return 0;
+			const char *str = FormatMediumStrVa(format, args);
+			gLog.LogError("%s : %s",  m_logName.c_str(), str);
 		}
-		if (success)
-			*success = true;
-		return (uint8_t)m_ttlOrHops;
+		else
+		{
+			gLog.MessageVa(Log::Error, format, args);
+		}
+		va_end(args);
+		return false;
 	}
-
-
 }

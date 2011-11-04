@@ -381,11 +381,11 @@ namespace openbfdd
 
   const char *sockAddrBase::ToString(bool includePort /*true*/) const
   {
-    in_port_t port = Port();
+    in_port_t port = includePort ? Port():0;
 
     if (IsIPv4())
     {
-      if (port == 0 || !includePort)
+      if (port == 0)
         return Ip4ToString(getIPv4Storage()->sin_addr);
       else
         return Ip4ToString(getIPv4Storage()->sin_addr, port);

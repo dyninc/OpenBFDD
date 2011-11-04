@@ -527,6 +527,30 @@ namespace openbfdd
     return buf;
   }
 
+  const char *FormatMediumStr(const char* format, ...) 
+  {
+    char * buf = nextFormatMeduimBuffer();
+    if (!buf)
+      return "tls_error";
+
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf, formatMediumBuffersSize, format, args);
+    va_end(args);
+    return buf;
+  }
+
+  const char *FormatMediumStrVa(const char* format, va_list args)
+  {
+    char * buf = nextFormatMeduimBuffer();
+    if (!buf)
+      return "tls_error";
+
+    vsnprintf(buf, formatMediumBuffersSize, format, args);
+    return buf;
+  }
+
+
   const char *FormatBigStr(const char* format, ...) 
   {
     char * buf;

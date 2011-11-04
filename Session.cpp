@@ -238,7 +238,7 @@ namespace openbfdd
     {
       if (header.length < bfd::BasePacketSize + bfd::AuthHeaderSize)
       {
-        gLog.Optional(Log::Discard, "Discard packet: length too small to include auth  %hhu", header.length);
+        gLog.Optional(Log::Discard, "Discard packet: length too small to include auth %hhu", header.length);
         return false;
       }
     }
@@ -924,13 +924,10 @@ namespace openbfdd
 
     logPacketContents(packet, true, false, m_remoteAddr, 0, m_localAddr, m_sendPort);
 
-
     if (m_sendSocket.SendTo(&packet, packet.header.length,
                             SockAddr(m_remoteAddr, bfd::ListenPort),
                             MSG_NOSIGNAL))
       gLog.Optional(Log::Packet, "Sent control packet for session %u.", m_id);
-    else
-      gLog.LogError("Error sending control packet for session %u", m_id);
   }
 
   /**
@@ -953,6 +950,9 @@ namespace openbfdd
     if (!LogVerify(!m_localAddr.IsAny()))
       return false;
 
+    char tmp[255];
+    sendSocket.SetLogName(FormatStr(tmp, sizeof(tmp), "Session %d sock", m_id));
+
     // Not that all sockets will log errors, so we do not have to.
     if (!sendSocket.OpenUDP(m_localAddr.Type()))
       return false;
@@ -964,13 +964,29 @@ namespace openbfdd
     if (m_sendPort != 0)
       startPort = m_sendPort;
     else
-      startPort =  bfd::MinSourcePort + rand()%(bfd::MaxSourcePort-bfd::MinSourcePort);
+      startPort = bfd::MinSourcePort + rand()%(bfd::MaxSourcePort-bfd::MinSourcePort);
 
     sendAddr = SockAddr(m_localAddr, startPort);
 
-    #warning need to be able to quiet socket
+    // We need the socket to be quiet so we do not get warnings for each port tried.
+    RiaaObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket); 
+    m_socketQuiet = sendSocket.SetQuiet(true);
+
     while (!sendSocket.Bind(sendAddr))
     {
+      switch (sendSocket.GetLastError())
+      {
+        default:
+          gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s", 
+                        m_id, sendAddr.ToString(false), 
+                        sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
+          return false;
+        break;
+        case EAGAIN:
+        case EADDRINUSE:
+          // Fall through and keep looking
+        break;
+      }
       if (sendAddr.Port() == bfd::MaxSourcePort)
         sendAddr.SetPort(bfd::MinSourcePort);
       else
@@ -982,6 +998,7 @@ namespace openbfdd
         return false;
       }
     } 
+    m_socketQuiet.Dispose(); // Allow log messages again
 
     if (m_sendPort != 0 && sendAddr.Port() != m_sendPort)
     {
@@ -994,6 +1011,7 @@ namespace openbfdd
 
     m_sendPort = sendAddr.Port();
     m_sendSocket.Transfer(sendSocket);
+    m_sendSocket.SetLogName(sendSocket.LogName());
     return true;
   }
 

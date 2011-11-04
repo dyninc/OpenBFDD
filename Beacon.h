@@ -14,6 +14,7 @@
 #include "hash_map.h"
 #include "Socket.h"
 #include "SockAddr.h"
+#include "RecvMsg.h"
 #include <deque>
 #include <vector>
 #include <set>
@@ -250,7 +251,7 @@ namespace openbfdd
     // locking needed
     //
     Scheduler *m_scheduler; // This is only valid after Run() is called.
-    Socket::RecvMsg m_packet; 
+    RecvMsg m_packet; 
 
     DiscMap m_discMap; // Your Discriminator -> Session
     IdMap m_IdMap; // Human readable session id -> Session

@@ -386,46 +386,33 @@ namespace openbfdd
     Socket listenSocket;
 
     outSocket.Close();
+    // Any socket error will get logged, so we don't need to log them again.
+    listenSocket.SetLogName(FormatShortStr("BFD %s listen socket", Addr::TypeToString(family)));
     listenSocket.OpenUDP(family);
     if (listenSocket.empty())
-    {
-      gLog.LogError("Failed to create BFD %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
       return;
-    }
 
     if (!listenSocket.SetTTLOrHops(bfd::TTLValue))
-    {
-      gLog.LogError("Failed to set ttl/hops on %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
       return;
-    }
+
     if (!listenSocket.SetRecieveTTLOrHops(true))
-    {
-      gLog.LogError("Failed to set receive for ttl/hops on %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
       return;
-    }
+
     if (!listenSocket.SetReceiveDestinationAddress(true))
-    {
-      gLog.LogError("Failed to set receive for dest address on %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
       return;
-    }
 
     if (family == Addr::IPv6)
     {
       if (!listenSocket.SetIPv6Only(true))
-      {
-        gLog.LogError("Failed to set IPv6 only on %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
         return;
-      }
     }   
      
     if (!listenSocket.Bind(SockAddr(family, bfd::ListenPort)))
-    {
-      gLog.LogError("Can't bind listenSocket to default port on %s listen Socket: %s", Addr::TypeToString(family), strerror(errno));
       return;
-    }
 
     // Take ownership
     outSocket.Transfer(listenSocket);
+    outSocket.SetLogName(listenSocket.LogName());
   }
 
   void Beacon::handleListenSocket(Socket *socket)

@@ -32,7 +32,7 @@ namespace openbfdd
     // 
     Socket m_listenSocket;
     Socket m_replySocket;
-    Socket::RecvMsg m_inCommand;
+    RecvMsg m_inCommand;
     vector<char> m_inReplyBuffer;  // only use  messageReply and friends.
     string m_inCommandLogStr;
 
@@ -53,6 +53,7 @@ namespace openbfdd
   public:
     CommandProcessorImp(Beacon &beacon) :  CommandProcessor(beacon),
     m_beacon(&beacon),
+    m_listenSocket(), 
     m_replySocket(),
     m_inCommand(MaxCommandSize, 0),
     m_inReplyBuffer(MaxReplyLineSize + 1),
@@ -192,6 +193,8 @@ namespace openbfdd
         return false;
       }
 
+      m_listenSocket.SetLogName(FormatShortStr("Control listen socket on port %"PRIu16, m_port));
+
       if (!m_listenSocket.OpenTCP(Addr::IPv4))
         return false;
 
@@ -328,7 +331,9 @@ namespace openbfdd
          // We do not quit on error?
         return true;
       }
+      connectedSocket.SetLogName(FormatShortStr("Command connection to %s",  connectedSocket.GetAddress().ToString()));
       m_replySocket = connectedSocket; // note connectedSocket still 'owns' the socket.
+      m_replySocket.SetLogName(connectedSocket.LogName());
 
       // Got a connection for the command. Now wait for a command. Since we are
       // non-blocking, we use select again.
@@ -2044,8 +2049,7 @@ namespace openbfdd
     void doMessageReply(const char *reply, size_t length)
     {
       // TODO timeout? Check for shutdown?
-      if (!m_replySocket.Send(reply, length))
-        gLog.ErrnoError(errno, "Failed to complete message reply.");
+      m_replySocket.Send(reply, length);
     }
 
 

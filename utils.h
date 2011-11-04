@@ -310,6 +310,20 @@ namespace openbfdd
   const char *FormatShortStr(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 
   /**
+	 * Formats a medium string using thread local storage. At most 1024 characters 
+	 * can be printed, anything beyond that will be truncated.  Do not permanently 
+   * store the return value . 
+	 * This, and other functions, share tls buffers. There are at least 4 buffers 
+	 * per thread. Do not permanently store the return value. 
+   * 
+   * @param format 
+   * 
+   * @return const char* - "tls_error" in the unlikely event of a tls error.
+   */
+  const char *FormatMediumStr(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+  const char *FormatMediumStrVa(const char* format, va_list args);
+
+  /**
    * Formats a "large" string using thread local storage. Currently at most 4096 
    * characters can be printed, anything beyond that will be truncated.  Do not 
    * permanently store the return value. Since this function uses a single tls 

@@ -128,28 +128,44 @@ namespace openbfdd
    * RIAA class for self deleting NON pointer type, that calls a function on a 
    * class. T Must have simple copy semantics & compare semantics. 
    *  
-   * (We need a separate template class, because NULL is not allowed as a template 
-   * parameter.) 
+   * (We need a separate template class from RiaaClassCall, because NULL is not 
+   * allowed as a template parameter.) 
    */
-  template <typename T, typename C, void (C::*freeFn)(T)> class RiaaObjCall
+  template <typename T, typename C, typename R, R (C::*freeFn)(T)> class RiaaObjCallVar
   {
   public:
     T val;
     bool valid;
     C* myClass;
-    //RiaaObjCall(C* myClass) : valid(false), myClass(myClass) { /*for warning ... hopefully not damaging*/}
-    RiaaObjCall(T val, C* myClass) : val(val), valid(true), myClass(myClass) {}
-    ~RiaaObjCall() {Dispose();}
+    RiaaObjCallVar(C* myClass) : valid(false), myClass(myClass) {}
+    RiaaObjCallVar(T val, C* myClass) : val(val), valid(true), myClass(myClass) {}
+    ~RiaaObjCallVar() {Dispose();}
     operator T&() { return val;}
     T& operator=(T newval) {Dispose();val = newval; valid=true; return val;}
     bool operator==(T cmp) const {return val == cmp;}
-    T& Detach() {valid = false; return val;} // detach without freeing
+    T& Detach() {valid = false; return val;} // detach without calling the callback
+    void Attach(T newval) {val = newval; valid=true;} // change/set without without calling the callback.
     void Dispose() {if (valid) (myClass->*freeFn)(val);valid=false;} 
     bool IsValid() const {return valid;}
     //T& operator->()  { return val; }  //??
   protected:
   private:
-    RiaaObjCall& operator=(RiaaObjCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCall freeing the same object
+    RiaaObjCallVar& operator=(RiaaObjCallVar<T, C, R, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCallVar freeing the same object
+    RiaaObjCallVar(const RiaaObjCallVar<T, C, R, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+  };
+
+  /**
+   * Same as RiaaObjCallVar, but with void return type. 
+   * 
+   */
+  template <typename T, typename C, void (C::*freeFn)(T)> class RiaaObjCall : public RiaaObjCallVar<T, C, void, freeFn >
+  {
+  public:
+    RiaaObjCall(C* myClass) : RiaaObjCallVar<T, C, void, freeFn >(myClass) {}
+    RiaaObjCall(T val, C* myClass) : RiaaObjCallVar<T, C, void, freeFn >(val, myClass) {}
+    T& operator=(T newval) {return RiaaObjCallVar<T, C, void, freeFn >::operator=(newval);}
+  private:
+    RiaaObjCall& operator=(RiaaObjCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCallVar freeing the same object
     RiaaObjCall(const RiaaObjCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
   };
 

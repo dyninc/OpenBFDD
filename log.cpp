@@ -406,6 +406,15 @@ namespace openbfdd
     va_end(args);
   }
 
+  void Log::MessageVa(Log::Type type, const char *format, va_list args)
+  {
+    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
+
+    if (!idLogTypeValid(type))
+      return;
+    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
+  }
+
 
   /** 
    *  

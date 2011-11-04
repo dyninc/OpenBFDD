@@ -163,11 +163,13 @@ namespace openbfdd
      * No newline is needed. 
      */
     void Message(Log::Type type, const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+    void MessageVa(Log::Type type, const char *format, va_list args);
 
     /**
      * shortcut for Message(Log::Error, 
      */
     void LogError(const char* format, ...) ATTR_FORMAT(printf, 2, 3);
+
 
     /**
      * shortcut for Message(Log::Warn, 
