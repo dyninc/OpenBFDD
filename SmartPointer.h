@@ -144,7 +144,7 @@ namespace openbfdd
     T& operator=(T newval) {Dispose();val = newval; valid=true; return val;}
     bool operator==(T cmp) const {return val == cmp;}
     T& Detach() {valid = false; return val;} // detach without calling the callback
-    void Attach(T newval) {val = newval; valid=true;} // change/set without without calling the callback.
+    void Attach(T newval) {val = newval; valid=true;} // change/set without calling the callback.
     void Dispose() {if (valid) (myClass->*freeFn)(val);valid=false;} 
     bool IsValid() const {return valid;}
     //T& operator->()  { return val; }  //??

@@ -6,6 +6,7 @@
 #include "common.h"
 #include "SmartPointer.h"
 #include "SockAddr.h"
+#include "Socket.h"
 #include <arpa/inet.h>
 #include <vector>
 #include <errno.h>
@@ -46,29 +47,25 @@ namespace openbfdd
   static bool SendData(const char *message, size_t message_size, uint16_t port, const char *outPrefix = NULL)
   {
     size_t totalLength;
-    sockaddr_in saddr; 
+    SockAddr saddr; 
+
     vector<char> buffer(max(MaxReplyLineSize,  MaxCommandSize));
-    FileDescriptor sendSocket;
+    Socket sendSocket;
     FileHandle fileHandle;
     uint32_t magic;
 
-    sendSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (!sendSocket.IsValid())
+    if (!sendSocket.OpenTCP(Addr::IPv4))
     {
-      perror("Error creating socket: ");
+      fprintf(stderr, "Error creating socket: %s", strerror(sendSocket.GetLastError()));
       return false;
     }
 
     // TODO: listen address should be settable.
-    memset(&saddr, 0, sizeof(saddr)); 
-    saddr.sin_family = AF_INET;
-    saddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
-    saddr.sin_port = htons(port);             
+    saddr.FromString("127.0.0.1", port);
 
-    if (connect(sendSocket, (sockaddr*)&saddr, sizeof(saddr)) < 0)
+    if (!sendSocket.Connect(saddr))
     {
-      perror("Error connecting to beacon: ");
+      fprintf(stderr, "Error connecting to beacon: %s", strerror(sendSocket.GetLastError()));
       return false;
     }
 
@@ -85,9 +82,9 @@ namespace openbfdd
     memcpy (&buffer[sizeof(uint32_t)], message, message_size); 
 
     // Send our message.
-    if (send(sendSocket, &buffer.front(), totalLength, 0) < 0)
+    if (!sendSocket.Send(&buffer.front(), totalLength))
     {
-      perror("Error sending command to beacon: ");
+      fprintf(stderr, "Error sending command to beacon: %s", strerror(sendSocket.GetLastError()));
       return false;
     }
 
