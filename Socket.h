@@ -7,6 +7,7 @@
 
 #include "SockAddr.h"
 #include "SmartPointer.h"
+#include <sys/socket.h>
 
 namespace openbfdd
 {
