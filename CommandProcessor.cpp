@@ -684,6 +684,12 @@ namespace openbfdd
 
       temp.SetAddress(local, addrVal);
 
+      if (temp.whichLocalAddr.Type() != temp.whichRemoteAddr.Type())
+      {
+        errorMsg = FormatBigStr("Error: can not mix IPv4 and IPv6 addresses.");
+        return false;
+      }
+
       sessionId = temp;
       *inOutParam = str;
       return true;
