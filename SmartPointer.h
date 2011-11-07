@@ -5,7 +5,6 @@
 ***************************************************************/
 // Base header for various "smart" pointer type classes.
 #pragma once
-#include <unistd.h>
 #include <stdio.h>
 
 namespace openbfdd
@@ -32,8 +31,8 @@ namespace openbfdd
   protected:
     bool isNull() const {return val==nullval;}
   private:
-    RiaaBase& operator=(RiaaBase<T, nullval, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaBase freeing the same object
-    RiaaBase(const RiaaBase<T, nullval, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+    RiaaBase& operator=(RiaaBase<T, nullval, freeFn> &src); // don't want two RiaaBase freeing the same object
+    RiaaBase(const RiaaBase<T, nullval, freeFn> &src); // never use this.
   };
 
 
@@ -61,8 +60,8 @@ namespace openbfdd
   protected:
     bool isNull() const {return val==NULL;}
   private:
-    RiaaNullBase& operator=(RiaaNullBase<T, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaNullBase freeing the same object
-    RiaaNullBase(const RiaaNullBase<T, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+    RiaaNullBase& operator=(RiaaNullBase<T, freeFn> &src) ; // don't want two RiaaNullBase freeing the same object
+    RiaaNullBase(const RiaaNullBase<T, freeFn> &src); // never use this.
   };
 
   /**
@@ -120,8 +119,8 @@ namespace openbfdd
   protected:
     bool isNull() const {return val==NULL;}
   private:
-    RiaaClassCall& operator=(RiaaClassCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaClassCall freeing the same object
-    RiaaClassCall(const RiaaClassCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+    RiaaClassCall& operator=(RiaaClassCall<T, C, freeFn> &src) ; // don't want two RiaaClassCall freeing the same object
+    RiaaClassCall(const RiaaClassCall<T, C, freeFn> &src); // never use this.
   };
 
   /**
@@ -150,8 +149,8 @@ namespace openbfdd
     //T& operator->()  { return val; }  //??
   protected:
   private:
-    RiaaObjCallVar& operator=(RiaaObjCallVar<T, C, R, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCallVar freeing the same object
-    RiaaObjCallVar(const RiaaObjCallVar<T, C, R, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+    RiaaObjCallVar& operator=(RiaaObjCallVar<T, C, R, freeFn> &src) ; // don't want two RiaaObjCallVar freeing the same object
+    RiaaObjCallVar(const RiaaObjCallVar<T, C, R, freeFn> &src); // never use this.
   };
 
   /**
@@ -165,8 +164,8 @@ namespace openbfdd
     RiaaObjCall(T val, C* myClass) : RiaaObjCallVar<T, C, void, freeFn >(val, myClass) {}
     T& operator=(T newval) {return RiaaObjCallVar<T, C, void, freeFn >::operator=(newval);}
   private:
-    RiaaObjCall& operator=(RiaaObjCall<T, C, freeFn> &src)  {fprintf(stderr, "Bad operator=\n"); return *this;}  // don't want two RiaaObjCallVar freeing the same object
-    RiaaObjCall(const RiaaObjCall<T, C, freeFn> &src) {fprintf(stderr, "Bad constructor\n");}; // never use this.
+    RiaaObjCall& operator=(RiaaObjCall<T, C, freeFn> &src) ; // don't want two RiaaObjCallVar freeing the same object
+    RiaaObjCall(const RiaaObjCall<T, C, freeFn> &src); // never use this.
   };
 
 };

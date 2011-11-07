@@ -12,8 +12,6 @@
 #include "Session.h"
 #include "threads.h"
 #include "hash_map.h"
-#include "Socket.h"
-#include "SockAddr.h"
 #include "RecvMsg.h"
 #include <deque>
 #include <vector>
@@ -23,7 +21,7 @@ struct sockaddr_in;
 
 namespace openbfdd
 {
-  class Session;
+  class Socket;
   class Scheduler;
 
   class Beacon

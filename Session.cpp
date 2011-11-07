@@ -9,7 +9,6 @@
 #include "Beacon.h"
 #include "Scheduler.h"
 #include <errno.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
 

@@ -6,6 +6,7 @@
 // Base header for various smart pointer type classes.
 #include "standard.h"
 #include "SmartPointer.h"
+#include <unistd.h>
 
 using namespace std;
 

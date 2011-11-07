@@ -7,11 +7,7 @@
 #include "CommandProcessor.h"
 #include "utils.h"
 #include "Beacon.h"
-#include "SockAddr.h"
-#include "Socket.h"
 #include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <stdarg.h>

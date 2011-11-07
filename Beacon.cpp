@@ -9,10 +9,6 @@
 #include "CommandProcessor.h"
 #include "SelectScheduler.h"
 #include "KeventScheduler.h"
-#include <errno.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 using namespace std;
 

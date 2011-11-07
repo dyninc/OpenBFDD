@@ -334,6 +334,5 @@ namespace openbfdd
      */
     const char *SpanToLogText(int decimals, bool shortName = true);
 
-
   };
 }

@@ -6,7 +6,6 @@
 // Base header for the beacon and control
 #include "common.h"
 #include "utils.h"
-#include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>

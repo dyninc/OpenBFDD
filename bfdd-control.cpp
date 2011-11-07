@@ -5,14 +5,10 @@
 ***************************************************************/
 #include "common.h"
 #include "SmartPointer.h"
-#include "SockAddr.h"
 #include "Socket.h"
-#include <arpa/inet.h>
 #include <vector>
 #include <errno.h>
 #include <fstream>
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include <string.h>
 #include "utils.h"
 

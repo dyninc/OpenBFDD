@@ -9,7 +9,6 @@
   #include "common.h"
   #include "SelectScheduler.h"
   #include "utils.h"
-  #include <sys/select.h>
   #include <errno.h>
   #include <string.h>
 

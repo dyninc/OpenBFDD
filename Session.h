@@ -13,10 +13,8 @@
 #include "bfd.h" 
 #include "SmartPointer.h" 
 #include "TimeSpec.h" 
-#include "SockAddr.h"
 #include "Socket.h"
 #include <list> 
-#include <arpa/inet.h>
 
 namespace openbfdd
 {
@@ -24,6 +22,7 @@ namespace openbfdd
   class Scheduler;
   class Timer;
   struct BfdPacket;
+  class SockAddr;
 
   /**
    * Session class, handles a single BFD session. 
