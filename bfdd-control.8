@@ -1,5 +1,5 @@
 .\" Manpage for bfdd-control.
-.TH "bfdd-control" "8" "September 30, 2010" "OpenBFDD v0.2.0" "OpenBFDD v0.2.0" 
+.TH "bfdd-control" "8" "December 3, 2010" "OpenBFDD v0.4.0" "OpenBFDD v0.4.0" 
 .SH NAME
 \fBbfdd-control\fR - control utility for \fBbfdd-beacon\fR(8)
 .SH SYNOPSIS
@@ -95,10 +95,10 @@ Used to set certain attributes for the session specified by \fIid\fR or \fIip-pa
 .RS 
 .TP
 \fBmintx\fR
-Sets the "Desired Minimum Transmit Interval" that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the "Required Minimum Receive Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 is not allowed. 
+Sets the "Desired Minimum Transmit Interval" that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the "Required Minimum Receive Interval" received from the remote session. The \fIvalue\fR parameter should be a \fItimeval\fR as described above. 0 is not allowed. 
 .TP
 \fBminrx\fR
-Sets the "Required Minimum Receive Interval" that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the "Desired Minimum Transmit Interval" received from the remote session. The \fIvalue\fR parameter should be an \fItimeval\fR as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
+Sets the "Required Minimum Receive Interval" that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the "Desired Minimum Transmit Interval" received from the remote session. The \fIvalue\fR parameter should be a \fItimeval\fR as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
 .TP
 \fBmulti\fR
 Sets the "Detection Multiplier" that the local session sends to the remote session in the control packet. This is (approximately) the number of periodic packets, from this session to the remote session, that can be lost before the remote system declares the link down due to timeout. The \fIvalue\fR parameter should be number between 1 and 255. 
@@ -115,8 +115,18 @@ Some of the parameters used in the \fBCOMMANDS\fR section require some additiona
 \fIid\fR 
 This parameter describes a locally maintained identifier for a session. This id is primarily used as a convenient way to identify sessions when using \fBbfdd-control\fR. Note that this \fIid\fR is not the same as the \fBLocalId\fR used to identify the session to the remote system. Passive sessions can be destroyed after a timeout period. If they are later reestablished they will have a new \fIid\fR. For this, and other, reasons, it may be preferable to use an \fIip-pair\fR when managing sessions in an automated way. 
 .TP 
+\fIip\fR 
+This parameter describes an ip address. An IPv4 or IPv6 address may be supplied. 
+An IPv4 address muse use dotted quad notation, in the form: 
+"\fBddd.ddd.ddd.ddd\fR"
+An IPv6 address can use full notation, in the form:
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh\fR"
+or shorthand notation, such as: "\fBhhhh:hhhh::hhhh\fR".
+Link-local addresses must also be followed by an interface name, using the form: 
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%\fR\fIifname\fR", where \fIifname\fR is the name of the interface to which the link local address applies. An interface may \fBonly\fR be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
+.TP 
 \fIip-pair\fR 
-This parameter describes a pair of ip addresses. It should take the form "\fBlocal\fR \fIip\fR \fBremote\fR \fIip\fR", where \fIip\fR is a dotted quad IPv4 address. The \fBlocal\fR \fIip\fR describes the ip address on the local system that will be used for the bfd session. The \fBremote\fR \fIip\fR describes the ip address on the remote system that will be used for the bfd session. The \fBlocal\fR and \fBremote\fR addresses may be specified in any order in an \fBip-pair\fR.
+This parameter describes a pair of ip addresses. It should take the form "\fBlocal\fR \fIip\fR \fBremote\fR \fIip\fR", where \fIip\fR is an ip address as described above. The "\fBlocal\fR \fIip\fR" describes the ip address on the local system that will be used for the bfd session. The "\fBremote\fR \fIip\fR" describes the ip address on the remote system that will be used for the bfd session. The \fBlocal\fR and \fBremote\fR addresses may be specified in any order in an \fBip-pair\fR.
 .SH STATUS ITEMS
 The \fBstatus\fR command returns a number of status items. Below is a brief description of some of these items.
 This assumes an understanding of the Bidirectional Forwarding Detection (BFD) protocol 
@@ -183,6 +193,3 @@ No know bugs at this time.
 Jake Montgomery for Dynamic Network Services, Inc.
 .SH COPYRIGHT
 Copyright (c) 2010, Dynamic Network Services, Inc.
-
-
-

@@ -1,6 +1,6 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 // Various threading and lock routines
@@ -18,7 +18,6 @@ namespace openbfdd
    * @param create - If true then the lock is created and initialized.
    */
   QuickLock::QuickLock(bool create /*false*/) :
-  m_Lock(NULL),
   m_initialized(false)
   {
     if (create)
@@ -228,7 +227,6 @@ namespace openbfdd
    * @param create - If true then the lock is created and initialized.
    */
   ReadWriteLock::ReadWriteLock(bool create /*false*/) :
-  m_Lock(NULL),
   m_initialized(false)
   {
     if (create)

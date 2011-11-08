@@ -1,17 +1,14 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "common.h"
 #include "Beacon.h"
 #include "utils.h"
 #include "CommandProcessor.h"
-#include "Scheduler.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <errno.h>
-#include <signal.h>
+#include "SelectScheduler.h"
+#include "KeventScheduler.h"
 
 using namespace std;
 
@@ -19,34 +16,38 @@ namespace openbfdd
 {
   Beacon::Beacon() :
   m_scheduler(NULL),
-  m_packetBuffer(bfd::MaxPacketSize),
   m_discMap(32),
   m_IdMap(32),
   m_sourceMap(32),
   m_allowAnyPassiveIP(false),
   m_strictPorts(false),
   m_initialSessionParams(),
+  m_selfSignalId(-1),
   m_paramsLock(true),
   m_shutownRequested (false)
   {
-    // Do as little as possible. Logging not even initialized.   
-    
-    // This must be big enough to include ttl and dest address 
-    m_messageBuffer.resize(CMSG_SPACE(sizeof(uint32_t))
-                           + CMSG_SPACE(sizeof(struct in_addr))
-                           + 8 /*just in case*/ 
-                             );
+    // Do as little as possible. Logging not even initialized.
   }
 
   Beacon::~Beacon()
   {
   }
 
+  void Beacon::handleListenSocketCallback(int ATTR_UNUSED(socket), void *userdata)
+  {
+    Beacon::listenCallbackData *data;
+    data = reinterpret_cast<Beacon::listenCallbackData *>(userdata);
+    data->beacon->handleListenSocket(data->socket);
+  }
+
   int Beacon::Run()
   {
-    RiaaClass<CommandProcessor> commandProcessor(MakeCommandProcessor(*this));
-    RiaaClass<CommandProcessor> altCommandProcessor(MakeCommandProcessor(*this));
+    Riaa<CommandProcessor>::Delete commandProcessor(MakeCommandProcessor(*this));
+    Riaa<CommandProcessor>::Delete altCommandProcessor(MakeCommandProcessor(*this));
     int returnVal = 1;
+
+    Socket socketIPv4, socketIPv6;
+    listenCallbackData socketIPv4data, socketIPv6data;
 
     if (m_scheduler != NULL)
     {
@@ -66,27 +67,56 @@ namespace openbfdd
       return 1;
     }
 
-    m_scheduler = Scheduler::MakeScheduler();
-    int socket = makeListenSocket();
-    if (socket < 0)
-    {
-      gLog.LogError("Failed to start create listen socket on BFD port %hd.", bfd::ListenPort);
-      return 1;
+#ifdef USE_KEVENT_SCHEDULER
+    m_scheduler = new KeventScheduler();
+#else
+    m_scheduler = new SelectScheduler();
+#endif 
 
-    }
-
-    if (!m_scheduler->SetSocketCallback(socket, handleListenSocketCallback, this))
+    makeListenSocket(Addr::IPv4, socketIPv4);
+    if (socketIPv4.empty())
     {
-      gLog.LogError("Failed to set m_scheduler socket processing thread. Aborting.");
+      gLog.LogError("Failed to start create IPv4 listen socket on BFD port %hd.", bfd::ListenPort);
       return 1;
     }
 
-    // We use SIGUSR1 to communicate back to ourself in the Scheduler thread. 
-    if (!m_scheduler->SetSignalCallback(SIGUSR1, handleSelfMessageCallback, this, true /*disable normal signal handling*/))
+    makeListenSocket(Addr::IPv6, socketIPv6);
+    if (socketIPv6.empty())
     {
-      gLog.LogError("Failed to set SIGUSER1 signal handling. Aborting.");
+      gLog.LogError("Failed to start create IPv6 listen socket on BFD port %hd.", bfd::ListenPort);
       return 1;
     }
+
+    m_packet.AllocBuffers(bfd::MaxPacketSize,
+                          Socket::GetMaxControlSizeReceiveDestinationAddress() +
+                          Socket::GetMaxControlSizeRecieveTTLOrHops() +
+                           + 8 /*just in case*/ );
+
+
+    // We use this "signal channel" to communicate back to ourself in the Scheduler
+    // thread.
+    if (!m_scheduler->CreateSignalChannel(&m_selfSignalId, handleSelfMessageCallback, this))
+    {
+      gLog.LogError("Failed to create  self signal handling. Aborting.");
+      return 1;
+    }
+
+    socketIPv4data.beacon = this;
+    socketIPv4data.socket = &socketIPv4;
+    if (!m_scheduler->SetSocketCallback(*socketIPv4data.socket, handleListenSocketCallback, &socketIPv4data))
+    {
+      gLog.LogError("Failed to set m_scheduler IPv4 socket processing thread. Aborting.");
+      return 1;
+    }
+
+    socketIPv6data.beacon = this;
+    socketIPv6data.socket = &socketIPv6;
+    if (!m_scheduler->SetSocketCallback(*socketIPv6data.socket, handleListenSocketCallback, &socketIPv6data))
+    {
+      gLog.LogError("Failed to set m_scheduler IPv6 socket processing thread. Aborting.");
+      return 1;
+    }
+
 
     if (!m_scheduler->Run())
       gLog.LogError("Failed to start m_scheduler. Aborting.");
@@ -103,51 +133,79 @@ namespace openbfdd
     // callbacks, which end when Scheduler::Run() ends
     Scheduler *oldScheduler = m_scheduler;
     m_scheduler = NULL;
-    Scheduler::FreeScheduler(oldScheduler);
+    delete oldScheduler;
 
     return returnVal;
   }
 
-  bool Beacon::StartActiveSession(in_addr_t remoteAddr, in_addr_t localAddr)
+  bool Beacon::StartActiveSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     Session *session = NULL;
 
     LogAssert(m_scheduler->IsMainThread());
 
     session = findInSourceMap(remoteAddr, localAddr);
-    if (NULL == session)
+    if (session)
+    {
+      if (session->IsActiveSession())
+        return true; 
+      if (!session->UpgradeToActiveSession())
+      {
+        LogOptional(Log::Session, "Failed to upgrade Session id=%u for %s to %s is to an active session.",
+                    session->GetId(), 
+                    localAddr.ToString(),  
+                    remoteAddr.ToString()  
+                   );
+        return false;
+      }
+
+
+      LogOptional(Log::Session, "Session id=%u for %s to %s is now an active session.",
+                  session->GetId(), 
+                  localAddr.ToString(),  
+                  remoteAddr.ToString()  
+                 );
+      return true;
+    }
+    else
     {
       session = addSession(remoteAddr, localAddr); 
       if (!session)
         return false;
 
       LogOptional(Log::Session, "Manually added new session for %s to %s id=%u.", 
-                  Ip4ToString(localAddr),  
-                  Ip4ToString(remoteAddr),  
+                  localAddr.ToString(),  
+                  remoteAddr.ToString(),  
                   session->GetId());
-    }
 
-    if(session->IsActiveSession())
+
+      if (!session->StartActiveSession(remoteAddr, localAddr))
+      {
+        LogOptional(Log::Session, "Failed to start active session id=%u for %s to %s.",
+                    session->GetId(), 
+                    localAddr.ToString(),  
+                    remoteAddr.ToString()  
+                   );
+        return false;
+      }
+
+      LogOptional(Log::Session, "Session id=%u for %s to %s is started as an active session.",
+                  session->GetId(), 
+                  localAddr.ToString(),  
+                  remoteAddr.ToString()  
+                 );
       return true;
-
-    session->StartActiveSession(remoteAddr, localAddr);
-
-    LogOptional(Log::Session, "Session id=%u for %s to %s is now an active session.",
-                session->GetId(), 
-                Ip4ToString(localAddr),
-                Ip4ToString(remoteAddr)  
-                );
-    return true;
+    }
   }
 
-  void Beacon::AllowPassiveIP(in_addr_t addr)
+  void Beacon::AllowPassiveIP(const IpAddr &addr)
   {
     LogAssert(m_scheduler->IsMainThread());
 
     m_allowedPassiveIP.insert(addr);
   }
 
-  void Beacon::BlockPassiveIP(in_addr_t addr)
+  void Beacon::BlockPassiveIP(const IpAddr &addr)
   {
     LogAssert(m_scheduler->IsMainThread());
 
@@ -168,7 +226,7 @@ namespace openbfdd
 
     AutoQuickLock lock(m_paramsLock);
     m_shutownRequested = true;
-    raise(SIGUSR1);
+    triggerSelfMessage();
   }
 
   bool Beacon::IsShutdownRequested()
@@ -188,29 +246,23 @@ namespace openbfdd
   }
 
 
-  Session *Beacon::FindSessionIp(in_addr_t remoteAddr, in_addr_t localAddr)
+  Session *Beacon::FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
     return findInSourceMap(remoteAddr, localAddr);
   }
 
-  static inline uint64_t makeSourceMapKey(in_addr_t remoteAddr, in_addr_t localAddr)
-  {
-    return (static_cast<uint64_t>(remoteAddr) << 32) + localAddr;
-  }
-
   /**
    * 
-   * 
-   * @param remoteAddr 
-   * @param localAddr 
+   * @param remoteAddr [in] - Port ignored 
+   * @param localAddr [in] - Port ignored 
    * 
    * @return Session* - NULL on failure 
    */
-  Session *Beacon::findInSourceMap(in_addr_t remoteAddr, in_addr_t localAddr)
+  Session *Beacon::findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
-    SourceMapIt found = m_sourceMap.find(makeSourceMapKey(remoteAddr, localAddr));
+    SourceMapIt found = m_sourceMap.find(SourceMapKey(remoteAddr, localAddr));
     if (found == m_sourceMap.end())
       return NULL;
     return found->second;
@@ -241,11 +293,11 @@ namespace openbfdd
 
     LogVerify(1==m_discMap.erase(session->GetLocalDiscriminator()));
     LogVerify(1==m_IdMap.erase(session->GetId()));
-    LogVerify(1==m_sourceMap.erase(makeSourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
+    LogVerify(1==m_sourceMap.erase(SourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
 
     LogOptional(Log::Session, "Removed session %s to %s id=%d.", 
-                Ip4ToString(session->GetLocalAddress()),  
-                Ip4ToString(session->GetRemoteAddress()),  
+                session->GetLocalAddress().ToString(), 
+                session->GetRemoteAddress().ToString(), 
                 session->GetId());
 
     delete session;
@@ -258,6 +310,8 @@ namespace openbfdd
     WaitCondition condition(false);
     PendingOperation operation;
     PendingOperation *useOperation;
+    Riaa<PendingOperation>::Delete allocOperation;
+
 
     if (!callback)
     {
@@ -277,232 +331,132 @@ namespace openbfdd
     }
     else
     {
-      useOperation = new PendingOperation;
+      allocOperation = useOperation = new(std::nothrow) PendingOperation;
+      if (!useOperation)
+        return false;
+
       *useOperation = operation;
     }
-
 
     {
       AutoQuickLock lock(m_paramsLock);
 
       if (m_shutownRequested)
+        return false;
+
+      try
       {
-        if (!waitForCompletion)
-          delete useOperation;
+        m_operations.push_back(useOperation);
+      }
+      catch (std::exception)
+      {
         return false;
       }
 
-      m_operations.push_back(useOperation);
+
+      // Once it is in m_operations, then the operation is no longer ours to delete.
+      allocOperation.Detach();
 
       if (waitForCompletion)
       {
-        raise(SIGUSR1);
+        triggerSelfMessage();
         while (!useOperation->completed)
           lock.LockWait(condition);
       }
     }
 
     if (!waitForCompletion)
-      raise(SIGUSR1);
+      triggerSelfMessage();
 
     return true;
   }
 
   /**
-   * Creates the one and only listen socket on the bfd listen port.
-   * 
-   * 
-   * @return int 
+   * Creates the a listen socket on the bfd listen port. 
+   *  
+   * outSocket will be empty on failure. 
+   *  
    */
-  int Beacon::makeListenSocket ()
+  void Beacon::makeListenSocket(Addr::Type family, Socket &outSocket)
   {
-    int val;
-    FileDescriptor listenSocket;
-    struct ::sockaddr_in sin;
+    Socket listenSocket;
 
-    /* Make UDP listenSocket to receive control packets */
-    listenSocket = ::socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (!listenSocket.IsValid())
-    {
-      gLog.ErrnoError(errno, "Failed to create BFD listen  listenSocket");
-      return -1;
-    }
-
-    val = bfd::TTLValue;
-    if (::setsockopt(listenSocket, IPPROTO_IP, IP_TTL, &val, sizeof(val)) < 0)
-    {
-      gLog.ErrnoError(errno, "Can't set TTL for outgoing packets");
-      return -1;
-    }
-    val = 1;
-    if (::setsockopt(listenSocket, IPPROTO_IP, IP_RECVTTL, &val, sizeof(val)) < 0)
-    {
-      gLog.ErrnoError(errno, "Can't set receive TTL for incoming packets");
-      return -1;
-    }
-
-    val = 1;
-    if (::setsockopt(listenSocket, IPPROTO_IP, IP_RECVDSTADDR, &val, sizeof(val)) < 0)
-    {
-      gLog.ErrnoError(errno, "Can't set option to get destination address for incoming packets");
-      return -1;
-    }
-    
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = INADDR_ANY;
-    sin.sin_port = htons(bfd::ListenPort);
-    if (::bind(listenSocket, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-    {
-      gLog.ErrnoError(errno, "Can't bind listenSocket to default port for bfd listen listenSocket.");
-      return -1;
-    }
-
-    return  listenSocket.Detach();
-  }
-
-  /**
-   *  Gets the tll.
-   * 
-   * 
-   * @param msg 
-   * @param outTTL [out] - Set to the ttl on success. May not be null.
-   * 
-   * @return bool - false on failure.
-   */         
-  static bool getTTL(struct msghdr *msg, uint8_t *outTTL)
-  {
-    struct cmsghdr* cmsg;
-
-    for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg))
-    {
-      // It appears that  some systems use IP_TTL and some use IP_RECVTTL to
-      // return the ttl. Specifically, FreeBSD uses IP_RECVTTL and Debian uses
-      // IP_TTL. We work around this by checking both (until that breaks some system.)
-      if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
-      {  
-        if(LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(uint32_t))))
-        {  
-          *outTTL = (uint8_t)*(uint32_t *)CMSG_DATA(cmsg);
-          return true;
-        }
-      }
-      else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVTTL)
-      {  
-        *outTTL = *(uint8_t *)CMSG_DATA(cmsg);
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  static bool getDstAddr(struct msghdr *msg, in_addr_t *outDstAddress)
-  {
-    struct cmsghdr* cmsg;
-
-    for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg))
-    {
-      if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)
-      {  
-        if(cmsg->cmsg_len < CMSG_LEN(sizeof(struct in_addr)))
-          return false;
-
-        *outDstAddress = reinterpret_cast<struct in_addr *>(CMSG_DATA(cmsg))->s_addr;
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-
-  /**
-   * @param listenSocket 
-   * @param outSourceAddress 
-   * @param outDstAddress 
-   * @param outTTL 
-   * 
-   * @return size_t - 0 on failure. Otherwize the number of bytes read.
-   */
-  size_t Beacon::readSocketPacket(int listenSocket, struct sockaddr_in *outSourceAddress, in_addr_t *outDstAddress, uint8_t *outTTL)
-  {
-    int msgLength;
-    struct sockaddr_in *sin;
-    struct iovec msgiov;
-    msgiov.iov_base = &m_packetBuffer.front();
-    msgiov.iov_len =  m_packetBuffer.size();
-
-    struct sockaddr_in msgaddr;
-    struct msghdr message; 
-    message.msg_name =&msgaddr;
-    message.msg_namelen = sizeof(msgaddr);
-    message.msg_iov = &msgiov;
-    message.msg_iovlen = 1;  // ??
-    message.msg_control = &m_messageBuffer.front();
-    message.msg_controllen = m_messageBuffer.size();
-    message.msg_flags = 0;
-
-    // Get packet
-    msgLength = recvmsg(listenSocket, &message, 0);
-    if (msgLength < 0)
-    {
-      gLog.ErrnoError(errno, "Error receiving on BFD listen listenSocket");
-      return 0;
-    }
-
-    // Get source address
-    if (message.msg_namelen < sizeof(struct sockaddr_in))
-    {
-      gLog.ErrnoError(errno, "Malformed source address on BFD packet.");
-      return 0;
-    }
-
-    sin = reinterpret_cast<struct sockaddr_in *>(message.msg_name);;
-    memcpy(outSourceAddress, sin, sizeof(struct sockaddr_in));
-    outSourceAddress->sin_port = ntohs(outSourceAddress->sin_port );
-
-    if (!getTTL(&message, outTTL))
-    {
-      gLog.LogError("Could not get ttl for packet from %s:%hu.", Ip4ToString(sin->sin_addr), outSourceAddress->sin_port);
-      return 0;
-    }
-       
-    if (!getDstAddr(&message, outDstAddress))
-    {
-      gLog.LogError("Could not get destination address for packet from %s:%hu.", Ip4ToString(sin->sin_addr), outSourceAddress->sin_port);
-      return 0;
-    }
-       
-    return msgLength;
-  }
-
-
-  void Beacon::handleListenSocket(int listenSocket)
-  {
-    struct sockaddr_in sourceAddr;
-    in_addr_t destAddr;
-    size_t messageLength;
-    uint8_t ttl; 
-    BfdPacket packet;
-    Session *session = NULL;
-
-
-    messageLength = readSocketPacket(listenSocket, &sourceAddr, &destAddr, &ttl);
-    if (messageLength == 0)
+    outSocket.Close();
+    // Any socket error will get logged, so we don't need to log them again.
+    listenSocket.SetLogName(FormatShortStr("BFD %s listen socket", Addr::TypeToString(family)));
+    listenSocket.OpenUDP(family);
+    if (listenSocket.empty())
       return;
 
-    LogOptional(Log::Packet, "Received bfd packet %zu bytes from %s:%hu to %s", messageLength, Ip4ToString(sourceAddr.sin_addr), sourceAddr.sin_port, Ip4ToString(destAddr));
+    if (!listenSocket.SetTTLOrHops(bfd::TTLValue))
+      return;
+
+    if (!listenSocket.SetRecieveTTLOrHops(true))
+      return;
+
+    if (!listenSocket.SetReceiveDestinationAddress(true))
+      return;
+
+    if (family == Addr::IPv6)
+    {
+      if (!listenSocket.SetIPv6Only(true))
+        return;
+    }   
+     
+    if (!listenSocket.Bind(SockAddr(family, bfd::ListenPort)))
+      return;
+
+    // Take ownership
+    outSocket.Transfer(listenSocket);
+    outSocket.SetLogName(listenSocket.LogName());
+  }
+
+  void Beacon::handleListenSocket(Socket *socket)
+  {
+    SockAddr sourceAddr;
+    IpAddr destIpAddr, sourceIpAddr;
+    uint8_t ttl; 
+    BfdPacket packet;
+    bool found;
+    Session *session = NULL;
+
+    if (!m_packet.DoRecvMsg(*socket))
+    {
+      gLog.ErrnoError(m_packet.GetLastError(), "Error receiving on BFD listen socket");
+      return;
+    }
+
+    sourceAddr = m_packet.GetSrcAddress();
+    if (!LogVerify(sourceAddr.IsValid()))
+      return;
+    sourceIpAddr = IpAddr(sourceAddr);
+
+    destIpAddr = m_packet.GetDestAddress();
+    if (!destIpAddr.IsValid())
+    {
+      gLog.LogError("Could not get destination address for packet from %s.", sourceAddr.ToString());
+      return;
+    }
+
+    ttl = m_packet.GetTTLorHops(&found);
+    if (!found)
+    {      
+      gLog.LogError("Could not get ttl for packet from %s.", sourceAddr.ToString());
+      return;
+    }
+
+    LogOptional(Log::Packet, "Received bfd packet %zu bytes from %s to %s", m_packet.GetDataSize(), sourceAddr.ToString(), destIpAddr.ToString());
 
     // 
     // Check ip specific stuff. See draft-ietf-bfd-v4v6-1hop-11.txt
     //
 
     // Port
-    if(m_strictPorts)
+    if (m_strictPorts)
     {
-      if (sourceAddr.sin_port < bfd::MinSourcePort) // max port is max value, so no need to check
+      if (sourceAddr.Port() < bfd::MinSourcePort) // max port is max value, so no need to check
       {
-        LogOptional(Log::Discard, "Discard packet: bad source port %s:%hu to %s", Ip4ToString(sourceAddr.sin_addr), sourceAddr.sin_port, Ip4ToString(destAddr));
+        LogOptional(Log::Discard, "Discard packet: bad source port %s to %s", sourceAddr.ToString(), destIpAddr.ToString());
         return;
       }
     }
@@ -510,11 +464,11 @@ namespace openbfdd
     // TTL assumes that all control packets are from neighbors.
     if (ttl != 255)
     {
-      gLog.Optional(Log::Discard, "Discard packet: bad ttl %hhu", ttl);
+      gLog.Optional(Log::Discard, "Discard packet: bad ttl/hops %hhu", ttl);
       return;
     }
 
-    if (!Session::InitialProcessControlPacket(&m_packetBuffer.front(), messageLength, packet))
+    if (!Session::InitialProcessControlPacket(m_packet.GetData(), m_packet.GetDataSize(), packet))
     {
       gLog.Optional(Log::Discard, "Discard packet");
       return;
@@ -527,73 +481,104 @@ namespace openbfdd
       if (found == m_discMap.end())
       {
         if (gLog.LogTypeEnabled(Log::DiscardDetail))
-            Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
-            
+          Session::LogPacketContents(packet, false, true, sourceAddr, destIpAddr);
+
         gLog.Optional(Log::Discard, "Discard packet: no session found for yourDisc <%u>.", packet.header.yourDisc);
         return;
       }
       session = found->second;
-      if (session->GetRemoteAddress() != sourceAddr.sin_addr.s_addr)
+      if (session->GetRemoteAddress() != sourceIpAddr)
       {
         if (gLog.LogTypeEnabled(Log::DiscardDetail))
-            Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
+          Session::LogPacketContents(packet, false, true, sourceAddr, destIpAddr);
 
-        LogOptional(Log::Discard, "Discard packet: mismatched yourDisc <%u> and ip <from %s to %s>.", packet.header.yourDisc, Ip4ToString(sourceAddr.sin_addr), Ip4ToString(destAddr));
+        LogOptional(Log::Discard, "Discard packet: mismatched yourDisc <%u> and ip <from %s to %s>.", packet.header.yourDisc, sourceAddr.ToString(), destIpAddr.ToString());
         return;
       }
     }
     else
     {
       // No discriminator
-      session = findInSourceMap(sourceAddr.sin_addr.s_addr, destAddr);
+      session = findInSourceMap(sourceIpAddr, destIpAddr);
       if (NULL == session)
       {
         // No session yet .. create one !?
-        if (!m_allowAnyPassiveIP && m_allowedPassiveIP.find(sourceAddr.sin_addr.s_addr) == m_allowedPassiveIP.end())
+        if (!m_allowAnyPassiveIP && m_allowedPassiveIP.find(sourceIpAddr) == m_allowedPassiveIP.end())
         {
           if (gLog.LogTypeEnabled(Log::DiscardDetail))
-              Session::LogPacketContents(packet, false, true, sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr, 0);
+            Session::LogPacketContents(packet, false, true, sourceAddr, destIpAddr);
 
-          LogOptional(Log::Discard, "Ignoring unauthorized bfd packets from %s",  Ip4ToString(sourceAddr.sin_addr));
+          LogOptional(Log::Discard, "Ignoring unauthorized bfd packets from %s",  sourceAddr.ToString());
           return;
         }
 
-        session = addSession(sourceAddr.sin_addr.s_addr,destAddr); 
+        session = addSession(sourceIpAddr, destIpAddr); 
         if (!session)
           return;
-        session->StartPassiveSession(sourceAddr.sin_addr.s_addr, sourceAddr.sin_port, destAddr);
-        LogOptional(Log::Session, "Added new session for local %s to remote  %s:%hu id=%d.", Ip4ToString(destAddr), Ip4ToString(sourceAddr.sin_addr), sourceAddr.sin_port, session->GetId());
+        if (!session->StartPassiveSession(sourceAddr, destIpAddr))
+        {
+          gLog.LogError("Failed to add new session for local %s to remote  %s id=%d.", destIpAddr.ToString(), sourceAddr.ToString(), session->GetId());
+          KillSession(session);
+        }
+        LogOptional(Log::Session, "Added new session for local %s to remote  %s id=%d.", destIpAddr.ToString(), sourceAddr.ToString(), session->GetId());
       }
     }
 
     // 
     //  We have a session that can handle the rest. 
     // 
-    session->ProcessControlPacket(packet, sourceAddr.sin_port);
+    session->ProcessControlPacket(packet, sourceAddr.Port());
   }
 
   /**
    * Adds a session
    * 
-   * @param remoteAddr 
-   * @param localAddr 
-   * 
    * @return Session* - NULL on failure
    */
-  Session *Beacon::addSession(in_addr_t remoteAddr, in_addr_t localAddr)
+  Session *Beacon::addSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     uint32_t newDisc = makeUniqueDiscriminator();
-    Session *session = new Session(*m_scheduler, this, newDisc, m_initialSessionParams);
-    if (0 == session->GetId())
+    Riaa<Session>::Delete session;
+
+    try
     {
-      delete session;
+      session = new Session(*m_scheduler, this, newDisc, m_initialSessionParams);
+
+      if (0 == session->GetId())
+        return NULL;
+
+      m_sourceMap[SourceMapKey(remoteAddr, localAddr)] = session;
+      m_discMap[newDisc] = session;
+      m_IdMap[session->GetId()] = session;
+    }
+    catch (std::exception &e)
+    {
+      if (session.IsValid())
+      {
+        m_sourceMap.erase(SourceMapKey(remoteAddr, localAddr));
+        m_IdMap.erase(session->GetId());
+      }
+
+      gLog.Message(Log::Error, "Add session failed: %s ", e.what());
       return NULL;
     }
-    m_sourceMap[makeSourceMapKey(remoteAddr, localAddr)] = session;
-    m_discMap[newDisc] = session;
-    m_IdMap[session->GetId()] = session;
-    return session;
+
+    return session.Detach();
   }
+
+  /**
+   * Call from any thread to trigger handleSelfMessage on main thread.
+   * 
+   * 
+   * @return bool 
+   */
+  bool Beacon::triggerSelfMessage()
+  {
+    if (!LogVerify(m_selfSignalId != -1) || !LogVerify(m_scheduler))
+      return false;
+    return m_scheduler->Signal(m_selfSignalId);
+  }
+
 
   /**
    * Called on the m_scheduler main thread when we have signaled ourselves.
@@ -603,35 +588,40 @@ namespace openbfdd
   void Beacon::handleSelfMessage(int sigId)
   {
     (void)sigId;
+    AutoQuickLock lock(m_paramsLock);
 
-    LogAssert(sigId == SIGUSR1);
+    while (!m_operations.empty())
     {
-      AutoQuickLock lock(m_paramsLock);
-      while (!m_operations.empty())
-      {
-        PendingOperation *operation;
-        operation = m_operations.front();
-        m_operations.pop_front();
-        lock.UnLock();
+      PendingOperation *operation;
+      operation = m_operations.front();
+      m_operations.pop_front();
+      lock.UnLock();
 
+      try
+      {
         operation->callback(this,  operation->userdata);
-        if (!operation->waitCondition)
-          delete operation;
-        else
-        {
-          lock.Lock();
-          operation->completed=true;
-          lock.SignalAndUnlock(*operation->waitCondition);
-        }
-
-        lock.Lock();
       }
-
-      if (m_shutownRequested)
+      catch (std::exception &e)
       {
-        lock.UnLock();
-        m_scheduler->RequestShutdown();
+        gLog.Message(Log::Error, "Beacon operation failed: %s ", e.what());
       }
+
+      if (!operation->waitCondition)
+        delete operation;
+      else
+      {
+        lock.Lock();
+        operation->completed=true;
+        lock.SignalAndUnlock(*operation->waitCondition);
+      }
+
+      lock.Lock();
+    }
+
+    if (m_shutownRequested)
+    {
+      lock.UnLock();
+      m_scheduler->RequestShutdown();
     }
   }
 
@@ -666,7 +656,7 @@ namespace openbfdd
   void Beacon::SetDefMulti(uint8_t val)
   {
     LogAssert(m_scheduler->IsMainThread());
-    if(!LogVerify(val != 0)) // v10/4.1
+    if (!LogVerify(val != 0)) // v10/4.1
       return;
 
     m_initialSessionParams.detectMulti = val;
@@ -675,7 +665,7 @@ namespace openbfdd
   void Beacon::SetDefMinTxInterval(uint32_t val)
   {
     LogAssert(m_scheduler->IsMainThread());
-    if(!LogVerify(val != 0)) // v10/4.1
+    if (!LogVerify(val != 0)) // v10/4.1
       return;
 
     m_initialSessionParams.desiredMinTx = val;
