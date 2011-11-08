@@ -1,11 +1,11 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 // Logging routines
 #pragma once
-#include<string>
+#include <string>
 
 namespace openbfdd
 {
@@ -38,7 +38,7 @@ namespace openbfdd
       Session, // Session creation and state change.
       SessionDetail, // Session creation and state change.
       Discard, // Packet discards and errors
-      DiscardDetail, // Contenets of (some) discarded packets.
+      DiscardDetail, // Contents of (some) discarded packets.
       Packet, // Detailed packet info
       PacketContents, // Log every non-discarded packet.
       Command, // Commands
@@ -120,7 +120,7 @@ namespace openbfdd
     void SetLogLevel(Log::Level level);
 
     /**
-     * Turns on or off extened time info.
+     * Turns on or off extended time info.
      * 
      * @param useExtendedTime 
      */
@@ -163,11 +163,13 @@ namespace openbfdd
      * No newline is needed. 
      */
     void Message(Log::Type type, const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+    void MessageVa(Log::Type type, const char *format, va_list args);
 
     /**
      * shortcut for Message(Log::Error, 
      */
     void LogError(const char* format, ...) ATTR_FORMAT(printf, 2, 3);
+
 
     /**
      * shortcut for Message(Log::Warn, 
@@ -203,7 +205,7 @@ namespace openbfdd
     std::string m_logFilePath; // The path of the current m_logFile.
     bool m_useSyslog; // Use syslog
     std::string m_ident; // Used with syslog
-    bool m_extendedTimeInfo; // Include full timestamp on every messgae.
+    bool m_extendedTimeInfo; // Include full timestamp on every message.
     struct TypeInfo
     {
       bool enabled;

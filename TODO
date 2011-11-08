@@ -1,10 +1,9 @@
 OpenBFDD todo:
 
- * Improve handling of low memory situations.
- * Provide the ability to build and run without kevent()
  * Support Demand Mode.
  * Support Echo Mode. 
  * Support Authentication
  * The communication ports 957 and 958 should be configurable.
  * Handle signals. Currently the app will exit on many common signals.
  * We need  a way to query the settings for the 'new' session using bfdd-control.
+ * Optionaly log bfdd-command message replies to bfdd-beacon log.

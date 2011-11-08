@@ -1,6 +1,6 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 /**
@@ -149,15 +149,7 @@ namespace openbfdd
   {
   public:
 
-    /** 
-     * Returns a scheduler. Use FreeScheduler when done. 
-     * The thread that calls this is considered the "main thread". See 
-     * IsMainThread(). 
-     * 
-     * @return Scheduler* 
-     */
-    static Scheduler *MakeScheduler();
-    static void FreeScheduler(Scheduler *scheduler);
+    virtual ~Scheduler() {};
 
     /** 
      *  
@@ -170,8 +162,8 @@ namespace openbfdd
     virtual bool Run() = 0;
 
     /**
-     * This checks if the current thread is the one under which MakeScheduler() was 
-     * called. Many functions must be called from the main thread. 
+     * This checks if the current thread is the one under which the scheduler was 
+     * created. Many functions must be called from the main thread. 
      * 
      * @return bool - True if the current thread is the main thread
      */
@@ -180,14 +172,13 @@ namespace openbfdd
     typedef void (*SocketCallback)(int socket, void *userdata);
 
     /**
-     * Will listen on this socket, and call the callback when there is data to 
-     * receive. The call will occur on the main thread.
-     *  
-     * There can currently be only one callback for one socket. (This could easily 
-     * change). 
+     * Will listen on this socket (or pipe), and call the callback when there is 
+     * data to receive. The call will occur on the main thread. 
      *  
      * @note Call only on main thread. See IsMainThread(). 
-     * 
+     *  
+     * @throw - std:bad_alloc on failure.
+     *  
      * @param socket [in] - The socket to listen on.
      * @param callback [in]- The callback. 
      * @param userdata [in]- passed back to callback. 
@@ -197,52 +188,54 @@ namespace openbfdd
     virtual bool SetSocketCallback(int socket, SocketCallback callback, void *userdata) = 0;
 
     /**
-     * Will stop listening in the socket for this callback and will no longer use 
-     * this callback. 
+     * Will stop listening on the socket (or pipe).
      *  
      * @note Call only on main thread. See IsMainThread(). 
      *  
-     * @param callback 
+     * @param socket [in] - The socket to stop listening on..
+     *  
      */
-    virtual void RemoveSocketCallback(SocketCallback callback) = 0;
+    virtual void RemoveSocketCallback(int socket) = 0;
 
-    typedef void (*SignalCallback)(int signal, void *userdata);
-
+    typedef void (*SignalCallback)(int sigId, void *userdata);
 
     /**
-     * Will call the callback after this signal is processed. This will get called 
-     * even if the signal is marked SIG_IGN.  The call will occur on the main 
-     * thread. This is lower precedence than the normal asynchronous signal 
-     * handling, so the normal signal handler may already have run.
+     * Sets up a "signal channel" that can be used to have the callback called on 
+     * the main thread by calling Signal() from any thread. 
      *  
-     * There can currently be only one callback for each signal (This could easily
-     * change). Do not call with another handler in place.
+     * @throw - std:bad_alloc on failure.
      *  
      * @note Call only on main thread. See IsMainThread(). 
+     *  
+     * @param outSigId [out] - On success, this is set to the int to use with 
+     *                 Signal. On failure set to -1 (invalid)
+     * @param callback [in] - Routine to run on signal.
+     * @param userdata  [in] - Sent to callback when signaled.
      * 
-     * @param sigId [in] - The signal number
-     * @param callback [in]- The callback. 
-     * @param userdata [in]- passed back to callback. 
-     * @param disable [in] - If true, then this will set the signal to be ignored, 
-     *                so normal processing will not occur, and only this callback
-     *                will process the signal.
-     * 
-     * @return bool - false on failure
+     * @return bool - false on failure. 
      */
-    virtual bool SetSignalCallback(int sigId, SignalCallback callback, void *userdata, bool disable = false) = 0;
+    virtual bool CreateSignalChannel(int *outSigId, SignalCallback callback, void *userdata) = 0;
 
     /**
-     * Will stop sending callback notifications for the given signal. 
+     *  
+     * Signals a channel to run its callback on the main thread. 
+     *  
+     * @note May be called from ANY thread. 
+     * 
+     * @param sigId 
+     * 
+     * @return bool 
+     */
+    virtual bool Signal(int sigId) = 0;
+
+    /**
+     * Call when done with a signal channel created with CreateSignalChannel(). 
      *  
      * @note Call only on main thread. See IsMainThread(). 
      *  
-     * @param sigId [in] - The signal number used with SetSignalCallback.
-     * @param callback [in] - The callback provided to SetSignalCallback.
-     * @param restoreDefault [in] -  If true then the signal handler for this event 
-     *                       will be set to the system default when the handler is
-     *                       removed. Some signals may still be lost.
+     * @param sigId 
      */
-    virtual void RemoveSignalCallback(int sigId, SignalCallback callback, bool restoreDefault = false) = 0;
+    virtual void RemoveSignalChannel(int sigId) = 0;
 
 
     /** 
@@ -263,9 +256,12 @@ namespace openbfdd
      *  
      * @note Call only on main thread. See IsMainThread(). 
      *  
+     * @throw - std:bad_alloc on failure.
+     *  
      * @param name [in] - The optional logging name for the timer. 
      *  
-     * @return Timer* - NULL on failure.
+     *  
+     * @return Timer* - Never NULL.
      */
     virtual Timer *MakeTimer(const char *name) = 0;
 
@@ -279,8 +275,13 @@ namespace openbfdd
     virtual void FreeTimer(Timer *timer) = 0;
 
   protected:
+
+    /** 
+     * Constructor  
+     * The thread that calls this is considered the "main thread". See 
+     * Scheduler::IsMainThread(). 
+     */
     Scheduler() {};
-    virtual ~Scheduler() {};
   };
 
 }

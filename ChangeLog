@@ -1,3 +1,42 @@
+2011-1-14  Jake Montgomery Update Version to 0.3.2
+   
+   * Small bug fixes.
+
+   * Compiles on Ubuntu without warning.
+
+   * Beacon can now be controled from system with opposite endianess.
+
+2010-12-3  Jake Montgomery Update Version to 0.3.1
+   
+   * Fixed high cpu usage when idle.
+
+2010-10-18  Jake Montgomery  Update Version to 0.3.0
+
+   * Now builds and runs on Linux (Debian).
+
+   * Systems that do not have ::kevent() will use a ::select() based  
+     scheduler.
+
+   * No longer uses signals (SIGUSR1) for self notification, since this 
+     was problematic when porting from kevent to select. 
+
+   * Formatting and other small changes and improvements.
+
+   * Fixed accept bug that only manifested in 32 bit systems. 
+
+2010-10-07  Jake Montgomery Update Version to 0.2.1
+   
+   * Improved low memory handling. There is now, at least, a good chance  
+     that existing sessions will continue to stay up in low memory 
+     situations. Memory failures during setup of bfdd-beacon will still 
+     crash, since there is no real damage that can be done at that point.
+
+   * Fixed small bug where a "select" error due to interrupt could 
+     permanently disable a bfdd-command communications port in 
+     bfdd-beacon.
+
 2010-09-30  Jake Montgomery
 
-    * Initial OpenBFDD code and bild. 
+    * Initial OpenBFDD code and build. 
+
+

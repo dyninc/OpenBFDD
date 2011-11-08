@@ -1,13 +1,14 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "standard.h"
 #include "log.h"
 #include <syslog.h>
 #include <errno.h>
-
+#include <string.h>
+#include <stdarg.h>
 
 namespace openbfdd
 {
@@ -281,6 +282,9 @@ namespace openbfdd
         m_types[PacketContents].enabled = true;
         m_types[AppDetail].enabled = true;
         m_types[SessionDetail].enabled = true;
+        #ifdef BFD_DEBUG
+        m_types[Temp].enabled = true;
+        #endif
         // Fall through
       case Detailed:
         m_types[Discard].enabled = true;
@@ -289,9 +293,6 @@ namespace openbfdd
         m_types[Session].enabled = true;
         m_types[App].enabled = true;
         m_types[Command].enabled = true;
-        #ifdef BFD_DEBUG
-        m_types[Temp].enabled = true;
-        #endif
         // Fall through
       case Minimal:
         m_types[Critical].enabled = true;
@@ -405,6 +406,15 @@ namespace openbfdd
     va_end(args);
   }
 
+  void Log::MessageVa(Log::Type type, const char *format, va_list args)
+  {
+    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
+
+    if (!idLogTypeValid(type))
+      return;
+    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
+  }
+
 
   /** 
    *  
@@ -422,7 +432,7 @@ namespace openbfdd
     time_t now;
     struct timespec extendedNow;
 
-    // Use CLOCK_MONOTONIC, which wil be better for "timing" but will not be useful
+    // Use CLOCK_MONOTONIC, which will be better for "timing" but will not be useful
     // for determining the real time of events. 
     if(m_extendedTimeInfo)
     {

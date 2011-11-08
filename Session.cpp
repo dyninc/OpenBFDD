@@ -1,6 +1,6 @@
 /************************************************************** 
 * Copyright (c) 2010, Dynamic Network Services, Inc.
-* Jacob Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "common.h"
@@ -9,8 +9,8 @@
 #include "Beacon.h"
 #include "Scheduler.h"
 #include <errno.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
+#include <string.h>
 
 using namespace std;
 
@@ -42,9 +42,9 @@ namespace openbfdd
   Session::Session(Scheduler &scheduler, Beacon *beacon, uint32_t descriminator, const InitialParams &params) :
   m_beacon(beacon),
   m_scheduler(&scheduler),
-  m_remoteAddr(INADDR_NONE),
+  m_remoteAddr(),
   m_remoteSourcePort(0),
-  m_localAddr(INADDR_NONE),
+  m_localAddr(),
   m_sendPort(0),
   m_isActive(false),
   m_sessionState(bfd::State::Down),
@@ -80,8 +80,8 @@ namespace openbfdd
   m_defaultDesiredMinTxInterval(params.desiredMinTx),  // this will not take effect until we are up ... see m_useDesiredMinTxInterva
   m_wantsPollForNewRequiredMinRxInterval(false),
   _useRequiredMinRxInterval(m_requiredMinRxInterval),
-  m_recieveTimeoutTimer(NULL),
-  m_transmitNextTimer(NULL)
+  m_receiveTimeoutTimer(this),
+  m_transmitNextTimer(this)
   { 
     LogAssert(m_scheduler->IsMainThread());
 
@@ -91,71 +91,115 @@ namespace openbfdd
       gLog.LogError("Maximum session count exceeded, refusing new sessions.");
     }
     else
-      m_id = m_nextId++;
-
+      m_id = m_nextId;
 
     // It may be more efficient to wait until we need these?
     char name[32];
     snprintf(name, sizeof(name), "<Rcv %u>", m_id);
-    m_recieveTimeoutTimer = m_scheduler->MakeTimer(name);
+    m_receiveTimeoutTimer = m_scheduler->MakeTimer(name);
     snprintf(name, sizeof(name), "<Tx %u>", m_id);
     m_transmitNextTimer = m_scheduler->MakeTimer(name);
 
-    m_recieveTimeoutTimer->SetCallback(handleRecieveTimeoutTimerCallback,  this);
-    m_recieveTimeoutTimer->SetPriority(Timer::Priority::Low);
+    m_receiveTimeoutTimer->SetCallback(handleRecieveTimeoutTimerCallback,  this);
+    m_receiveTimeoutTimer->SetPriority(Timer::Priority::Low);
     m_transmitNextTimer->SetCallback(handletTransmitNextTimerCallback,  this);
     m_transmitNextTimer->SetPriority(Timer::Priority::Hi);
 
-    logSessionTransition ();
+    logSessionTransition();
+
+    // Update this only at the end, in case an exception is thrown.
+    m_nextId++;
   }
 
   Session::~Session()
   {
     LogAssert(m_scheduler->IsMainThread());
-
-    m_scheduler->FreeTimer(m_recieveTimeoutTimer);
-    m_scheduler->FreeTimer(m_transmitNextTimer);
-    m_sendSocket.Dispose();
   }
 
 
-  void Session::StartPassiveSession(in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr)
+  void Session::deleteTimer(Timer *timer)
+  {
+    LogAssert(m_scheduler->IsMainThread());
+    if (m_scheduler && timer)  
+    {
+      gLog.Message(Log::Temp,  "Free timer %p", timer);
+      m_scheduler->FreeTimer(timer);
+    }
+  }
+
+  bool Session::StartPassiveSession(const SockAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
 
     // this should only be called once.
-    LogAssert(m_remoteAddr==INADDR_NONE);
-    LogAssert(m_localAddr==INADDR_NONE);
-    m_remoteAddr = remoteAddr;
-    m_remoteSourcePort = remotePort;
+    LogAssert(!m_remoteAddr.IsValid());
+    LogAssert(!m_localAddr.IsValid());
+    if (!LogVerify(remoteAddr.HasPort()))
+      return false;
+    if (!LogVerify(!localAddr.IsAny()))
+      return false;
+
+    m_remoteAddr = IpAddr(remoteAddr);
+    m_remoteSourcePort = remoteAddr.Port();
+
     m_localAddr = localAddr;
     m_isActive = false;
-
+    return true;
   }
 
-  void Session::StartActiveSession(in_addr_t remoteAddr, in_addr_t localAddr)
+
+
+  bool Session::StartActiveSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
 
     // this should only be called once.
-    LogAssert(m_remoteAddr==INADDR_NONE);
-    LogAssert(m_localAddr==INADDR_NONE);
+    if (!LogVerify(!m_remoteAddr.IsValid()))
+      return false;
+    if (!LogVerify(!m_localAddr.IsValid()))
+      return false;
+    // Any is not valid send address
+    if (!LogVerify(!localAddr.IsAny()))
+      return false;
+
     m_remoteAddr = remoteAddr;
     m_remoteSourcePort = 0;
+
     m_localAddr = localAddr;
     m_isActive = true;
 
     // Start the timers now, and begin sending connection packets
     scheduleTransmit();
+    return true;
   }
 
-  in_addr_t Session::GetRemoteAddress()
+  bool Session::UpgradeToActiveSession()
+  {
+    LogAssert(m_scheduler->IsMainThread());
+
+    // Must already have a passive session.
+    if (!LogVerify(m_remoteAddr.IsValid()))
+      return false;
+    if (!LogVerify(m_localAddr.IsValid()))
+      return false;
+    if (!LogVerify(!IsActiveSession()))
+      return false;
+
+    m_isActive = true;
+
+    // Start the timers now, and begin sending connection packets
+    scheduleTransmit();
+    return true;
+  }
+
+
+  const IpAddr &Session::GetRemoteAddress()
   {
     LogAssert(m_scheduler->IsMainThread());
     return m_remoteAddr;
   }
 
-  in_addr_t Session::GetLocalAddress()
+  const IpAddr & Session::GetLocalAddress()
   {
     LogAssert(m_scheduler->IsMainThread());
     return m_localAddr;
@@ -193,7 +237,7 @@ namespace openbfdd
     {
       if (header.length < bfd::BasePacketSize + bfd::AuthHeaderSize)
       {
-        gLog.Optional(Log::Discard, "Discard packet: length too small to include auth  %hhu", header.length);
+        gLog.Optional(Log::Discard, "Discard packet: length too small to include auth %hhu", header.length);
         return false;
       }
     }
@@ -254,7 +298,7 @@ namespace openbfdd
 
     LogAssert(m_scheduler->IsMainThread());
 
-    LogPacketContents(packet, false, true, m_remoteAddr, port, m_localAddr, 0);
+    logPacketContents(packet, false, true, m_remoteAddr, port, m_localAddr, 0);
 
     if(gDropFinalPercent != 0)
     {
@@ -445,9 +489,9 @@ namespace openbfdd
 
     uint64_t timeout = getDetectionTimeout();
     if(timeout == 0)
-      m_recieveTimeoutTimer->Stop();
+      m_receiveTimeoutTimer->Stop();
     else
-      m_recieveTimeoutTimer->SetMicroTimer(timeout);
+      m_receiveTimeoutTimer->SetMicroTimer(timeout);
   }
 
   /**
@@ -464,9 +508,9 @@ namespace openbfdd
 
     uint64_t timeout = getDetectionTimeout();
     if(timeout == 0)
-      m_recieveTimeoutTimer->Stop();
+      m_receiveTimeoutTimer->Stop();
     else
-      m_recieveTimeoutTimer->UpdateMicroTimer(timeout);
+      m_receiveTimeoutTimer->UpdateMicroTimer(timeout);
   }
 
 
@@ -487,8 +531,8 @@ namespace openbfdd
    * scheduleTransmit(), or sendControlPacket(). 
    *  
    * Set the SetValueFlags::TryPoll flag is in flags to start a poll sequence if 
-   * the sate is changed. This is an 'optional'poll sequence, and will be ignored 
-   * if there is already one underway. The boll sequence may be "ambigious" (see 
+   * the sate is changed. This is an 'optional' poll sequence, and will be ignored
+   * if there is already one underway. The poll sequence may be "ambiguous" (see 
    * transitionPollState) 
    *  
    * 
@@ -549,11 +593,12 @@ namespace openbfdd
 
   /**
    * Logs a transition to the current state. 
+   * Stores the transition information for stats. 
    */
   void Session::logSessionTransition()
   {
     UptimeInfo *last = NULL;
-    struct timespec now;
+    TimeSpec now(TimeSpec::MonoNow());
 
     // We only log state change when we are fully up.
     // The state machine does not allow up->init transition, so we must have been
@@ -593,10 +638,17 @@ namespace openbfdd
 
     uptime.state = m_sessionState;
     uptime.startTime = now;
-    uptime.endTime.tv_sec = uptime.endTime.tv_nsec = 0;
     uptime.forced = false;  // currently not using this.
 
-    m_uptimeList.push_front(uptime);
+    try
+    {
+      m_uptimeList.push_front(uptime);
+    }
+    catch  (std::exception)
+    {
+      // TODO - could mark the whole thing as "invalid"?
+      m_uptimeList.clear();
+    }
 
     if (m_uptimeList.size() > MaxUptimeCount)
       m_uptimeList.pop_back();
@@ -607,9 +659,9 @@ namespace openbfdd
    * Called to attempt to transition poll state. Enforces linear transitions.
    * 
    * @param nextState 
-   * @param allowAmbiguous - If true, then we can start a new poll sequnce even if 
+   * @param allowAmbiguous - If true, then we can start a new poll sequence even if 
    *                       the previous one just ended. The poll sequence will be
-   *                       "ambigious" as described in v10/6/8/3p9. This should be
+   *                       "ambiguous" as described in v10/6/8/3p9. This should be
    *                       used only if the caller does not need to take any
    *                       action when the poll completes. 
    *  
@@ -817,7 +869,8 @@ namespace openbfdd
 
     poll = (!m_pollRecieved && (m_pollState == PollState::Requested || m_pollState == PollState::Polling ));
 
-    memset(&packet, 0, sizeof(packet));
+    packet = BfdPacket();
+
     header.SetVersion(bfd::Version);
     header.length = sizeof(header);
 
@@ -852,15 +905,13 @@ namespace openbfdd
 
   /**
    * Sends the given packet. 
+   *  
    * @note Must be called from main thread.
    *  
-   * 
    * @param packet 
    */
   void Session::send(const BfdPacket &packet)
   {
-    struct sockaddr_in sin;
-
     if (!ensureSendSocket())
       return;
 
@@ -870,107 +921,102 @@ namespace openbfdd
       return;
     }
 
-    LogPacketContents(packet, true, false, m_remoteAddr, 0, m_localAddr, m_sendPort);
+    logPacketContents(packet, true, false, m_remoteAddr, 0, m_localAddr, m_sendPort);
 
-    // Send the packet
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = m_remoteAddr;
-    sin.sin_port = htons(bfd::ListenPort);
-
-
-    if (sendto(m_sendSocket, &packet, packet.header.length, MSG_NOSIGNAL, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-    {
-      gLog.LogError("Error sending control packet for session %u : %s", m_id,  strerror(errno));
-      return;
-    }
-
-    gLog.Optional(Log::Packet, "Sent control packet for session %u.", m_id);
-    return;
+    if (m_sendSocket.SendTo(&packet, packet.header.length,
+                            SockAddr(m_remoteAddr, bfd::ListenPort),
+                            MSG_NOSIGNAL))
+      gLog.Optional(Log::Packet, "Sent control packet for session %u.", m_id);
   }
 
   /**
-   * Attempts to connect the send socket, if there is not one already. 
+   * Attempts to connect the m_sendSocket send socket, if there is not one 
+   * already. 
    * 
    * @return bool - false if the socket could not be opened.
    */
   bool Session::ensureSendSocket()
   {
-    int ttlval = bfd::TTLValue;
-    struct sockaddr_in sin;
-    uint16_t port, startPort;
-    FileDescriptor sendSocket;
+    uint16_t startPort;
+    Socket sendSocket;
+    SockAddr sendAddr;
 
-    if (m_sendSocket.IsValid())
+    if (!m_sendSocket.empty())
       return true;
 
-    if (m_localAddr == INADDR_NONE)
-    {
-      gLog.ErrnoError(errno, "No source address for send socket");
+    if (!LogVerify(m_localAddr.IsValid()))
       return false;
-    }
+    if (!LogVerify(!m_localAddr.IsAny()))
+      return false;
 
-    if (m_localAddr == INADDR_ANY)
-    {
-      gLog.ErrnoError(errno, "'INADDR_ANY' is not a valid source address for send socket");
-      return false;
-    }
+    char tmp[255];
+    sendSocket.SetLogName(FormatStr(tmp, sizeof(tmp), "Session %d sock", m_id));
 
-    sendSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (!sendSocket.IsValid())
-    {
-      gLog.ErrnoError(errno, "Failed to create socket for send");
+    // Not that all sockets will log errors, so we do not have to.
+    if (!sendSocket.OpenUDP(m_localAddr.Type()))
       return false;
-    }
-
-    /* Set TTL to 255 for all transmitted packets */
-    if (setsockopt(sendSocket, IPPROTO_IP, IP_TTL, &ttlval, sizeof(ttlval)) < 0)
-    {
-      gLog.ErrnoError(errno,  "Can't set TTL for send socket" );
+    
+    if (!sendSocket.SetTTLOrHops(bfd::TTLValue))
       return false;
-    }
 
     /* Find an available port in the proper range */
     if (m_sendPort != 0)
-      port = startPort = m_sendPort;
+      startPort = m_sendPort;
     else
-      port = startPort =  bfd::MinSourcePort + rand()%(bfd::MaxSourcePort-bfd::MinSourcePort);
+      startPort = bfd::MinSourcePort + rand()%(bfd::MaxSourcePort-bfd::MinSourcePort);
 
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = m_localAddr;
-    sin.sin_port = htons(port);
-    while (bind(sendSocket, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+    sendAddr = SockAddr(m_localAddr, startPort);
+
+    // We need the socket to be quiet so we do not get warnings for each port tried.
+    RiaaObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket); 
+    m_socketQuiet = sendSocket.SetQuiet(true);
+
+    while (!sendSocket.Bind(sendAddr))
     {
-      if (port == bfd::MaxSourcePort)
-        port = bfd::MinSourcePort;
+      switch (sendSocket.GetLastError())
+      {
+        default:
+          gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s", 
+                        m_id, sendAddr.ToString(false), 
+                        sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
+          return false;
+        break;
+        case EAGAIN:
+        case EADDRINUSE:
+          // Fall through and keep looking
+        break;
+      }
+      if (sendAddr.Port() == bfd::MaxSourcePort)
+        sendAddr.SetPort(bfd::MinSourcePort);
       else
-        port++;
+        sendAddr.SetPort(sendAddr.Port() + 1);
 
-      if (port == startPort)
+      if (sendAddr.Port() == startPort)
       {
         gLog.LogError("Cant find valid send port." );
         return false;
       }
-
-      sin.sin_port = htons(port);
     } 
+    m_socketQuiet.Dispose(); // Allow log messages again
 
-    if (m_sendPort != 0 && port != m_sendPort)
+    if (m_sendPort != 0 && sendAddr.Port() != m_sendPort)
     {
-      gLog.Message(Log::Session, "Source port for session %u at address %s changed from %hu to %hu.",  m_id, Ip4ToString(m_localAddr), m_sendPort, port);
+      gLog.Message(Log::Session, "Source port for session %u at address %s changed from %hu to %hu.",  m_id, m_localAddr.ToString(), m_sendPort, (uint16_t)sendAddr.Port());
     }
     else
     {
-      gLog.Optional(Log::Session, "Source socket %s:%hu for session %u opened.", Ip4ToString(m_localAddr), port, m_id);
+      gLog.Optional(Log::Session, "Source socket %s for session %u opened.", sendAddr.ToString(), m_id);
     }
 
-    m_sendPort = port;
-    m_sendSocket = sendSocket.Detach();
+    m_sendPort = sendAddr.Port();
+    m_sendSocket.Transfer(sendSocket);
+    m_sendSocket.SetLogName(sendSocket.LogName());
     return true;
   }
 
 
   /**
-   * Called when m_recieveTimeoutTimer expires. 
+   * Called when m_receiveTimeoutTimer expires. 
    * This may call "delete this" so the object should not be used again.
    * 
    * @param timer 
@@ -1006,11 +1052,11 @@ namespace openbfdd
 
       uint64_t initialTimeout = getDetectionTimeout()*(m_destroyAfterTimeouts - 1);
       gLog.Optional(Log::SessionDetail, "Session (id=%u) setting initial timeout based on local system timeout multiplier.", m_id);
-      m_recieveTimeoutTimer->SetMicroTimer(initialTimeout);
+      m_receiveTimeoutTimer->SetMicroTimer(initialTimeout);
     }
     else if ( m_timeoutStatus == TimeoutStatus::TimedOut)
     {
-      // Active sessions never get suspened and die.
+      // Active sessions never get suspended and die.
       if(m_isActive)
         return;
 
@@ -1036,11 +1082,11 @@ namespace openbfdd
 
 
       gLog.Optional(Log::SessionDetail, "Session (id=%u) setting deadly timeout based on remote system Detection interval.", m_id);
-      m_recieveTimeoutTimer->SetMicroTimer(remoteDeadlyTimeout);
+      m_receiveTimeoutTimer->SetMicroTimer(remoteDeadlyTimeout);
     }
     else if ( m_timeoutStatus == TimeoutStatus::TxSuspeded)
     {
-      // This is it ... the dealy timeout. We have waited long enough ... goodbye
+      // This is it ... the delay timeout. We have waited long enough ... goodbye
       // cruel world.
       gLog.Optional(Log::SessionDetail, "Killing session (id=%u) after kill period elapsed.", m_id);
       m_beacon->KillSession(this);
@@ -1062,7 +1108,7 @@ namespace openbfdd
     if(m_timeoutStatus != TimeoutStatus::TxSuspeded)
       sendControlPacket();
     else
-      gLog.Optional(Log::SessionDetail,  "Not sending packet becuase we are in TxSuspend from timing out");
+      gLog.Optional(Log::SessionDetail,  "Not sending packet because we are in TxSuspend from timing out");
 
     scheduleTransmit();
   }
@@ -1102,7 +1148,7 @@ namespace openbfdd
 
     outState.uptimeList.assign(m_uptimeList.begin(), m_uptimeList.end());
     if(!outState.uptimeList.empty())
-      GetMonolithicTime(outState.uptimeList.front().endTime);
+      outState.uptimeList.front().endTime = TimeSpec::MonoNow();
   }
 
   uint32_t Session::GetLocalDiscriminator()
@@ -1196,49 +1242,80 @@ namespace openbfdd
     gLog.Optional(Log::Session, "(id=%u) set from %s to %s.", m_id, wasSuspened ? "suspended":"responsive", m_isSuspended ? "suspended":"responsive");
   }
 
-
-  void Session::LogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, in_addr_t remoteAddr, in_port_t remotePort, in_addr_t localAddr, in_port_t localPort)
+  /**
+   * Logs packet contents if PacketContents is enabled. 
+   * This version allows the ports to be specified. 
+   * 
+   * @param packet                                     
+   * @param outPacket 
+   * @param inHostOrder 
+   * @param remoteAddr 
+   * @param remotePort  - 0 for no port specified. 
+   * @param localAddr 
+   * @param localPort - 0 for no port specified.
+   */
+  void Session::logPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const IpAddr &remoteAddr, in_port_t remotePort, const IpAddr &localAddr, in_port_t localPort)
   {
     if(gLog.LogTypeEnabled(Log::PacketContents))
     {
-      struct timespec time;
-      const BfdPacketHeader &header = packet.header;
-
-      // Since we use multiple log lines, this is inefficient, and could get
-      // "confused" if more than one session was running??
-      GetMonolithicTime(time);
-
-      gLog.Message(Log::PacketContents, "%s [%jd:%09ld] from %s to %s, myDisc=%u yourDisc=%u", 
-                   outPacket ?"Send":"Receive",
-                   (intmax_t)time.tv_sec, 
-                   time.tv_nsec, 
-                   localPort ? Ip4ToString(localAddr, localPort) : Ip4ToString(localAddr),
-                   remotePort ? Ip4ToString(remoteAddr, remotePort) : Ip4ToString(remoteAddr),
-                   inHostOrder ? header.myDisc : ntohl(header.myDisc),
-                   inHostOrder ? header.yourDisc : ntohl(header.yourDisc)
-                   );
-
-      gLog.Message(Log::PacketContents, "  v=%hhd state=<%s> flags=[%s%s%s%s%s%s] diag=<%s> len=%hhd", 
-                   header.GetVersion(),
-                   bfd::StateName(header.GetState()),
-                   header.GetPoll() ? "P":"",
-                   header.GetFinal() ? "F":"",
-                   header.GetControlPlaneIndependent() ? "C":"",
-                   header.GetAuth() ? "A":"",  
-                   header.GetDemand() ? "D":"",  
-                   header.GetMultipoint() ? "M":"", 
-                   bfd::DiagShortString(header.GetDiag()),
-                   header.length
-                   );
-
-
-      gLog.Message(Log::PacketContents, "  Multi=%hhu MinTx=%u MinRx=%u MinEchoRx=%u",
-                   header.detectMult,
-                   inHostOrder ? header.txDesiredMinInt :     htonl(header.txDesiredMinInt),
-                   inHostOrder ? header.rxRequiredMinInt :    htonl(header.rxRequiredMinInt),
-                   inHostOrder ? header.rxRequiredMinEchoInt : htonl(header.rxRequiredMinEchoInt)
-                   );
+      // Not super efficient ... but we are logging packet contents, so this is a
+      // debug situation
+      SockAddr useRemoteAddr(remoteAddr);
+      SockAddr useLocalAddr(localAddr);
+      useRemoteAddr.SetPort(remotePort);
+      useLocalAddr.SetPort(localPort);
+      doLogPacketContents(packet, outPacket, inHostOrder, useRemoteAddr, useLocalAddr);
     }
+  }
+
+  void Session::LogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const SockAddr &remoteAddr, const IpAddr &localAddr)
+  {
+    if(gLog.LogTypeEnabled(Log::PacketContents))
+      doLogPacketContents(packet, outPacket, inHostOrder, remoteAddr, SockAddr(localAddr));
+  }
+
+  /**
+   * Same as LogPacketContents, but always does the work.
+   */
+  void Session::doLogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const SockAddr &remoteAddr, const SockAddr &localAddr)
+  {
+    TimeSpec time;
+    const BfdPacketHeader &header = packet.header;
+
+    // Since we use multiple log lines, this is inefficient, and could get
+    // "confused" if more than one session was running??
+    time  = TimeSpec::MonoNow();
+
+    gLog.Message(Log::PacketContents, "%s [%jd:%09ld] from %s to %s, myDisc=%u yourDisc=%u", 
+                 outPacket ?"Send":"Receive",
+                 (intmax_t)time.tv_sec, 
+                 time.tv_nsec, 
+                 localAddr.ToString(),
+                 remoteAddr.ToString(), 
+                 inHostOrder ? header.myDisc : ntohl(header.myDisc),
+                 inHostOrder ? header.yourDisc : ntohl(header.yourDisc)
+                 );
+
+    gLog.Message(Log::PacketContents, "  v=%hhd state=<%s> flags=[%s%s%s%s%s%s] diag=<%s> len=%hhd", 
+                 header.GetVersion(),
+                 bfd::StateName(header.GetState()),
+                 header.GetPoll() ? "P":"",
+                 header.GetFinal() ? "F":"",
+                 header.GetControlPlaneIndependent() ? "C":"",
+                 header.GetAuth() ? "A":"",  
+                 header.GetDemand() ? "D":"",  
+                 header.GetMultipoint() ? "M":"", 
+                 bfd::DiagShortString(header.GetDiag()),
+                 header.length
+                 );
+
+
+    gLog.Message(Log::PacketContents, "  Multi=%hhu MinTx=%u MinRx=%u MinEchoRx=%u",
+                 header.detectMult,
+                 inHostOrder ? header.txDesiredMinInt :     htonl(header.txDesiredMinInt),
+                 inHostOrder ? header.rxRequiredMinInt :    htonl(header.rxRequiredMinInt),
+                 inHostOrder ? header.rxRequiredMinEchoInt : htonl(header.rxRequiredMinEchoInt)
+                 );
   }
 
   void Session::SetMulti(uint8_t val)
