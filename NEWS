@@ -2,6 +2,26 @@ News for OpenBFDD
 
 -------------------------------------------------
 
+OpenBFDD 0.4.0 2011-11-08
+  Added IPv6v Support.
+  Bug Fixes.
+
+OpenBFDD 0.3.2 2011-01-14 
+  Builds on Ubuntu
+  Bug Fixes.
+
+OpenBFDD 0.3.1 2010-12-03 
+  Fixed runaway cpu bug.
+
+OpenBFDD 0.3.0 2010-10-18 
+  Builds on Debian
+  Fixed accept bug on 32 bit architecture.
+  Improved configure.
+
+OpenBFDD 0.2.1 2010-10-07 
+  Bug Fixes.
+  Improved low memory handling.   
+
 OpenBFDD 0.2.0 2010-09-30 
 
   OpenBFDD 0.2.0 Released. 

@@ -1,5 +1,5 @@
 .\" Manpage for bfdd-control.
-.TH "bfdd-control" "8" "December 3, 2010" "OpenBFDD v0.3.2" "OpenBFDD v0.3.2" 
+.TH "bfdd-control" "8" "December 3, 2010" "OpenBFDD v0.4.0" "OpenBFDD v0.4.0" 
 .SH NAME
 \fBbfdd-control\fR - control utility for \fBbfdd-beacon\fR(8)
 .SH SYNOPSIS
@@ -115,8 +115,18 @@ Some of the parameters used in the \fBCOMMANDS\fR section require some additiona
 \fIid\fR 
 This parameter describes a locally maintained identifier for a session. This id is primarily used as a convenient way to identify sessions when using \fBbfdd-control\fR. Note that this \fIid\fR is not the same as the \fBLocalId\fR used to identify the session to the remote system. Passive sessions can be destroyed after a timeout period. If they are later reestablished they will have a new \fIid\fR. For this, and other, reasons, it may be preferable to use an \fIip-pair\fR when managing sessions in an automated way. 
 .TP 
+\fIip\fR 
+This parameter describes an ip address. An IPv4 or IPv6 address may be supplied. 
+An IPv4 address muse use dotted quad notation, in the form: 
+"\fBddd.ddd.ddd.ddd\fR"
+An IPv6 address can use full notation, in the form:
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh\fR"
+or shorthand notation, such as: "\fBhhhh:hhhh::hhhh\fR".
+Link-local addresses must also be followed by an interface name, using the form: 
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%\fR\fIifname\fR", where \fIifname\fR is the name of the interface to which the link local address applies. An interface may \fBonly\fR be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
+.TP 
 \fIip-pair\fR 
-This parameter describes a pair of ip addresses. It should take the form "\fBlocal\fR \fIip\fR \fBremote\fR \fIip\fR", where \fIip\fR is a dotted quad IPv4 address. The \fBlocal\fR \fIip\fR describes the ip address on the local system that will be used for the bfd session. The \fBremote\fR \fIip\fR describes the ip address on the remote system that will be used for the bfd session. The \fBlocal\fR and \fBremote\fR addresses may be specified in any order in an \fBip-pair\fR.
+This parameter describes a pair of ip addresses. It should take the form "\fBlocal\fR \fIip\fR \fBremote\fR \fIip\fR", where \fIip\fR is an ip address as described above. The "\fBlocal\fR \fIip\fR" describes the ip address on the local system that will be used for the bfd session. The "\fBremote\fR \fIip\fR" describes the ip address on the remote system that will be used for the bfd session. The \fBlocal\fR and \fBremote\fR addresses may be specified in any order in an \fBip-pair\fR.
 .SH STATUS ITEMS
 The \fBstatus\fR command returns a number of status items. Below is a brief description of some of these items.
 This assumes an understanding of the Bidirectional Forwarding Detection (BFD) protocol 
@@ -183,6 +193,3 @@ No know bugs at this time.
 Jake Montgomery for Dynamic Network Services, Inc.
 .SH COPYRIGHT
 Copyright (c) 2010, Dynamic Network Services, Inc.
-
-
-

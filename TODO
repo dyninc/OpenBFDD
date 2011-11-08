@@ -1,6 +1,5 @@
 OpenBFDD todo:
 
- * Provide the ability to build and run without kevent()
  * Support Demand Mode.
  * Support Echo Mode. 
  * Support Authentication
