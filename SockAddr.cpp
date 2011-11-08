@@ -7,7 +7,6 @@
 #include "SockAddr.h"
 #include "utils.h"
 #include "lookup3.h"
-#include <sys/socket.h>
 #include <net/if.h>
 #include <cstring>
 

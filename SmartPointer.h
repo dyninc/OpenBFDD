@@ -136,7 +136,7 @@ namespace openbfdd
     T val;
     bool valid;
     C* myClass;
-    RiaaObjCallVar(C* myClass) : valid(false), myClass(myClass) {}
+    RiaaObjCallVar(C* myClass) : val(T()), valid(false), myClass(myClass) {}
     RiaaObjCallVar(T val, C* myClass) : val(val), valid(true), myClass(myClass) {}
     ~RiaaObjCallVar() {Dispose();}
     operator T&() { return val;}

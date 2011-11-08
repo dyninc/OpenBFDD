@@ -20,7 +20,7 @@ AC_DEFUN(
            ac_save_CXXFLAGS="$CXXFLAGS"
            CXXFLAGS="$CXXFLAGS -$1"
            AC_COMPILE_IFELSE(
-              AC_LANG_SOURCE,
+              [AC_LANG_PROGRAM([],[])],
               eval "dyn_cv_prog_cpp_flag_$cachename=yes",
               eval "dyn_cv_prog_cpp_flag_$cachename=no",
            )
