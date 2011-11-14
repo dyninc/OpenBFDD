@@ -4,10 +4,10 @@
 AC_PREREQ(2.61)
 sinclude(acx_nlnetlabs.m4)
 
-AC_INIT(openbfdd, 0.4.0)
+AC_INIT(openbfdd, 0.4.1)
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([BeaconMain.cpp])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Checks for programs.
 AC_PROG_CXX
