@@ -1,9 +1,3 @@
-OpenBFDD todo:
+The OpenBFDD TODO list can be found on the GitHub wiki at:
 
- * Support Demand Mode.
- * Support Echo Mode. 
- * Support Authentication
- * The communication ports 957 and 958 should be configurable.
- * Handle signals. Currently the app will exit on many common signals.
- * We need  a way to query the settings for the 'new' session using bfdd-control.
- * Optionaly log bfdd-command message replies to bfdd-beacon log.
+https://github.com/dyninc/OpenBFDD/wiki/Todo
