@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of bfdd-control</TITLE>
+</HEAD><BODY>
+<H1>bfdd-control</H1>
+Section: OpenBFDD v0.4.0 (8)<BR>Updated: December 3, 2010<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
+
+<B style="color: #996600;">bfdd-control</B> - control utility for <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8)
+<A NAME="lbAC">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
+
+<B style="color: #996600;">bfdd-control</B> [<i style="color: #008000;"> options </I>] <i style="color: #008000;"> command </I>
+<A NAME="lbAD">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
+
+<B style="color: #996600;">bfdd-control</B> is a control and configuration application for <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). 
+It is part of the OpenBFDD package. 
+<A NAME="lbAE">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
+
+The optional <i style="color: #008000;">options</I> parameter can be one or more of the following:
+<DL COMPACT>
+<DT><B style="color: #996600;">--altport </B>
+
+<DD>
+Causes the &quot;alternate&quot; communications port to be used for connecting to <B style="color: #996600;">bfdd-beacon</B>. This can be used if there is a problem with the primary port. It could also be used to keep the main port free for normal control if commands are being sent repeatedly in a loop, such as a continual &quot;monitoring&quot; script.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COMMANDS</p><DL><DD>
+
+The <i style="color: #008000;">command</I> parameter consists of a command to send to <B style="color: #996600;">bfdd-beacon</B> followed by one or more parameters for that command. The commands are:
+<DL COMPACT>
+<DT><B style="color: #996600;">version</B><DD>
+Displays the version number of this utility as well as the version of the current running bfd beacon, if it can be contacted.
+<DT><B style="color: #996600;">stop</B><DD>
+Causes <B style="color: #996600;">bfdd-beacon</B> to exit.
+<DT><B style="color: #996600;">load</B> <i style="color: #008000;">path</I><DD>
+Runs all commands in the file specified by <i style="color: #008000;">path</I>. The file should have each command on its own line. Any line beginning with # is considered a comment line, and will be ignored.  
+<DT><B style="color: #996600;">allow</B> <i style="color: #008000;">ip</I><DD>
+Allows incoming packets from the given <i style="color: #008000;">ip</I> address. This allows BFD sessions to be established if there is an active BFD service running on the given <i style="color: #008000;">ip</I>. No session will be created until packets are received from the remote system. The beacon will act in passive mode for these sessions.
+<DT><B style="color: #996600;">connect</B> <i style="color: #008000;">ip-pair</I><DD>
+Starts an active session between the two ip addresses specified in <i style="color: #008000;">ip-pair</I>. A session will be created immediately. If there is already a session with the given <i style="color: #008000;">ip-pair</I> addresses then it is switched from passive to active.
+<DT><B style="color: #996600;">block</B> <i style="color: #008000;">ip</I><DD>
+Blocks any new connections from being established from the given <i style="color: #008000;">ip</I> address. Existing sessions with this <i style="color: #008000;">ip</I> will not be affected. By default all ip addresses are blocked.
+<DT><B style="color: #996600;">log</B> (<B style="color: #996600;">level</B> (<i style="color: #008000;">loglevel</I> | <B style="color: #996600;">list</B>) | <B style="color: #996600;">type</B> (<i style="color: #008000;">logtype</I>  (<B style="color: #996600;">yes</B> | <B style="color: #996600;">no</B> ) | <B style="color: #996600;">list</B>))<DD>
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B style="color: #996600;">level</B> <DD>
+Sets logging to one of a set of predefined <i style="color: #008000;">loglevel</I> values. Use the command <B style="color: #996600;">log level list</B> to get a list of all available levels. Some of these include <B style="color: #996600;">none</B>, <B style="color: #996600;">minimal</B>, <B style="color: #996600;">normal</B>, <B style="color: #996600;">detailed</B>, <B style="color: #996600;">dev</B> and <B style="color: #996600;">all</B>. The <B style="color: #996600;">all</B> level will produce a lot of logging and is not suitable for a production situation. The default level at startup is <B style="color: #996600;">normal</B>.
+<DT><B style="color: #996600;">type</B> <DD>
+Enables or disables specific log types. Use the command <B style="color: #996600;">log type list</B> to get a full list of <i style="color: #008000;">logtype</I> values. 
+</DL>
+</DL>
+
+<DT><B style="color: #996600;">log timing</B> (<B style="color: #996600;">yes</B> | <B style="color: #996600;">no</B> )<DD>
+Enables or disables extended time logging. This will add a nanosecond timestamp to each message, in addition to the normal timestamp. The default is off.
+<DT><B style="color: #996600;">status</B> [(<i style="color: #008000;">id</I> | <i style="color: #008000;">ip-pair</I> | <B style="color: #996600;">all</B>) [<B style="color: #996600;">level</B> <i style="color: #008000;">level</I>] [<B style="color: #996600;">[no]compact</B>] [<B style="color: #996600;">brief</B>]]<DD>
+Displays stats on one or all of the sessions.
+If no parameters are given then a brief <B style="color: #996600;">compact</B> level 1 summary of all sessions will be displayed, including their <i style="color: #008000;">id</I> values. 
+If <i style="color: #008000;">id</I> or <i style="color: #008000;">ip-pair</I> is supplied then the status of the specified session will be displayed. 
+If <B style="color: #996600;">all</B> is used, then information for all sessions will be displayed. 
+<B style="color: #996600;">level</B> <i style="color: #008000;">level</I>, where <i style="color: #008000;">level</I> is an integer, can be used to control the detail that is displayed. 
+The default <i style="color: #008000;">level</I> is 1. 
+<B style="color: #996600;">brief</B> will cause certain values to be displayed as codes, or in shortened form, and will not use thousands separators for large numbers. 
+<B style="color: #996600;">compact</B> will cause the stats for each session to be displayed on a single line. 
+<B style="color: #996600;">nocompact</B> will place each stat on its own line (this is the default). 
+<P>
+The items returned in the status are documented in the <B style="color: #996600;">STATUS ITEMS</B> section of this document.
+<DT><B style="color: #996600;">session</B> (<i style="color: #008000;">id</I> | <i style="color: #008000;">ip-pair</I> | <B style="color: #996600;">all</B>) <B style="color: #996600;">state</B> <i style="color: #008000;">stateval</I> [<i style="color: #008000;">diagnostic</I>]<DD>
+Changes the state of the session specified by <i style="color: #008000;">id</I> or <i style="color: #008000;">ip-pair</I>, or all sessions. <i style="color: #008000;">stateval</I> Can be one of the following:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B style="color: #996600;">down</B><DD>
+Forces the session into the &quot;Down&quot; state, and holds it there. The session continues to communicate with the remote session, but the local state remains &quot;Down&quot;.  <i style="color: #008000;">diagnostic</I> is an optional integer diagnostic code (as defined in the bfd specification.) The default is 5 (&quot;Path Down&quot;)
+<DT><B style="color: #996600;">admin</B><DD>
+Forces the session into the &quot;AdminDown&quot; state, and holds it there. The session continues to communicate with the remote session, but the local state remains &quot;AdminDown&quot;. <i style="color: #008000;">diagnostic</I> is an optional integer diagnostic code (as defined in the bfd specification.) The default is 7 (Administratively Down&quot;)
+<DT><B style="color: #996600;">up</B><DD>
+Allows the session to transition normally out of its current state. Used to end a <B style="color: #996600;">down</B> or <B style="color: #996600;">admin</B> hold.
+</DL>
+</DL>
+
+<DT><B style="color: #996600;">session</B> (<i style="color: #008000;">id</I> | <i style="color: #008000;">ip-pair</I> | <B style="color: #996600;">all</B>) (<B style="color: #996600;">kill</B> | <B style="color: #996600;">reset</B> | <B style="color: #996600;">suspend</B> | <B style="color: #996600;">resume</B>)<DD>
+Used to modify or remove a session specified by <i style="color: #008000;">id</I> or <i style="color: #008000;">ip-pair</I>, or all sessions. The action depends on the parameter as follows:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B style="color: #996600;">kill</B><DD>
+Immediately deletes the session. Note that this does not prevent a new passive session from being immediately created if the <B style="color: #996600;">allow</B> command was used for the remote ip address. Use the <B style="color: #996600;">connect</B> command to reestablish an active session, if desired. 
+<DT><B style="color: #996600;">reset</B><DD>
+Immediately deletes the session. If the session was an active session then a new active session is created. If the session was a passive session then it will listen for control packets from the original ip address, and will create a session when packets are received, unless the <B style="color: #996600;">block</B> command has been issued to block the remote ip address.
+<DT><B style="color: #996600;">suspend</B><DD>
+Prevents the session from sending any packets to the remote session, simulating a unidirectional link failure. This is used primarily for debugging purposes. 
+<DT><B style="color: #996600;">resume</B><DD>
+Resumes sending packets after a previous <B style="color: #996600;">suspend</B>. If the session is not suspended then this has no effect. 
+</DL>
+</DL>
+
+<DT><B style="color: #996600;">session</B> (<i style="color: #008000;">id</I> | <i style="color: #008000;">ip-pair</I> | <B style="color: #996600;">all</B> | <B style="color: #996600;">new</B>) <B style="color: #996600;">set</B> <i style="color: #008000;">item</I> <i style="color: #008000;">value</I><DD>
+Used to set certain attributes for the session specified by <i style="color: #008000;">id</I> or <i style="color: #008000;">ip-pair</I>, or all sessions, or for new sessions. If <B style="color: #996600;">new</B> is specified then the setting applies to any future sessions that are created, but no current sessions will be affected. Some of the setting use a <i style="color: #008000;">timeval</I> for <i style="color: #008000;">value</I>. A <i style="color: #008000;">timeval</I> should be an integer, followed by a space, followed by 's' for seconds, 'ms' for milliseconds (1/1,000th of a second), or 'us' for microseconds (1/1,000,000th of a second.) The <i style="color: #008000;">item</I> parameter can be one of the following:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B style="color: #996600;">mintx</B><DD>
+Sets the &quot;Desired Minimum Transmit Interval&quot; that the local session sends to the remote session in the control packet. When the session is up, the rate at which we send packets to the remote system is (approximately) the larger of this value, and the &quot;Required Minimum Receive Interval&quot; received from the remote session. The <i style="color: #008000;">value</I> parameter should be a <i style="color: #008000;">timeval</I> as described above. 0 is not allowed. 
+<DT><B style="color: #996600;">minrx</B><DD>
+Sets the &quot;Required Minimum Receive Interval&quot; that the local session sends to the remote session in the control packet. The rate at which we expect to receive packets from the remote system is (approximately) the larger of this value, and the &quot;Desired Minimum Transmit Interval&quot; received from the remote session. The <i style="color: #008000;">value</I> parameter should be a <i style="color: #008000;">timeval</I> as described above. 0 seconds is an allowed value, and indicates that we do not wish to receive any periodic control packets. However, 0 is not supported properly on all remote BFD implementations, and should be used with caution. 
+<DT><B style="color: #996600;">multi</B><DD>
+Sets the &quot;Detection Multiplier&quot; that the local session sends to the remote session in the control packet. This is (approximately) the number of periodic packets, from this session to the remote session, that can be lost before the remote system declares the link down due to timeout. The <i style="color: #008000;">value</I> parameter should be number between 1 and 255. 
+<DT><B style="color: #996600;">cpi</B><DD>
+Sets the value of the &quot;Control Plane Independent&quot; (C) flag that the local session sends to the remote session in the control packet. This effects how the remote system handles the &quot;Down&quot; and &quot;AdminDown&quot; states. The exact implications of this flag are up to the remote system. The <i style="color: #008000;">value</I> parameter should be <B style="color: #996600;">yes</B> or <B style="color: #996600;">no</B>. 
+<DT><B style="color: #996600;">admin_up_poll</B><DD>
+Enables or disables a workaround that prevents rapid Up-&gt;AdminDown-&gt;Up from taking a long time to come back Up. The workaround is needed (at least) for JUNOS8.5S4. See the wiki for more details. The default is enabled. The <i style="color: #008000;">value</I> parameter should be <B style="color: #996600;">yes</B> or <B style="color: #996600;">no</B>. 
+</DL>
+</DL>
+
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">PARAMETERS</p><DL><DD>
+
+Some of the parameters used in the <B style="color: #996600;">COMMANDS</B> section require some additional explanation.
+<DL COMPACT>
+<DT><i style="color: #008000;">id</I> <DD>
+This parameter describes a locally maintained identifier for a session. This id is primarily used as a convenient way to identify sessions when using <B style="color: #996600;">bfdd-control</B>. Note that this <i style="color: #008000;">id</I> is not the same as the <B style="color: #996600;">LocalId</B> used to identify the session to the remote system. Passive sessions can be destroyed after a timeout period. If they are later reestablished they will have a new <i style="color: #008000;">id</I>. For this, and other, reasons, it may be preferable to use an <i style="color: #008000;">ip-pair</I> when managing sessions in an automated way. 
+<DT><i style="color: #008000;">ip</I> <DD>
+This parameter describes an ip address. An IPv4 or IPv6 address may be supplied. 
+An IPv4 address muse use dotted quad notation, in the form: 
+&quot;<B style="color: #996600;">ddd.ddd.ddd.ddd</B>&quot;
+An IPv6 address can use full notation, in the form:
+&quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh</B>&quot;
+or shorthand notation, such as: &quot;<B style="color: #996600;">hhhh:hhhh::hhhh</B>&quot;.
+Link-local addresses must also be followed by an interface name, using the form: 
+&quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%</B><i style="color: #008000;">ifname</I>&quot;, where <i style="color: #008000;">ifname</I> is the name of the interface to which the link local address applies. An interface may <B style="color: #996600;">only</B> be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
+<DT><i style="color: #008000;">ip-pair</I> <DD>
+This parameter describes a pair of ip addresses. It should take the form &quot;<B style="color: #996600;">local</B> <i style="color: #008000;">ip</I> <B style="color: #996600;">remote</B> <i style="color: #008000;">ip</I>&quot;, where <i style="color: #008000;">ip</I> is an ip address as described above. The &quot;<B style="color: #996600;">local</B> <i style="color: #008000;">ip</I>&quot; describes the ip address on the local system that will be used for the bfd session. The &quot;<B style="color: #996600;">remote</B> <i style="color: #008000;">ip</I>&quot; describes the ip address on the remote system that will be used for the bfd session. The <B style="color: #996600;">local</B> and <B style="color: #996600;">remote</B> addresses may be specified in any order in an <B style="color: #996600;">ip-pair</B>.
+</DL>
+<A NAME="lbAH">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">STATUS ITEMS</p><DL><DD>
+
+The <B style="color: #996600;">status</B> command returns a number of status items. Below is a brief description of some of these items.
+This assumes an understanding of the Bidirectional Forwarding Detection (BFD) protocol 
+and refers to items in BFD Base Specification the RFC5880  at <A HREF="http://www.rfc-editor.org/rfc/rfc5880.txt">http://www.rfc-editor.org/rfc/rfc5880.txt</A> .
+<P>
+Note that some items are only available at higher status levels.
+<P>
+<DL COMPACT>
+<DT><B style="color: #996600;">id</B> <DD>
+The id of the given session. This id is only used to refer to the session when using <B style="color: #996600;">bfdd-control</B> commands. This is not used in the actual BFD protocol and is not the same as <B style="color: #996600;">LocalId</B>
+<DT><B style="color: #996600;">local</B> <DD>
+The local ip address used to send and receive packets for this session. This may be followed by <B style="color: #996600;">(active)</B> or <B style="color: #996600;">(passive)</B> depending on what role the session is taking.
+<DT><B style="color: #996600;">remote</B> <DD>
+The remote ip address used to send and receive packets for this session. 
+<DT><B style="color: #996600;">LocalState</B> <DD>
+The local Session State (bfd.SessionState in outgoing control packets.) This is followed by the Local Diagnostic value (bfd.LocalDiag) which gives the reason for the most recent state change. This item may also include <B style="color: #996600;">Forced</B> if the current state is being held using the <B style="color: #996600;">bfdd-control session state</B> command. This item may also include <B style="color: #996600;">Suspended</B> if the session is suspended.
+<DT><B style="color: #996600;">RemoteState</B> <DD>
+The remote Session State (the &quot;Sta&quot; field in the most recently received control packet.) This is followed by the Remote  Diagnostic value (the &quot;Diag&quot; field in the most recently received control packet) which gives the reason for the most recent remote state change. 
+<DT><B style="color: #996600;">LocalId</B> <DD>
+<BR>&nbsp;The&nbsp;Discriminator&nbsp;used&nbsp;to&nbsp;identify&nbsp;this&nbsp;session&nbsp;in&nbsp;packet&nbsp;exchanges&nbsp;with&nbsp;the&nbsp;remote&nbsp;system&nbsp;(bfd.LocalDiscr,&nbsp;and&nbsp;the&nbsp;&quot;My&nbsp;Discriminator&quot;&nbsp;field&nbsp;in&nbsp;outgoing&nbsp;packets.)
+<DT><B style="color: #996600;">RemoteId</B> <DD>
+The Discriminator used to identify the remote session in packet exchanges with the this system (bfd.RemoteDiscr, and the &quot;My Discriminator&quot; field in incoming packets.)
+<DT><B style="color: #996600;">Time</B> <DD>
+The amount of time spent in the current state. At higher status levels this may include the time spent in the 4 most recent states.
+<DT><B style="color: #996600;">CurrentTxInterval</B> <DD>
+The interval between sending scheduled control packets. This value is calculated based on a number of other settings. 
+<DT><B style="color: #996600;">CurrentRxTimeout</B> <DD>
+The Detection Timeout after which, if no packets are received from the remote system, the session is put into the Down state. This is based on the larger of <B style="color: #996600;">RemoteDesiredMinTx</B> and <B style="color: #996600;">LocalRequiredMinRx</B> multiplied by <B style="color: #996600;">RemoteDetectMulti</B>.
+<DT><B style="color: #996600;">LocalDetectMulti</B> <DD>
+The approximate number of scheduled packets that the remote system can't receive before it will declare the session Down. (bfd.DetectMult and the &quot;Detect Mult&quot; field in outgoing packets.)
+<DT><B style="color: #996600;">LocalDesiredMinTx</B> <DD>
+The lowest interval (highest rate) at which we can (want) to send packets. (bfd.DesiredMinTxInterval and &quot;Desired Min TX Interval&quot; in outgoing packets.) The remote system will expect to receive packets at intervals of, approximately, the larger of this and <B style="color: #996600;">RemoteRequiredMinRx</B>. When the session is not Up, then the normal value may not be used. In that case the value that will be used when the session is up will be displayed in parenthesis and marked with <B style="color: #996600;">def</B>. This value can be changed using the <B style="color: #996600;">bfdd-control session set mintx</B> command. In some cases the new value is not actually used until the remote system acknowledges the change. In these cases the pending value will be  displayed in parenthesis and marked with <B style="color: #996600;">pending</B>.
+<DT><B style="color: #996600;">LocalRequiredMinRx</B> <DD>
+The lowest interval (highest rate) at which we can (want) to receive packets. (bfd.RequiredMinRxInterval and &quot;Required Min RX Interval&quot; in outgoing packets.) The remote system will send periodic control packets at intervals of, approximately, the larger of this and <B style="color: #996600;">RemoteDesiredMinTx</B>. This value can be changed using the <B style="color: #996600;">bfdd-control session set minrx</B> command. In some cases the new value is not actually used (for timeout detection) until the remote system acknowledges the change. In these cases the pending value will be displayed in parenthesis and marked with <B style="color: #996600;">pending</B>.
+<DT><B style="color: #996600;">RemoteDetectMulti</B> <DD>
+The approximate number of scheduled packets that the local system can't receive before it will declare the session Down. (&quot;Detect Mult&quot; field of the last incoming packet.)
+<DT><B style="color: #996600;">RemoteDesiredMinTx</B> <DD>
+The lowest interval (highest rate) at which the remote system can to send packets. (&quot;Desired Min TX Interval&quot; in the most recently received packet.) Used in calculating <B style="color: #996600;">CurrentRxTimeout</B>.
+<DT><B style="color: #996600;">RemoteRequiredMinRx</B> <DD>
+The lowest interval (highest rate) at which the remote system can receive packets. (&quot;Required Min RX Interval&quot; in the most recent incoming packet.) Used in calculating <B style="color: #996600;">CurrentTxInterval</B>.
+<P>
+</DL>
+<A NAME="lbAI">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
+
+Currently the program only exits with an error if it fails to make or maintain a connection with <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). If the beacon rejects the command, or the command fails to execute, this still exits with an exit code of 0 (success). This could change in the future.
+<A NAME="lbAJ">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
+
+No know bugs at this time.
+<A NAME="lbAK">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
+
+<B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8)
+<A NAME="lbAL">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
+
+Jake Montgomery for Dynamic Network Services, Inc.
+<A NAME="lbAM">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
+
+Copyright (c) 2010, Dynamic Network Services, Inc.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS </A><DD>
+<DT><A HREF="#lbAF">COMMANDS</A><DD>
+<DT><A HREF="#lbAG">PARAMETERS</A><DD>
+<DT><A HREF="#lbAH">STATUS ITEMS</A><DD>
+<DT><A HREF="#lbAI">NOTES</A><DD>
+<DT><A HREF="#lbAJ">BUGS</A><DD>
+<DT><A HREF="#lbAK">SEE ALSO</A><DD>
+<DT><A HREF="#lbAL">AUTHOR</A><DD>
+<DT><A HREF="#lbAM">COPYRIGHT</A><DD>
+</DL>
+</BODY>
+</HTML>

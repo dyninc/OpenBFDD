@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of bfdd-beacon</TITLE>
+</HEAD><BODY>
+<H1>bfdd-beacon</H1>
+Section: OpenBFDD v0.4.0 (8)<BR>Updated: December 3, 2010<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
+
+<B style="color: #996600;">bfdd-beacon</B> - a Bidirectional Forwarding Detection (BFD) beacon daemon.
+<A NAME="lbAC">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
+
+<B style="color: #996600;">bfdd-beacon</B> [<i style="color: #008000;"> options </I>]
+<A NAME="lbAD">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
+
+<B style="color: #996600;">bfdd-beacon</B> is software implementation of the Bidirectional Forwarding Detection (BFD) protocol. 
+When <B style="color: #996600;">bfdd-beacon</B> is running commands can be issued to the beacon using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility.
+It is part of the OpenBFDD package. 
+<A NAME="lbAE">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
+
+The <i style="color: #008000;">options</I> parameter can be one or more of the following:
+<DL COMPACT>
+<DT><B style="color: #996600;">--version</B>
+
+<DD>
+This will print the current version and exit.
+<DT><B style="color: #996600;">--tee</B>
+
+<DD>
+All logging will be sent to stdout in addition to the normal syslog or log file. 
+This is the default in debug builds run with the <B style="color: #996600;">--nofork</B> option.
+This option is only applied if used with the <B style="color: #996600;">--nofork</B> option.
+<DT><B style="color: #996600;">--notee</B>
+
+<DD>
+Logging will not be sent to stdout. This is the default for release builds.
+<DT><B style="color: #996600;">--nofork</B>
+
+<DD>
+Prevents the beacon from running as a daemon. This is useful for debugging.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">CONTROL</p><DL><DD>
+
+When <B style="color: #996600;">bfdd-beacon</B> is running commands can be issued to the beacon using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility. 
+See <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) documentation for more details.
+<A NAME="lbAG">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">LOGGING</p><DL><DD>
+
+Currently log messages go to syslog. The <B style="color: #996600;">--tee</B> command can be used to also send log messages to stdout. 
+The identity &quot;bfdd-beacon&quot; is used for all syslog logging. 
+Logging is fully configurable.                
+See <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) documentation for more details. 
+<A NAME="lbAH">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
+
+when <B style="color: #996600;">bfdd-beacon</B> is first started it will not accept any connections.
+This allows <B style="color: #996600;">bfdd-beacon</B> to be configured using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility before any sessions begin. 
+The <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility can then be used to start an active session, or to enable passive sessions. 
+<P>
+The current implementation of the BFD protocol was tested specifically with the Juniper router's BFD (JUNOS 8.5). Demand mode is not currently supported. 
+Echo mode is not currently supported. 
+Authentication is not supported. 
+<A NAME="lbAI">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
+
+No known bugs at this time.
+<A NAME="lbAJ">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
+
+<B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8)
+<A NAME="lbAK">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
+
+Jake Montgomery for Dynamic Network Services, Inc.
+<A NAME="lbAL">&nbsp;</A>
+</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
+
+Copyright (c) 2010, Dynamic Network Services, Inc.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS </A><DD>
+<DT><A HREF="#lbAF">CONTROL</A><DD>
+<DT><A HREF="#lbAG">LOGGING</A><DD>
+<DT><A HREF="#lbAH">NOTES</A><DD>
+<DT><A HREF="#lbAI">BUGS</A><DD>
+<DT><A HREF="#lbAJ">SEE ALSO</A><DD>
+<DT><A HREF="#lbAK">AUTHOR</A><DD>
+<DT><A HREF="#lbAL">COPYRIGHT</A><DD>
+</DL>
+</BODY>
+</HTML>
