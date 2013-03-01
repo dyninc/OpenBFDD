@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 namespace openbfdd
 {
