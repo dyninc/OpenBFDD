@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -205,11 +206,11 @@ namespace openbfdd
 
       if (!expireChange && !startChange)
       {
-        LogOptional(Log::TimerDetail, "Timer %s no change.  %"PRIu64"  microseconds. Expires:%jd:%09ld", m_name, micro, (intmax_t)expireTime.tv_sec, expireTime.tv_nsec );
+        LogOptional(Log::TimerDetail, "Timer %s no change.  %" PRIu64 "  microseconds. Expires:%jd:%09ld", m_name, micro, (intmax_t)expireTime.tv_sec, expireTime.tv_nsec );
         return true;
       }
 
-      LogOptional(Log::TimerDetail, "%s timer %s for %"PRIu64" microseconds from %jd:%09ld. Expires:%jd:%09ld", 
+      LogOptional(Log::TimerDetail, "%s timer %s for %" PRIu64 " microseconds from %jd:%09ld. Expires:%jd:%09ld", 
                   m_stopped ? "Starting": startChange ? "Resetting":"Advancing", 
                   m_name, 
                   micro, 

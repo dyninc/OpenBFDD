@@ -976,7 +976,7 @@ namespace openbfdd
       switch (sendSocket.GetLastError())
       {
         default:
-          gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s", 
+          gLog.LogError("Unable to open socket for session %" PRIu32 " %s : (%d) %s", 
                         m_id, sendAddr.ToString(false), 
                         sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
           return false;

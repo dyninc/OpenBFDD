@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string.h>
 #include "utils.h"
+#include <unistd.h>
 
 using namespace std;
 
