@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -12,10 +12,4 @@ namespace openbfdd
   const char *SofwareVesrion = PACKAGE_VERSION;
   const char *ControlAppName = "bfdd-control";
   const char *BeaconAppName = "bfdd-beacon";
-} 
-
-
-
-
-
-
+}

@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -8,7 +8,7 @@
 #include "utils.h"
 #include <string.h>
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   int ret;
   openbfdd::Beacon app;
@@ -19,31 +19,31 @@ int main (int argc, char *argv[])
 
 #ifdef BFD_DEBUG
   tee = true;
-#endif       
+#endif
 
-  //Parse command line options. 
-  //Be careful what we do here, since we are pre-fork, and we have not initialized 
-  //utils, logging, etc. 
+  //Parse command line options.
+  //Be careful what we do here, since we are pre-fork, and we have not initialized
+  //utils, logging, etc.
   for (argIndex = 1; argIndex < argc; argIndex++)
   {
     if (0 == strcmp("--notee", argv[argIndex]))
     {
-      tee=false;
+      tee = false;
     }
     else if (0 == strcmp("--tee", argv[argIndex]))
     {
-      tee=true;
+      tee = true;
     }
     else if (0 == strcmp("--nofork", argv[argIndex]))
     {
-      doFork=false;
+      doFork = false;
     }
     else if (0 == strcmp("--version", argv[argIndex]))
     {
       fprintf(stdout, "%s version %s\n", openbfdd::BeaconAppName, openbfdd::SofwareVesrion);
       exit(0);
     }
-    else 
+    else
     {
       fprintf(stderr, "Unrecognized %s command line option %s.\n", openbfdd::BeaconAppName, argv[argIndex]);
       exit(1);
@@ -53,7 +53,7 @@ int main (int argc, char *argv[])
   if (doFork)
   {
     tee = false;
-    if(0 != daemon(1,0))
+    if (0 != daemon(1, 0))
     {
       fprintf(stderr, "Failed to daemonize. Exiting.\n");
       exit(1);
@@ -62,7 +62,7 @@ int main (int argc, char *argv[])
 
   srand(time(NULL));
 
-  if(!openbfdd::UtilsInit() || !openbfdd::UtilsInitThread())
+  if (!openbfdd::UtilsInit() || !openbfdd::UtilsInitThread())
   {
     fprintf(stderr, "Unable to init thread local storage. Exiting.\n");
     exit(1);
@@ -71,11 +71,11 @@ int main (int argc, char *argv[])
   // Setup logging first
   //  openbfdd::gLog.SetLogLevel(openbfdd::Log::Detail);
   openbfdd::gLog.LogToSyslog("bfdd-beacon", tee);
-  openbfdd::gLog.Message(openbfdd::Log::App,"Started %d", getpid());
+  openbfdd::gLog.Message(openbfdd::Log::App, "Started %d", getpid());
 
   ret = app.Run();
 
-  openbfdd::gLog.Message(openbfdd::Log::App,"Shutdown %d", getpid());
+  openbfdd::gLog.Message(openbfdd::Log::App, "Shutdown %d", getpid());
 }
 
 namespace openbfdd
@@ -83,4 +83,3 @@ namespace openbfdd
   // Global logger;
   Log gLog;
 }
-

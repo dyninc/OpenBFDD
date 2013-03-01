@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -15,16 +15,16 @@ using namespace std;
 namespace openbfdd
 {
   Beacon::Beacon() :
-  m_scheduler(NULL),
-  m_discMap(32),
-  m_IdMap(32),
-  m_sourceMap(32),
-  m_allowAnyPassiveIP(false),
-  m_strictPorts(false),
-  m_initialSessionParams(),
-  m_selfSignalId(-1),
-  m_paramsLock(true),
-  m_shutownRequested (false)
+     m_scheduler(NULL),
+     m_discMap(32),
+     m_IdMap(32),
+     m_sourceMap(32),
+     m_allowAnyPassiveIP(false),
+     m_strictPorts(false),
+     m_initialSessionParams(),
+     m_selfSignalId(-1),
+     m_paramsLock(true),
+     m_shutownRequested(false)
   {
     // Do as little as possible. Logging not even initialized.
   }
@@ -71,7 +71,7 @@ namespace openbfdd
     m_scheduler = new KeventScheduler();
 #else
     m_scheduler = new SelectScheduler();
-#endif 
+#endif
 
     makeListenSocket(Addr::IPv4, socketIPv4);
     if (socketIPv4.empty())
@@ -90,7 +90,7 @@ namespace openbfdd
     m_packet.AllocBuffers(bfd::MaxPacketSize,
                           Socket::GetMaxControlSizeReceiveDestinationAddress() +
                           Socket::GetMaxControlSizeRecieveTTLOrHops() +
-                           + 8 /*just in case*/ );
+                          +8 /*just in case*/);
 
 
     // We use this "signal channel" to communicate back to ourself in the Scheduler
@@ -148,52 +148,52 @@ namespace openbfdd
     if (session)
     {
       if (session->IsActiveSession())
-        return true; 
+        return true;
       if (!session->UpgradeToActiveSession())
       {
         LogOptional(Log::Session, "Failed to upgrade Session id=%u for %s to %s is to an active session.",
-                    session->GetId(), 
-                    localAddr.ToString(),  
-                    remoteAddr.ToString()  
-                   );
+                    session->GetId(),
+                    localAddr.ToString(),
+                    remoteAddr.ToString()
+                    );
         return false;
       }
 
 
       LogOptional(Log::Session, "Session id=%u for %s to %s is now an active session.",
-                  session->GetId(), 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString()  
-                 );
+                  session->GetId(),
+                  localAddr.ToString(),
+                  remoteAddr.ToString()
+                  );
       return true;
     }
     else
     {
-      session = addSession(remoteAddr, localAddr); 
+      session = addSession(remoteAddr, localAddr);
       if (!session)
         return false;
 
-      LogOptional(Log::Session, "Manually added new session for %s to %s id=%u.", 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString(),  
+      LogOptional(Log::Session, "Manually added new session for %s to %s id=%u.",
+                  localAddr.ToString(),
+                  remoteAddr.ToString(),
                   session->GetId());
 
 
       if (!session->StartActiveSession(remoteAddr, localAddr))
       {
         LogOptional(Log::Session, "Failed to start active session id=%u for %s to %s.",
-                    session->GetId(), 
-                    localAddr.ToString(),  
-                    remoteAddr.ToString()  
-                   );
+                    session->GetId(),
+                    localAddr.ToString(),
+                    remoteAddr.ToString()
+                    );
         return false;
       }
 
       LogOptional(Log::Session, "Session id=%u for %s to %s is started as an active session.",
-                  session->GetId(), 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString()  
-                 );
+                  session->GetId(),
+                  localAddr.ToString(),
+                  remoteAddr.ToString()
+                  );
       return true;
     }
   }
@@ -235,7 +235,7 @@ namespace openbfdd
     return m_shutownRequested;
   }
 
-  Session *Beacon::FindSessionId(uint32_t id)
+  Session* Beacon::FindSessionId(uint32_t id)
   {
     LogAssert(m_scheduler->IsMainThread());
 
@@ -246,20 +246,20 @@ namespace openbfdd
   }
 
 
-  Session *Beacon::FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
     return findInSourceMap(remoteAddr, localAddr);
   }
 
   /**
-   * 
-   * @param remoteAddr [in] - Port ignored 
-   * @param localAddr [in] - Port ignored 
-   * 
-   * @return Session* - NULL on failure 
+   *
+   * @param remoteAddr [in] - Port ignored
+   * @param localAddr [in] - Port ignored
+   *
+   * @return Session* - NULL on failure
    */
-  Session *Beacon::findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
     SourceMapIt found = m_sourceMap.find(SourceMapKey(remoteAddr, localAddr));
@@ -276,7 +276,7 @@ namespace openbfdd
     outList.clear();
     outList.reserve(m_IdMap.size());
 
-    for (IdMapIt found=m_IdMap.begin(); found != m_IdMap.end(); found++)
+    for (IdMapIt found = m_IdMap.begin(); found != m_IdMap.end(); found++)
     {
       outList.push_back(found->first);
     }
@@ -291,13 +291,13 @@ namespace openbfdd
 
     LogAssert(m_scheduler->IsMainThread());
 
-    LogVerify(1==m_discMap.erase(session->GetLocalDiscriminator()));
-    LogVerify(1==m_IdMap.erase(session->GetId()));
-    LogVerify(1==m_sourceMap.erase(SourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
+    LogVerify(1 == m_discMap.erase(session->GetLocalDiscriminator()));
+    LogVerify(1 == m_IdMap.erase(session->GetId()));
+    LogVerify(1 == m_sourceMap.erase(SourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
 
-    LogOptional(Log::Session, "Removed session %s to %s id=%d.", 
-                session->GetLocalAddress().ToString(), 
-                session->GetRemoteAddress().ToString(), 
+    LogOptional(Log::Session, "Removed session %s to %s id=%d.",
+                session->GetLocalAddress().ToString(),
+                session->GetRemoteAddress().ToString(),
                 session->GetId());
 
     delete session;
@@ -372,10 +372,10 @@ namespace openbfdd
   }
 
   /**
-   * Creates the a listen socket on the bfd listen port. 
-   *  
-   * outSocket will be empty on failure. 
-   *  
+   * Creates the a listen socket on the bfd listen port.
+   *
+   * outSocket will be empty on failure.
+   *
    */
   void Beacon::makeListenSocket(Addr::Type family, Socket &outSocket)
   {
@@ -401,8 +401,8 @@ namespace openbfdd
     {
       if (!listenSocket.SetIPv6Only(true))
         return;
-    }   
-     
+    }
+
     if (!listenSocket.Bind(SockAddr(family, bfd::ListenPort)))
       return;
 
@@ -415,7 +415,7 @@ namespace openbfdd
   {
     SockAddr sourceAddr;
     IpAddr destIpAddr, sourceIpAddr;
-    uint8_t ttl; 
+    uint8_t ttl;
     BfdPacket packet;
     bool found;
     Session *session = NULL;
@@ -440,14 +440,14 @@ namespace openbfdd
 
     ttl = m_packet.GetTTLorHops(&found);
     if (!found)
-    {      
+    {
       gLog.LogError("Could not get ttl for packet from %s.", sourceAddr.ToString());
       return;
     }
 
     LogOptional(Log::Packet, "Received bfd packet %zu bytes from %s to %s", m_packet.GetDataSize(), sourceAddr.ToString(), destIpAddr.ToString());
 
-    // 
+    //
     // Check ip specific stuff. See draft-ietf-bfd-v4v6-1hop-11.txt
     //
 
@@ -512,7 +512,7 @@ namespace openbfdd
           return;
         }
 
-        session = addSession(sourceIpAddr, destIpAddr); 
+        session = addSession(sourceIpAddr, destIpAddr);
         if (!session)
           return;
         if (!session->StartPassiveSession(sourceAddr, destIpAddr))
@@ -524,18 +524,18 @@ namespace openbfdd
       }
     }
 
-    // 
-    //  We have a session that can handle the rest. 
-    // 
+    //
+    //  We have a session that can handle the rest.
+    //
     session->ProcessControlPacket(packet, sourceAddr.Port());
   }
 
   /**
    * Adds a session
-   * 
+   *
    * @return Session* - NULL on failure
    */
-  Session *Beacon::addSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::addSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     uint32_t newDisc = makeUniqueDiscriminator();
     Riaa<Session>::Delete session;
@@ -568,9 +568,9 @@ namespace openbfdd
 
   /**
    * Call from any thread to trigger handleSelfMessage on main thread.
-   * 
-   * 
-   * @return bool 
+   *
+   *
+   * @return bool
    */
   bool Beacon::triggerSelfMessage()
   {
@@ -582,8 +582,8 @@ namespace openbfdd
 
   /**
    * Called on the m_scheduler main thread when we have signaled ourselves.
-   * 
-   * @param sigId 
+   *
+   * @param sigId
    */
   void Beacon::handleSelfMessage(int sigId)
   {
@@ -611,7 +611,7 @@ namespace openbfdd
       else
       {
         lock.Lock();
-        operation->completed=true;
+        operation->completed = true;
         lock.SignalAndUnlock(*operation->waitCondition);
       }
 
@@ -626,13 +626,13 @@ namespace openbfdd
   }
 
   /**
-   * This creates a "unique" discriminator value. Could be done more methodically to 
-   * absolutely ensure that we do not re-use a discriminator after a session is 
-   * removed ... but for now this is probably good enough. 
-   *  
-   * @note call only from main thread. 
-   *  
-   * @return uint32_t 
+   * This creates a "unique" discriminator value. Could be done more methodically to
+   * absolutely ensure that we do not re-use a discriminator after a session is
+   * removed ... but for now this is probably good enough.
+   *
+   * @note call only from main thread.
+   *
+   * @return uint32_t
    */
   uint32_t Beacon::makeUniqueDiscriminator()
   {
@@ -693,5 +693,3 @@ namespace openbfdd
 
 
 }
-
-

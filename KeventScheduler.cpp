@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -15,11 +15,11 @@ using namespace std;
 namespace openbfdd
 {
 
-  KeventScheduler::KeventScheduler() : SchedulerBase() ,
-    m_totalEvents(0),
-    m_foundEvents(0),
-    m_nextCheckEvent(0),
-    m_events(m_totalEvents + 1)
+  KeventScheduler::KeventScheduler() : SchedulerBase(),
+     m_totalEvents(0),
+     m_foundEvents(0),
+     m_nextCheckEvent(0),
+     m_events(m_totalEvents + 1)
   {
     m_kqueue = ::kqueue();
     if (m_kqueue < 0)
@@ -55,10 +55,10 @@ namespace openbfdd
   int KeventScheduler::getNextSocketEvent()
   {
     if (!LogVerify(m_foundEvents <= int(m_events.size())))
-        m_foundEvents = m_events.size();
+      m_foundEvents = m_events.size();
 
 
-    for (;m_nextCheckEvent < m_foundEvents; m_nextCheckEvent++)
+    for (; m_nextCheckEvent < m_foundEvents; m_nextCheckEvent++)
     {
       // TODO check for EV_ERROR in flags?
       if (m_events[m_nextCheckEvent].filter == EVFILT_READ)
@@ -70,7 +70,7 @@ namespace openbfdd
       {
         // We should only have socket events
         gLog.LogError("Unexpected kevent event %"PRIuPTR" got result of %hu",
-                      m_events[m_nextCheckEvent].ident, 
+                      m_events[m_nextCheckEvent].ident,
                       m_events[m_nextCheckEvent].filter);
       }
     }
@@ -102,7 +102,7 @@ namespace openbfdd
   {
     struct kevent change;
 
-    LogAssert(m_kqueue!=-1);
+    LogAssert(m_kqueue != -1);
 
     EV_SET(&change, fd, EVFILT_READ, EV_DELETE, 0, NULL, NULL);
     if (kevent(m_kqueue, &change, 1, NULL, 0, NULL) < 0)
@@ -117,9 +117,9 @@ namespace openbfdd
 
   /**
    * resizes m_events.
-   * 
+   *
    * @throw - May throw.
-   * 
+   *
    */
   void KeventScheduler::resizeEvents()
   {
@@ -134,9 +134,3 @@ namespace openbfdd
 }
 
 #endif  // USE_KEVENT_SCHEDULER
-
-
-
-
-
-

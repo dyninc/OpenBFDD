@@ -1,10 +1,10 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 // Common header for the beacon and control
-#pragma once  
+#pragma once
 #include "standard.h"
 #include "log.h"
 
@@ -23,7 +23,7 @@ namespace openbfdd
   const size_t MaxReplyLineSize = 2046;
 
   // Maximum length of command from control->beacon
-  const size_t MaxCommandSize = 1024; // really this is probably to large given the current command set? 
+  const size_t MaxCommandSize = 1024; // really this is probably to large given the current command set?
 
   extern const char *SofwareVesrion;
 
@@ -38,7 +38,7 @@ namespace openbfdd
   // This is like gLog.Optional(), but does not evaluate the parameters if logging
   // is off. It incurs extra locking overhead, so only use when parameters include
   // expensive function calls.
-  #define LogOptional(type, format, ...) \
+#define LogOptional(type, format, ...) \
   do { if(gLog.LogTypeEnabled(type)) gLog.Message(type,  format,   ## __VA_ARGS__); } while(0)
 
   /**
@@ -76,9 +76,4 @@ namespace openbfdd
           (gLog.Message(Log::Critical, "ASSERT FALSE: %s:%d: %s: %s", __FILE__, __LINE__, __func__, msg), false)
 
   #endif
-} 
-
-
-
-
-
+}

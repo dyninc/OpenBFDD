@@ -1,12 +1,12 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 /**
- 
+
   Scheduler implementation for system with kevent.
-    
+
  */
 #pragma once
 
@@ -24,10 +24,10 @@ namespace openbfdd
   {
 
   public:
-    /** 
-     * Constructor  
-     * The thread that calls this is considered the "main thread". See 
-     * Scheduler::IsMainThread(). 
+    /**
+     * Constructor
+     * The thread that calls this is considered the "main thread". See
+     * Scheduler::IsMainThread().
      */
     KeventScheduler();
     virtual ~KeventScheduler();
@@ -49,7 +49,7 @@ namespace openbfdd
     int m_kqueue;
     int m_foundEvents; // from last waitForEvents()
     int m_nextCheckEvent;  // for getNextSocketEvent
-    std::vector<struct kevent> m_events; // from last waitForEvents() 
+    std::vector<struct kevent> m_events; // from last waitForEvents()
   };
 
 }

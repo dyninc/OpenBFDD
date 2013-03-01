@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -16,13 +16,13 @@ using namespace std;
 
 namespace openbfdd
 {
-  static int bfdMain (int argc, char *argv[]);
+  static int bfdMain(int argc, char *argv[]);
 
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-  return openbfdd::bfdMain(argc,  argv); 
+  return openbfdd::bfdMain(argc,  argv);
 }
 
 namespace openbfdd
@@ -30,20 +30,20 @@ namespace openbfdd
   Log gLog;
 
   /**
-   * 
-   * 
-   * @param message 
-   * @param message_size 
-   * @param port 
-   * @param outPrefix [in] - If not null, then every response line will be 
+   *
+   *
+   * @param message
+   * @param message_size
+   * @param port
+   * @param outPrefix [in] - If not null, then every response line will be
    *                  prefixed with this string.
-   * 
-   * @return bool 
+   *
+   * @return bool
    */
   static bool SendData(const char *message, size_t message_size, uint16_t port, const char *outPrefix = NULL)
   {
     size_t totalLength;
-    SockAddr saddr; 
+    SockAddr saddr;
 
     vector<char> buffer(max(MaxReplyLineSize,  MaxCommandSize));
     Socket sendSocket;
@@ -67,7 +67,7 @@ namespace openbfdd
 
     // Assemble the message
     magic = htonl(MagicMessageNumber);
-    memcpy (&buffer.front(), &magic, sizeof(uint32_t));
+    memcpy(&buffer.front(), &magic, sizeof(uint32_t));
     totalLength = message_size + sizeof(uint32_t);
     if (totalLength > MaxCommandSize)
     {
@@ -75,7 +75,7 @@ namespace openbfdd
       return false;
     }
 
-    memcpy (&buffer[sizeof(uint32_t)], message, message_size); 
+    memcpy(&buffer[sizeof(uint32_t)], message, message_size);
 
     // Send our message.
     if (!sendSocket.Send(&buffer.front(), totalLength))
@@ -95,7 +95,7 @@ namespace openbfdd
     // Read until done
     while (fgets(&buffer.front(), buffer.size(), fileHandle))
     {
-      if(outPrefix)
+      if (outPrefix)
         fputs(outPrefix, stdout);
 
       fputs(&buffer.front(), stdout);
@@ -111,14 +111,14 @@ namespace openbfdd
   }
 
   /**
-   * Adds a parameter, if appropriate and possible, to the end of the vector. 
-   * If the parameter is empty then it is skipped. Adds a null to the end of the 
-   * buffer. 
-   *  
-   * @throw bad_alloc  
-   * 
-   * @param buffer 
-   * @param param 
+   * Adds a parameter, if appropriate and possible, to the end of the vector.
+   * If the parameter is empty then it is skipped. Adds a null to the end of the
+   * buffer.
+   *
+   * @throw bad_alloc
+   *
+   * @param buffer
+   * @param param
    */
   static void AddParamToBuffer(vector<char> &buffer, const char *param)
   {
@@ -139,10 +139,10 @@ namespace openbfdd
     string line;
     int lines = 0;
     vector<char> buffer;
-    const char *seps=" \t";
+    const char *seps = " \t";
 
     file.open(path);
-    if(!file.is_open())
+    if (!file.is_open())
     {
       fprintf(stderr, "Failed to open file <%s> : %s\n", path, strerror(errno));
       return false;
@@ -153,9 +153,9 @@ namespace openbfdd
     {
       size_t pos = 0;
       lines++;
-      if(line.empty())
+      if (line.empty())
         continue;
-      if(line[0] == '#')
+      if (line[0] == '#')
         continue;
 
       // Parse the command line. This doe not currently handle quoted parameters. If
@@ -166,13 +166,13 @@ namespace openbfdd
       while (pos != string::npos)
       {
         size_t sepPos = line.find_first_of(seps, pos);
-        LogVerify (sepPos != pos);
-        size_t end = (sepPos == string::npos) ? line.length():sepPos;
+        LogVerify(sepPos != pos);
+        size_t end = (sepPos == string::npos) ? line.length() : sepPos;
         size_t bufpos = buffer.size();
-        buffer.resize(bufpos + end-pos);
-        memcpy(&buffer[bufpos], &line[pos], end-pos);
+        buffer.resize(bufpos + end - pos);
+        memcpy(&buffer[bufpos], &line[pos], end - pos);
         buffer.push_back('\0');
-        if(sepPos == string::npos)
+        if (sepPos == string::npos)
           break;
         pos = line.find_first_not_of(seps, end);
       }
@@ -188,7 +188,7 @@ namespace openbfdd
       }
     }
 
-    if(!file.eof())
+    if (!file.eof())
     {
       fprintf(stderr, "Failed to read from file <%s>. %d lines processed: %s\n", path, lines, strerror(errno));
       return false;
@@ -198,7 +198,7 @@ namespace openbfdd
     return true;
   }
 
-  int bfdMain (int argc, char *argv[])
+  int bfdMain(int argc, char *argv[])
   {
     int argIndex;
     uint16_t port = PORTNUM;
@@ -220,7 +220,7 @@ namespace openbfdd
         fprintf(stderr, "Unrecognized %s command line option %s.\n", ControlAppName, argv[argIndex]);
         exit(1);
       }
-      else 
+      else
         break;
     }
 
@@ -241,20 +241,20 @@ namespace openbfdd
     {
       argIndex++;
 
-      if(argIndex >=  argc)
+      if (argIndex >=  argc)
       {
         fprintf(stderr, "Must supply a script file after 'load'\n");
         exit(1);
       }
-       
+
       fprintf(stdout,  "Running script from file <%s>\n", argv[argIndex]);
-      if(!doLoadScript(argv[argIndex], port))
+      if (!doLoadScript(argv[argIndex], port))
       {
         fprintf(stderr, "Script load failed.\n");
-        exit (1);
+        exit(1);
       }
       fprintf(stdout,  "Completed script from file <%s>\n", argv[argIndex]);
-      exit (0);
+      exit(0);
     }
 
     // To allow for quotes, we concatenate all the arguments, separating them with
@@ -278,19 +278,8 @@ namespace openbfdd
     buffer.push_back('\0');
 
     if (!SendData(&buffer.front(), buffer.size(), port))
-        exit(1);
+      exit(1);
 
     exit(0);
   }
 }
-
-
-
-
-
-
-
-
-
-
-

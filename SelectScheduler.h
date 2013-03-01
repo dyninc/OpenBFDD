@@ -1,12 +1,12 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 /**
- 
+
   Scheduler implementation for system with select, but without kevent..
-    
+
  */
 #pragma once
 
@@ -14,9 +14,9 @@
 
 #ifndef USE_KEVENT_SCHEDULER
 
-  #include "SchedulerBase.h"
-  #include <vector>
-  #include <set>
+#include "SchedulerBase.h"
+#include <vector>
+#include <set>
 
 namespace openbfdd
 {
@@ -25,10 +25,10 @@ namespace openbfdd
 
   public:
   public:
-    /** 
-     * Constructor  
-     * The thread that calls this is considered the "main thread". See 
-     * Scheduler::IsMainThread(). 
+    /**
+     * Constructor
+     * The thread that calls this is considered the "main thread". See
+     * Scheduler::IsMainThread().
      */
     SelectScheduler();
     virtual ~SelectScheduler();
@@ -47,7 +47,7 @@ namespace openbfdd
     void resizeFoundSockets();
 
     int m_foundEvents;  // from last waitForEvents()
-    std::vector<int> m_foundSockets; // from last waitForEvents(). 
+    std::vector<int> m_foundSockets; // from last waitForEvents().
     int m_nextCheckEvent;  // for getNextSocketEvent
     std::set<int> m_watchSockets;
   };

@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -11,8 +11,8 @@ namespace openbfdd
   // bfd constants are in a special namespace for clarity
   namespace bfd
   {
-    const char *StateNameArray[] = {"AdminDown","Down","Init","Up"};
-    const char *StateName( bfd::State::Value state)
+    const char *StateNameArray[] = { "AdminDown", "Down", "Init", "Up" };
+    const char* StateName(bfd::State::Value state)
     {
       if (state < 0 || state > bfd::State::Up)
         return "Invalid";
@@ -20,7 +20,7 @@ namespace openbfdd
     }
 
 
-    const char *DiagNameArray[] = 
+    const char *DiagNameArray[] =
     {
       "No Diagnostic",
       "Control Detection Time Expired",
@@ -33,7 +33,7 @@ namespace openbfdd
       "Reverse Concatenated Path Down"
     };
 
-    const char *DiagString(Diag::Value diag)
+    const char* DiagString(Diag::Value diag)
     {
       if (diag < 0 || diag > bfd::Diag::ReverseConcatPathDown)
         return "Unknown";
@@ -42,7 +42,7 @@ namespace openbfdd
     }
 
 
-    const char *DiagShortNameArray[] = 
+    const char *DiagShortNameArray[] =
     {
       "None",
       "Time Expired",
@@ -55,7 +55,7 @@ namespace openbfdd
       "Reverse Concat Down"
     };
 
-    const char *DiagShortString(Diag::Value diag)
+    const char* DiagShortString(Diag::Value diag)
     {
       if (diag < 0 || diag > bfd::Diag::ReverseConcatPathDown)
         return "Unknown";
@@ -67,5 +67,4 @@ namespace openbfdd
 
   } // namespace
 
-} // namespace 
-
+} // namespace

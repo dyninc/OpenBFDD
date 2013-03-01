@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -17,72 +17,72 @@ using namespace std;
 namespace openbfdd
 {
 
-  #ifdef TEST_DROP_FINAL
-  #warning TEST_DROP_FINAL defined ... testing only!
+#ifdef TEST_DROP_FINAL
+#warning TEST_DROP_FINAL defined ... testing only!
   static int gDropFinalPercent = 60;
-  #else
+#else
   static int gDropFinalPercent = 0;
-  #endif
+#endif
 
   static const size_t MaxUptimeCount = 4; // number of states to keep track of for logging.
 
   uint32_t Session::m_nextId = 1;
 
   Session::InitialParams::InitialParams() :
-    detectMulti(3),
-    desiredMinTx(bfd::BaseMinTxInterval),
-    requiredMinRx(1000000),
-    controlPlaneIndependent(false), 
-    adminUpPollWorkaround(true)
+     detectMulti(3),
+     desiredMinTx(bfd::BaseMinTxInterval),
+     requiredMinRx(1000000),
+     controlPlaneIndependent(false),
+     adminUpPollWorkaround(true)
   {
   }
 
   // Note that the inclusion of the Beacon pointer is bad design and sheer
   // laziness. This should really be an event sink or callback.
   Session::Session(Scheduler &scheduler, Beacon *beacon, uint32_t descriminator, const InitialParams &params) :
-  m_beacon(beacon),
-  m_scheduler(&scheduler),
-  m_remoteAddr(),
-  m_remoteSourcePort(0),
-  m_localAddr(),
-  m_sendPort(0),
-  m_isActive(false),
-  m_sessionState(bfd::State::Down),
-  m_remoteSessionState(bfd::State::Down),
-  m_localDiscr(descriminator),
-  m_remoteDiscr(0),
-  m_localDiag(bfd::Diag::None),
-  m_desiredMinTxInterval(bfd::BaseMinTxInterval), // Since we start "down" this must be 1s see v10/6.8.3
-  m_requiredMinRxInterval(params.requiredMinRx),
-  m_remoteMinRxInterval(1),
-  m_demandMode(false),  // We get to choose this. 
-  m_remoteDemandMode(false),
-  m_detectMult(params.detectMulti),
-  m_authType(bfd::AuthType::None), // ?? 
-  m_rcvAuthSeq(0),
-  m_xmitAuthSeq(rand() % UINT32_MAX),
-  m_authSeqKnown(false),
-  m_pollState(PollState::None),
-  m_pollRecieved(false),
-  m_remoteDetectMult(0),
-  m_remoteDesiredMinTxInterval(0),
-  m_remoteDiag(bfd::Diag::None),
-  m_destroyAfterTimeouts(3),
-  m_remoteDestroyAfterTimeouts(3),
-  m_timeoutStatus(TimeoutStatus::None),
-  m_isSuspended(false),
-  m_immediateControlPacket(false),
-  m_controlPlaneIndependent(params.controlPlaneIndependent),
-  m_adminUpPollWorkaround(params.adminUpPollWorkaround),
-  m_forcedState(false),
-  m_wantsPollForNewDesiredMinTxInterval(false),
-  _useDesiredMinTxInterval(bfd::BaseMinTxInterval),  // Since we start "down" this must be 1s see v10/6.8.3
-  m_defaultDesiredMinTxInterval(params.desiredMinTx),  // this will not take effect until we are up ... see m_useDesiredMinTxInterva
-  m_wantsPollForNewRequiredMinRxInterval(false),
-  _useRequiredMinRxInterval(m_requiredMinRxInterval),
-  m_receiveTimeoutTimer(this),
-  m_transmitNextTimer(this)
-  { 
+     m_beacon(beacon),
+     m_scheduler(&scheduler),
+     m_remoteAddr(),
+     m_remoteSourcePort(0),
+     m_localAddr(),
+     m_sendPort(0),
+     m_isActive(false),
+     m_sessionState(bfd::State::Down),
+     m_remoteSessionState(bfd::State::Down),
+     m_localDiscr(descriminator),
+     m_remoteDiscr(0),
+     m_localDiag(bfd::Diag::None),
+     m_desiredMinTxInterval(bfd::BaseMinTxInterval), // Since we start "down" this must be 1s see v10/6.8.3
+     m_requiredMinRxInterval(params.requiredMinRx),
+     m_remoteMinRxInterval(1),
+     m_demandMode(false),  // We get to choose this.
+     m_remoteDemandMode(false),
+     m_detectMult(params.detectMulti),
+     m_authType(bfd::AuthType::None), // ??
+     m_rcvAuthSeq(0),
+     m_xmitAuthSeq(rand() % UINT32_MAX),
+     m_authSeqKnown(false),
+     m_pollState(PollState::None),
+     m_pollRecieved(false),
+     m_remoteDetectMult(0),
+     m_remoteDesiredMinTxInterval(0),
+     m_remoteDiag(bfd::Diag::None),
+     m_destroyAfterTimeouts(3),
+     m_remoteDestroyAfterTimeouts(3),
+     m_timeoutStatus(TimeoutStatus::None),
+     m_isSuspended(false),
+     m_immediateControlPacket(false),
+     m_controlPlaneIndependent(params.controlPlaneIndependent),
+     m_adminUpPollWorkaround(params.adminUpPollWorkaround),
+     m_forcedState(false),
+     m_wantsPollForNewDesiredMinTxInterval(false),
+     _useDesiredMinTxInterval(bfd::BaseMinTxInterval),  // Since we start "down" this must be 1s see v10/6.8.3
+     m_defaultDesiredMinTxInterval(params.desiredMinTx),  // this will not take effect until we are up ... see m_useDesiredMinTxInterva
+     m_wantsPollForNewRequiredMinRxInterval(false),
+     _useRequiredMinRxInterval(m_requiredMinRxInterval),
+     m_receiveTimeoutTimer(this),
+     m_transmitNextTimer(this)
+  {
     LogAssert(m_scheduler->IsMainThread());
 
     if (m_nextId == 0)
@@ -120,7 +120,7 @@ namespace openbfdd
   void Session::deleteTimer(Timer *timer)
   {
     LogAssert(m_scheduler->IsMainThread());
-    if (m_scheduler && timer)  
+    if (m_scheduler && timer)
     {
       gLog.Message(Log::Temp,  "Free timer %p", timer);
       m_scheduler->FreeTimer(timer);
@@ -193,13 +193,13 @@ namespace openbfdd
   }
 
 
-  const IpAddr &Session::GetRemoteAddress()
+  const IpAddr& Session::GetRemoteAddress()
   {
     LogAssert(m_scheduler->IsMainThread());
     return m_remoteAddr;
   }
 
-  const IpAddr & Session::GetLocalAddress()
+  const IpAddr& Session::GetLocalAddress()
   {
     LogAssert(m_scheduler->IsMainThread());
     return m_localAddr;
@@ -213,7 +213,7 @@ namespace openbfdd
 
 
   // static
-  bool Session::InitialProcessControlPacket(const uint8_t* data, size_t dataLength, BfdPacket &outPacket)
+  bool Session::InitialProcessControlPacket(const uint8_t *data, size_t dataLength, BfdPacket &outPacket)
   {
     BfdPacketHeader &header = outPacket.header;
 
@@ -272,18 +272,18 @@ namespace openbfdd
     }
 
     // Can check for 0 without byte order concerns.
-    if (header.yourDisc == 0 && header.GetState() != bfd::State::Down && header.GetState() != bfd::State::AdminDown )
+    if (header.yourDisc == 0 && header.GetState() != bfd::State::Down && header.GetState() != bfd::State::AdminDown)
     {
       gLog.Optional(Log::Discard, "Discard packet: No destination discriminator and state is %s.", bfd::StateName(header.GetState()));
       return false;
     }
 
     // Now we need to worry about byte order
-    header.myDisc               = ntohl(header.myDisc);               
-    header.yourDisc             = ntohl(header.yourDisc);             
-    header.txDesiredMinInt      = ntohl(header.txDesiredMinInt);      
-    header.rxRequiredMinInt     = ntohl(header.rxRequiredMinInt);     
-    header.rxRequiredMinEchoInt = ntohl(header.rxRequiredMinEchoInt); 
+    header.myDisc               = ntohl(header.myDisc);
+    header.yourDisc             = ntohl(header.yourDisc);
+    header.txDesiredMinInt      = ntohl(header.txDesiredMinInt);
+    header.rxRequiredMinInt     = ntohl(header.rxRequiredMinInt);
+    header.rxRequiredMinEchoInt = ntohl(header.rxRequiredMinEchoInt);
 
     // packet is good as far as we can tell without a session.
     return true;
@@ -300,10 +300,10 @@ namespace openbfdd
 
     logPacketContents(packet, false, true, m_remoteAddr, port, m_localAddr, 0);
 
-    if(gDropFinalPercent != 0)
+    if (gDropFinalPercent != 0)
     {
       // For testing only
-      if(header.GetFinal() && rand() % 100 < gDropFinalPercent)
+      if (header.GetFinal() && rand() % 100 < gDropFinalPercent)
       {
         gLog.Optional(Log::Discard, "Discard packet: TESTING final bit set.");
         return false;
@@ -339,7 +339,7 @@ namespace openbfdd
     }
 
 
-    if(header.GetDemand())
+    if (header.GetDemand())
     {
       {
         gLog.Optional(Log::Error, "Discard packet: We do not support demand mode for remote host.");
@@ -350,7 +350,7 @@ namespace openbfdd
 
     //
     // looks like packet can not be discarded after this point
-    // 
+    //
 
     m_remoteDesiredMinTxInterval = header.txDesiredMinInt;
     m_remoteDetectMult = header.detectMult;
@@ -397,8 +397,8 @@ namespace openbfdd
       }
       else if (m_sessionState == bfd::State::Init)
       {
-        if (m_remoteSessionState == bfd::State::Init 
-            || m_remoteSessionState == bfd::State::Up )
+        if (m_remoteSessionState == bfd::State::Init
+            || m_remoteSessionState == bfd::State::Up)
           setSessionState(bfd::State::Up, bfd::Diag::None, SetValueFlags::PreventTxReschedule);
       }
       else if (m_sessionState == bfd::State::Up)
@@ -413,12 +413,12 @@ namespace openbfdd
     if (isRemoteDemandModeActive())
     {
       // Cease periodic control packets.
-      LogVerifyFalse("We do not currently support demand mode"); 
+      LogVerifyFalse("We do not currently support demand mode");
       m_transmitNextTimer->Stop();
     }
     else if (m_transmitNextTimer->IsStopped())
     {
-      // Start the timer. 
+      // Start the timer.
       scheduleTransmit();
     }
 
@@ -433,7 +433,7 @@ namespace openbfdd
     // If we are active, then we may not yet have a source port
     if (m_remoteSourcePort == 0 && m_isActive)
       m_remoteSourcePort = port;
-    else if ( m_remoteSourcePort != port)
+    else if (m_remoteSourcePort != port)
     {
       m_remoteSourcePort = port;
       gLog.Optional(Log::Session, "Source port has changed for session %u.", m_id);
@@ -444,13 +444,13 @@ namespace openbfdd
 
 
     // Certain changes my require a packet reschedule.
-    if(m_immediateControlPacket 
-       || olduseDesiredMinTxInterval != getUseDesiredMinTxInterval()
-       || oldRemoteMinRxInterval > m_remoteMinRxInterval // v10/6.8.3p6
-       || (oldRemoteMinRxInterval == 0 && oldRemoteMinRxInterval != m_remoteMinRxInterval) // basically the same as above.
-       )
+    if (m_immediateControlPacket
+        || olduseDesiredMinTxInterval != getUseDesiredMinTxInterval()
+        || oldRemoteMinRxInterval > m_remoteMinRxInterval // v10/6.8.3p6
+        || (oldRemoteMinRxInterval == 0 && oldRemoteMinRxInterval != m_remoteMinRxInterval) // basically the same as above.
+        )
     {
-       scheduleTransmit();
+      scheduleTransmit();
     }
 
     // Packet received ... update Detection time timer
@@ -460,15 +460,15 @@ namespace openbfdd
   }
 
   /**
-   * Gets the time between receiving remote control packets that should be 
-   * considered a "timeout". 
-   *  
+   * Gets the time between receiving remote control packets that should be
+   * considered a "timeout".
+   *
    * Returns 0 if we do not expect any packets. (Timeout disabled.)
-   *  
+   *
    */
   uint64_t Session::getDetectionTimeout()
   {
-    if(getUseRequiredMinRxInterval() == 0)
+    if (getUseRequiredMinRxInterval() == 0)
       return 0;
 
     return m_remoteDetectMult * uint64_t(max(getUseRequiredMinRxInterval(),  m_remoteDesiredMinTxInterval));
@@ -476,7 +476,7 @@ namespace openbfdd
 
   /**
    * Schedule the next received timeout based on the current settings.
-   * 
+   *
    */
   void  Session::scheduleRecieveTimeout()
   {
@@ -488,7 +488,7 @@ namespace openbfdd
     }
 
     uint64_t timeout = getDetectionTimeout();
-    if(timeout == 0)
+    if (timeout == 0)
       m_receiveTimeoutTimer->Stop();
     else
       m_receiveTimeoutTimer->SetMicroTimer(timeout);
@@ -507,7 +507,7 @@ namespace openbfdd
     }
 
     uint64_t timeout = getDetectionTimeout();
-    if(timeout == 0)
+    if (timeout == 0)
       m_receiveTimeoutTimer->Stop();
     else
       m_receiveTimeoutTimer->UpdateMicroTimer(timeout);
@@ -517,32 +517,32 @@ namespace openbfdd
 
   bool Session::isRemoteDemandModeActive()
   {
-    return(m_remoteDemandMode && m_sessionState == bfd::State::Up && m_remoteSessionState == bfd::State::Up);
+    return (m_remoteDemandMode && m_sessionState == bfd::State::Up && m_remoteSessionState == bfd::State::Up);
   }
 
   /**
-   * Use this to change m_sessionState. Handles the timing of control packets. 
-   *  
-   * @note This may change the MinTXInterval. 
-   *  
-   *  
-   * Set the SetValueFlags::PreventTxReschedule flag is in flags to prevent this 
-   * function from calling scheduleTransmit(). Use only if caller will call 
-   * scheduleTransmit(), or sendControlPacket(). 
-   *  
-   * Set the SetValueFlags::TryPoll flag is in flags to start a poll sequence if 
+   * Use this to change m_sessionState. Handles the timing of control packets.
+   *
+   * @note This may change the MinTXInterval.
+   *
+   *
+   * Set the SetValueFlags::PreventTxReschedule flag is in flags to prevent this
+   * function from calling scheduleTransmit(). Use only if caller will call
+   * scheduleTransmit(), or sendControlPacket().
+   *
+   * Set the SetValueFlags::TryPoll flag is in flags to start a poll sequence if
    * the sate is changed. This is an 'optional' poll sequence, and will be ignored
-   * if there is already one underway. The poll sequence may be "ambiguous" (see 
-   * transitionPollState) 
-   *  
-   * 
-   * @param newState 
-   * @param diag [in] - The new local diag. 
+   * if there is already one underway. The poll sequence may be "ambiguous" (see
+   * transitionPollState)
+   *
+   *
+   * @param newState
+   * @param diag [in] - The new local diag.
    * @param flags [in] - See description above.
    */
-  void Session::setSessionState(bfd::State::Value newState, bfd::Diag::Value diag, SetValueFlags::Flag flags /*SetValueFlags::None*/ )
+  void Session::setSessionState(bfd::State::Value newState, bfd::Diag::Value diag, SetValueFlags::Flag flags /*SetValueFlags::None*/)
   {
-    if(m_forcedState)
+    if (m_forcedState)
     {
       LogOptional(Log::SessionDetail, "(id=%u) Session held at %s no transition to %s", m_id, bfd::StateName(m_sessionState),  bfd::StateName(newState));
       return;
@@ -550,7 +550,7 @@ namespace openbfdd
 
     m_localDiag = diag;
 
-    if(m_sessionState != newState)
+    if (m_sessionState != newState)
     {
       LogOptional(Log::Session, "(id=%u) Session transition from %s to %s", m_id, bfd::StateName(m_sessionState),  bfd::StateName(newState));
       m_sessionState = newState;
@@ -560,19 +560,19 @@ namespace openbfdd
       if (newState == bfd::State::Up)
       {
         // Since we are up, we can change to our real DesiredMinTxInterval
-        if(m_desiredMinTxInterval != m_defaultDesiredMinTxInterval)
+        if (m_desiredMinTxInterval != m_defaultDesiredMinTxInterval)
           setDesiredMinTxInterval(m_defaultDesiredMinTxInterval, (flags & SetValueFlags::PreventTxReschedule));
       }
       else
       {
         // According to v10/6.8.3 when state is not up we must have
         // m_desiredMinTxInterval at least 1000000
-        if(m_desiredMinTxInterval < bfd::BaseMinTxInterval)
+        if (m_desiredMinTxInterval < bfd::BaseMinTxInterval)
           setDesiredMinTxInterval(bfd::BaseMinTxInterval, (flags & SetValueFlags::PreventTxReschedule));
 
         // If we were waiting for a RequiredMinRxInterval change to finish polling, that
         // is now moot.
-        if(getUseRequiredMinRxInterval() != m_requiredMinRxInterval)
+        if (getUseRequiredMinRxInterval() != m_requiredMinRxInterval)
         {
           // This is Ok here only since we know we are not up.
           gLog.Optional(Log::Session, "(id=%u) RequiredMinRxInterval now using new value %u due to session down.", m_id, m_requiredMinRxInterval);
@@ -581,19 +581,19 @@ namespace openbfdd
         }
       }
 
-      if ( SetValueFlags::TryPoll == (flags & SetValueFlags::TryPoll))
-        transitionPollState(PollState::Requested , true /*allowAmbiguous*/);
+      if (SetValueFlags::TryPoll == (flags & SetValueFlags::TryPoll))
+        transitionPollState(PollState::Requested, true /*allowAmbiguous*/);
 
       // Change in control packets should cause an immediate send (per v10/6.8.7)
       m_immediateControlPacket = true;
-      if((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
+      if ((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
         scheduleTransmit(); // schedule immediate transmit.
     }
   }
 
   /**
-   * Logs a transition to the current state. 
-   * Stores the transition information for stats. 
+   * Logs a transition to the current state.
+   * Stores the transition information for stats.
    */
   void Session::logSessionTransition()
   {
@@ -603,7 +603,7 @@ namespace openbfdd
     // We only log state change when we are fully up.
     // The state machine does not allow up->init transition, so we must have been
     // down (and we still count this as down).
-    if(m_sessionState == bfd::State::Init) 
+    if (m_sessionState == bfd::State::Init)
       return;
 
     // Check if we even need to log the state transition
@@ -611,7 +611,7 @@ namespace openbfdd
     {
       last = &m_uptimeList.front();
 
-      // only log when state changes. 
+      // only log when state changes.
       if (last->state == m_sessionState)
       {
         if (m_forcedState  && !last->forced)
@@ -657,15 +657,15 @@ namespace openbfdd
 
   /**
    * Called to attempt to transition poll state. Enforces linear transitions.
-   * 
-   * @param nextState 
-   * @param allowAmbiguous - If true, then we can start a new poll sequence even if 
+   *
+   * @param nextState
+   * @param allowAmbiguous - If true, then we can start a new poll sequence even if
    *                       the previous one just ended. The poll sequence will be
    *                       "ambiguous" as described in v10/6/8/3p9. This should be
    *                       used only if the caller does not need to take any
-   *                       action when the poll completes. 
-   *  
-   * @return - false if the transition was not valid. 
+   *                       action when the poll completes.
+   *
+   * @return - false if the transition was not valid.
    */
   bool Session::transitionPollState(PollState::Value nextState, bool allowAmbiguous /*false*/)
   {
@@ -675,12 +675,12 @@ namespace openbfdd
     // poll. We could also add a timing element as described in that section, if
     // needed.
 
-    if(nextState == PollState::None)
+    if (nextState == PollState::None)
     {
-      if(m_pollState == PollState::None)
+      if (m_pollState == PollState::None)
         return true;
 
-      if(m_pollState == PollState::Completed)
+      if (m_pollState == PollState::Completed)
       {
         // Poll sequence is now unambiguously finished. We can now start a new one if we
         // want.
@@ -696,11 +696,11 @@ namespace openbfdd
       }
       return false;
     }
-    else if(nextState == PollState::Requested)
+    else if (nextState == PollState::Requested)
     {
-      if(m_pollState == PollState::Requested || m_pollState == PollState::None)
+      if (m_pollState == PollState::Requested || m_pollState == PollState::None)
       {
-        m_pollState = PollState::Requested; 
+        m_pollState = PollState::Requested;
 
         // If either of these were true, then we can set them to false now, since they
         // will automatically take effect at the end of this poll sequence.
@@ -710,13 +710,13 @@ namespace openbfdd
         // If we are not transmitting (perhaps m_remoteMinRxInterval == 0) then we need
         // to now to make polling happen. Note that this will still wait until the
         // "next" transmit, even though that might not be required in all cases.
-        if(m_transmitNextTimer->IsStopped())
+        if (m_transmitNextTimer->IsStopped())
           scheduleTransmit();
 
         return true;
       }
 
-      if(m_pollState == PollState::Completed && allowAmbiguous)
+      if (m_pollState == PollState::Completed && allowAmbiguous)
       {
         m_pollState = PollState::None;
         return transitionPollState(PollState::Requested);
@@ -724,20 +724,20 @@ namespace openbfdd
 
       return false;
     }
-    else if(nextState == PollState::Polling)
+    else if (nextState == PollState::Polling)
     {
-      if(m_pollState == PollState::Requested || m_pollState == PollState::None)
-      {  
+      if (m_pollState == PollState::Requested || m_pollState == PollState::None)
+      {
         m_pollState = PollState::Polling;
         return true;
       }
       return false;
     }
-    else if(nextState == PollState::Completed)
+    else if (nextState == PollState::Completed)
     {
-      if(m_pollState == PollState::Polling)
-      {  
-        m_pollState = PollState::Completed; 
+      if (m_pollState == PollState::Polling)
+      {
+        m_pollState = PollState::Completed;
 
         // Handle any changes that need to be made after polling.
 
@@ -756,7 +756,7 @@ namespace openbfdd
         }
 
         // If we are only sending packets as part of a poll then we can stop now.
-        if(!m_transmitNextTimer->IsStopped() && getBaseTransmitTime() == 0)
+        if (!m_transmitNextTimer->IsStopped() && getBaseTransmitTime() == 0)
           scheduleTransmit();
 
         return true;
@@ -770,8 +770,8 @@ namespace openbfdd
 
 
   /**
-   * Schedules the next packet transmission based on current state. 
-   * Poll response packets are not scheduled, and so are not handled here. 
+   * Schedules the next packet transmission based on current state.
+   * Poll response packets are not scheduled, and so are not handled here.
    */
   void Session::scheduleTransmit()
   {
@@ -781,7 +781,7 @@ namespace openbfdd
     // involved.
     LogAssert(!m_pollRecieved);
 
-    if(m_immediateControlPacket)
+    if (m_immediateControlPacket)
     {
       // On certain changes we need to send an immediate packet
       m_transmitNextTimer->SetMicroTimer(0);
@@ -791,20 +791,20 @@ namespace openbfdd
 
     if (!m_isActive && m_remoteDiscr == 0)
     {
-      m_transmitNextTimer->Stop();  
+      m_transmitNextTimer->Stop();
       return; // Passive session.
     }
 
     // We recalculate the transmit interval every time, which may mean a little
-    // extra "churning" on the timer. 
+    // extra "churning" on the timer.
     transmitInterval = getBaseTransmitTime();
-    if(transmitInterval == 0)
+    if (transmitInterval == 0)
     {
-      bool sendPoll = (m_pollState == PollState::Requested || m_pollState == PollState::Polling );
+      bool sendPoll = (m_pollState == PollState::Requested || m_pollState == PollState::Polling);
       // If we are not polling, then no packets get sent.
-      if(!sendPoll)
+      if (!sendPoll)
       {
-        m_transmitNextTimer->Stop();  
+        m_transmitNextTimer->Stop();
         return;
       }
       else
@@ -819,22 +819,22 @@ namespace openbfdd
     }
 
     // Apply jitter
-    transmitInterval = uint64_t(transmitInterval*(0.75 + 0.25*double(rand())/RAND_MAX));
-    
+    transmitInterval = uint64_t(transmitInterval * (0.75 + 0.25 * double(rand()) / RAND_MAX));
+
     // Limits on jitter
     if (m_detectMult == 1)
     {
-      if (transmitInterval > uint64_t(0.90*transmitInterval))
-        transmitInterval = uint64_t(0.90*transmitInterval);
+      if (transmitInterval > uint64_t(0.90 * transmitInterval))
+        transmitInterval = uint64_t(0.90 * transmitInterval);
     }
 
     m_transmitNextTimer->UpdateMicroTimer(transmitInterval);
   }
 
-  /** 
-   *  
+  /**
+   *
    * Gets the base time for transmitting periodic control packets.
-   * 
+   *
    * @return uint32_t  - 0 if no packets are being sent.
    */
   uint32_t Session::getBaseTransmitTime()
@@ -843,11 +843,11 @@ namespace openbfdd
       return 0; // Passive session.
 
     if (m_remoteMinRxInterval == 0)
-      return 0; // no periodic 
-                  
+      return 0; // no periodic
+
     // Note, we do not handle this anyway.
     if (isRemoteDemandModeActive())
-      return 0; // no periodic 
+      return 0; // no periodic
 
     return max(getUseDesiredMinTxInterval(), m_remoteMinRxInterval);
   }
@@ -856,7 +856,7 @@ namespace openbfdd
   /**
    * Sends a control packet. Does not update timers.
    * @note Must be called from main thread.
-   * 
+   *
    */
   void Session::sendControlPacket()
   {
@@ -867,7 +867,7 @@ namespace openbfdd
     if (!ensureSendSocket())
       return;
 
-    poll = (!m_pollRecieved && (m_pollState == PollState::Requested || m_pollState == PollState::Polling ));
+    poll = (!m_pollRecieved && (m_pollState == PollState::Requested || m_pollState == PollState::Polling));
 
     packet = BfdPacket();
 
@@ -884,14 +884,14 @@ namespace openbfdd
     header.SetAuth(false);  // never for now.
     header.SetDemand(false);  // never for now.
     header.SetMultipoint(false),  // never
-    header.detectMult = m_detectMult;
+       header.detectMult = m_detectMult;
     header.myDisc = htonl(m_localDiscr);
     header.yourDisc = htonl(m_remoteDiscr);
     header.txDesiredMinInt = htonl(m_desiredMinTxInterval);
     header.rxRequiredMinInt = htonl(m_requiredMinRxInterval);
     header.rxRequiredMinEchoInt = htonl(0);  // no echo allowed for this system.
 
-    // Since we have sent a poll response, we are done unless we get another. 
+    // Since we have sent a poll response, we are done unless we get another.
     m_pollRecieved = false;
 
     // Since we are sending the packet, we have fulfilled m_immediateControlPacket
@@ -899,16 +899,16 @@ namespace openbfdd
 
     send(packet);
 
-    if(poll)
+    if (poll)
       transitionPollState(PollState::Polling);
   }
 
   /**
-   * Sends the given packet. 
-   *  
+   * Sends the given packet.
+   *
    * @note Must be called from main thread.
-   *  
-   * @param packet 
+   *
+   * @param packet
    */
   void Session::send(const BfdPacket &packet)
   {
@@ -930,9 +930,9 @@ namespace openbfdd
   }
 
   /**
-   * Attempts to connect the m_sendSocket send socket, if there is not one 
-   * already. 
-   * 
+   * Attempts to connect the m_sendSocket send socket, if there is not one
+   * already.
+   *
    * @return bool - false if the socket could not be opened.
    */
   bool Session::ensureSendSocket()
@@ -955,7 +955,7 @@ namespace openbfdd
     // Not that all sockets will log errors, so we do not have to.
     if (!sendSocket.OpenUDP(m_localAddr.Type()))
       return false;
-    
+
     if (!sendSocket.SetTTLOrHops(bfd::TTLValue))
       return false;
 
@@ -963,27 +963,27 @@ namespace openbfdd
     if (m_sendPort != 0)
       startPort = m_sendPort;
     else
-      startPort = bfd::MinSourcePort + rand()%(bfd::MaxSourcePort-bfd::MinSourcePort);
+      startPort = bfd::MinSourcePort + rand() % (bfd::MaxSourcePort - bfd::MinSourcePort);
 
     sendAddr = SockAddr(m_localAddr, startPort);
 
     // We need the socket to be quiet so we do not get warnings for each port tried.
-    RiaaObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket); 
+    RiaaObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket);
     m_socketQuiet = sendSocket.SetQuiet(true);
 
     while (!sendSocket.Bind(sendAddr))
     {
       switch (sendSocket.GetLastError())
       {
-        default:
-          gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s", 
-                        m_id, sendAddr.ToString(false), 
-                        sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
-          return false;
+      default:
+        gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s",
+                      m_id, sendAddr.ToString(false),
+                      sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
+        return false;
         break;
-        case EAGAIN:
-        case EADDRINUSE:
-          // Fall through and keep looking
+      case EAGAIN:
+      case EADDRINUSE:
+        // Fall through and keep looking
         break;
       }
       if (sendAddr.Port() == bfd::MaxSourcePort)
@@ -993,10 +993,10 @@ namespace openbfdd
 
       if (sendAddr.Port() == startPort)
       {
-        gLog.LogError("Cant find valid send port." );
+        gLog.LogError("Cant find valid send port.");
         return false;
       }
-    } 
+    }
     m_socketQuiet.Dispose(); // Allow log messages again
 
     if (m_sendPort != 0 && sendAddr.Port() != m_sendPort)
@@ -1016,17 +1016,17 @@ namespace openbfdd
 
 
   /**
-   * Called when m_receiveTimeoutTimer expires. 
+   * Called when m_receiveTimeoutTimer expires.
    * This may call "delete this" so the object should not be used again.
-   * 
-   * @param timer 
+   *
+   * @param timer
    */
-  void Session::handleRecieveTimeoutTimer(Timer * ATTR_UNUSED(timer))
+  void Session::handleRecieveTimeoutTimer(Timer *ATTR_UNUSED(timer))
   {
     // We have timed out.
 
-    // Check that we are still using timeouts. 
-    if(!LogVerify(getDetectionTimeout() != 0))
+    // Check that we are still using timeouts.
+    if (!LogVerify(getDetectionTimeout() != 0))
       return;
 
     gLog.Optional(Log::Session, "Session (id=%u) detection timeout.", m_id);
@@ -1041,23 +1041,23 @@ namespace openbfdd
 
       // If we have timed out after receiving a "F" bit, then we can consider that
       // the polling is disambiguated.
-      if(m_pollState == PollState::Completed)
-        transitionPollState(PollState::None); 
+      if (m_pollState == PollState::Completed)
+        transitionPollState(PollState::None);
     }
 
-    if ( m_timeoutStatus == TimeoutStatus::None)
+    if (m_timeoutStatus == TimeoutStatus::None)
     {
-      // This is the initial timeout. We now wait for a while. 
+      // This is the initial timeout. We now wait for a while.
       m_timeoutStatus = TimeoutStatus::TimedOut;
 
-      uint64_t initialTimeout = getDetectionTimeout()*(m_destroyAfterTimeouts - 1);
+      uint64_t initialTimeout = getDetectionTimeout() * (m_destroyAfterTimeouts - 1);
       gLog.Optional(Log::SessionDetail, "Session (id=%u) setting initial timeout based on local system timeout multiplier.", m_id);
       m_receiveTimeoutTimer->SetMicroTimer(initialTimeout);
     }
-    else if ( m_timeoutStatus == TimeoutStatus::TimedOut)
+    else if (m_timeoutStatus == TimeoutStatus::TimedOut)
     {
       // Active sessions never get suspended and die.
-      if(m_isActive)
+      if (m_isActive)
         return;
 
       // Although v10/6.8.1p3 only mandates that we keep a session for one Timeout
@@ -1084,7 +1084,7 @@ namespace openbfdd
       gLog.Optional(Log::SessionDetail, "Session (id=%u) setting deadly timeout based on remote system Detection interval.", m_id);
       m_receiveTimeoutTimer->SetMicroTimer(remoteDeadlyTimeout);
     }
-    else if ( m_timeoutStatus == TimeoutStatus::TxSuspeded)
+    else if (m_timeoutStatus == TimeoutStatus::TxSuspeded)
     {
       // This is it ... the delay timeout. We have waited long enough ... goodbye
       // cruel world.
@@ -1100,12 +1100,12 @@ namespace openbfdd
 
   /**
    * Called when m_transmitNextTimer expires.
-   * 
-   * @param timer 
+   *
+   * @param timer
    */
-  void Session::handletTransmitNextTimer(Timer * ATTR_UNUSED(timer))
+  void Session::handletTransmitNextTimer(Timer *ATTR_UNUSED(timer))
   {
-    if(m_timeoutStatus != TimeoutStatus::TxSuspeded)
+    if (m_timeoutStatus != TimeoutStatus::TxSuspeded)
       sendControlPacket();
     else
       gLog.Optional(Log::SessionDetail,  "Not sending packet because we are in TxSuspend from timing out");
@@ -1128,17 +1128,17 @@ namespace openbfdd
     outState.remoteState = m_remoteSessionState;
     outState.remoteDiag = m_remoteDiag;
 
-    outState.desiredMinTxInterval = m_desiredMinTxInterval; 
-    outState.useDesiredMinTxInterval = getUseDesiredMinTxInterval(); 
-    outState.defaultDesiredMinTxInterval = m_defaultDesiredMinTxInterval; 
+    outState.desiredMinTxInterval = m_desiredMinTxInterval;
+    outState.useDesiredMinTxInterval = getUseDesiredMinTxInterval();
+    outState.defaultDesiredMinTxInterval = m_defaultDesiredMinTxInterval;
 
     outState.requiredMinRxInterval = m_requiredMinRxInterval;
     outState.useRequiredMinRxInterval = getUseRequiredMinRxInterval();
     outState.detectMult = m_detectMult;
 
     outState.remoteDetectMult = m_remoteDetectMult;
-    outState.remoteDesiredMinTxInterval = m_remoteDesiredMinTxInterval; 
-    outState.remoteMinRxInterval = m_remoteMinRxInterval;  
+    outState.remoteDesiredMinTxInterval = m_remoteDesiredMinTxInterval;
+    outState.remoteMinRxInterval = m_remoteMinRxInterval;
 
     outState.transmitInterval = getBaseTransmitTime();  // scheduled transmit interval
     outState.detectionTime = getDetectionTimeout(); // Current detection time for timeouts
@@ -1147,7 +1147,7 @@ namespace openbfdd
     outState.isSuspended = m_isSuspended;
 
     outState.uptimeList.assign(m_uptimeList.begin(), m_uptimeList.end());
-    if(!outState.uptimeList.empty())
+    if (!outState.uptimeList.empty())
       outState.uptimeList.front().endTime = TimeSpec::MonoNow();
   }
 
@@ -1188,7 +1188,7 @@ namespace openbfdd
     const char *name = bfd::StateName(state);
     LogAssert(state == bfd::State::AdminDown || state == bfd::State::Down);
 
-    if(m_sessionState == state)
+    if (m_sessionState == state)
     {
       m_localDiag = diag;
       gLog.Optional(Log::Session, "(id=%u) Holding %s session already in %s state.", m_id, name, name);
@@ -1206,19 +1206,19 @@ namespace openbfdd
 
   void Session::AllowStateChanges()
   {
-    if(!m_forcedState)
+    if (!m_forcedState)
       return;
 
     // Let nature take its course.
     m_forcedState = false;
-   
+
     gLog.Optional(Log::Session, "(id=%u) No longer holding session state.", m_id);
 
-    if(m_sessionState == bfd::State::AdminDown)
+    if (m_sessionState == bfd::State::AdminDown)
     {
       // Transition from Admin to Down to allow us to go back up.
-      setSessionState(bfd::State::Down, m_localDiag, 
-                      m_adminUpPollWorkaround ? SetValueFlags::TryPoll: SetValueFlags::None);
+      setSessionState(bfd::State::Down, m_localDiag,
+                      m_adminUpPollWorkaround ? SetValueFlags::TryPoll : SetValueFlags::None);
     }
     else if (m_sessionState == bfd::State::Down)
     {
@@ -1228,7 +1228,7 @@ namespace openbfdd
       // a poll, which should accelerate the process.
       transitionPollState(PollState::Requested, true /*allowAmbiguous*/);
       m_immediateControlPacket = true;
-      scheduleTransmit(); 
+      scheduleTransmit();
     }
   }
 
@@ -1239,24 +1239,24 @@ namespace openbfdd
 
     m_isSuspended = suspend;
 
-    gLog.Optional(Log::Session, "(id=%u) set from %s to %s.", m_id, wasSuspened ? "suspended":"responsive", m_isSuspended ? "suspended":"responsive");
+    gLog.Optional(Log::Session, "(id=%u) set from %s to %s.", m_id, wasSuspened ? "suspended" : "responsive", m_isSuspended ? "suspended" : "responsive");
   }
 
   /**
-   * Logs packet contents if PacketContents is enabled. 
-   * This version allows the ports to be specified. 
-   * 
-   * @param packet                                     
-   * @param outPacket 
-   * @param inHostOrder 
-   * @param remoteAddr 
-   * @param remotePort  - 0 for no port specified. 
-   * @param localAddr 
+   * Logs packet contents if PacketContents is enabled.
+   * This version allows the ports to be specified.
+   *
+   * @param packet
+   * @param outPacket
+   * @param inHostOrder
+   * @param remoteAddr
+   * @param remotePort  - 0 for no port specified.
+   * @param localAddr
    * @param localPort - 0 for no port specified.
    */
   void Session::logPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const IpAddr &remoteAddr, in_port_t remotePort, const IpAddr &localAddr, in_port_t localPort)
   {
-    if(gLog.LogTypeEnabled(Log::PacketContents))
+    if (gLog.LogTypeEnabled(Log::PacketContents))
     {
       // Not super efficient ... but we are logging packet contents, so this is a
       // debug situation
@@ -1270,7 +1270,7 @@ namespace openbfdd
 
   void Session::LogPacketContents(const BfdPacket &packet, bool outPacket, bool inHostOrder, const SockAddr &remoteAddr, const IpAddr &localAddr)
   {
-    if(gLog.LogTypeEnabled(Log::PacketContents))
+    if (gLog.LogTypeEnabled(Log::PacketContents))
       doLogPacketContents(packet, outPacket, inHostOrder, remoteAddr, SockAddr(localAddr));
   }
 
@@ -1286,25 +1286,25 @@ namespace openbfdd
     // "confused" if more than one session was running??
     time  = TimeSpec::MonoNow();
 
-    gLog.Message(Log::PacketContents, "%s [%jd:%09ld] from %s to %s, myDisc=%u yourDisc=%u", 
-                 outPacket ?"Send":"Receive",
-                 (intmax_t)time.tv_sec, 
-                 time.tv_nsec, 
+    gLog.Message(Log::PacketContents, "%s [%jd:%09ld] from %s to %s, myDisc=%u yourDisc=%u",
+                 outPacket ? "Send" : "Receive",
+                 (intmax_t)time.tv_sec,
+                 time.tv_nsec,
                  localAddr.ToString(),
-                 remoteAddr.ToString(), 
+                 remoteAddr.ToString(),
                  inHostOrder ? header.myDisc : ntohl(header.myDisc),
                  inHostOrder ? header.yourDisc : ntohl(header.yourDisc)
                  );
 
-    gLog.Message(Log::PacketContents, "  v=%hhd state=<%s> flags=[%s%s%s%s%s%s] diag=<%s> len=%hhd", 
+    gLog.Message(Log::PacketContents, "  v=%hhd state=<%s> flags=[%s%s%s%s%s%s] diag=<%s> len=%hhd",
                  header.GetVersion(),
                  bfd::StateName(header.GetState()),
-                 header.GetPoll() ? "P":"",
-                 header.GetFinal() ? "F":"",
-                 header.GetControlPlaneIndependent() ? "C":"",
-                 header.GetAuth() ? "A":"",  
-                 header.GetDemand() ? "D":"",  
-                 header.GetMultipoint() ? "M":"", 
+                 header.GetPoll() ? "P" : "",
+                 header.GetFinal() ? "F" : "",
+                 header.GetControlPlaneIndependent() ? "C" : "",
+                 header.GetAuth() ? "A" : "",
+                 header.GetDemand() ? "D" : "",
+                 header.GetMultipoint() ? "M" : "",
                  bfd::DiagShortString(header.GetDiag()),
                  header.length
                  );
@@ -1329,7 +1329,7 @@ namespace openbfdd
     {
       m_detectMult = val;
       m_immediateControlPacket = true;
-      scheduleTransmit(); 
+      scheduleTransmit();
     }
   }
 
@@ -1354,11 +1354,11 @@ namespace openbfdd
     LogAssert(m_scheduler->IsMainThread());
 
     // Change in control packets should cause an immediate send (per v10/6.8.7)
-    if(m_controlPlaneIndependent != cpi)
+    if (m_controlPlaneIndependent != cpi)
     {
       m_controlPlaneIndependent = cpi;
       m_immediateControlPacket = true;
-      scheduleTransmit(); 
+      scheduleTransmit();
     }
   }
 
@@ -1369,20 +1369,20 @@ namespace openbfdd
     if (m_adminUpPollWorkaround == enable)
       return;
 
-    gLog.Optional(Log::Session, "Session (id=%u) change adminUpPollWorkaround from %s to %s.", 
-                  m_id, 
-                  m_adminUpPollWorkaround ? "enabled":"disabled",
-                  enable ? "enabled":"disabled"
+    gLog.Optional(Log::Session, "Session (id=%u) change adminUpPollWorkaround from %s to %s.",
+                  m_id,
+                  m_adminUpPollWorkaround ? "enabled" : "disabled",
+                  enable ? "enabled" : "disabled"
                   );
 
     m_adminUpPollWorkaround = enable;
   }
 
   /**
-   * 
-   * 
-   * @param newValue 
-   *  
+   *
+   *
+   * @param newValue
+   *
    * @param flags [in] - SetValueFlags::PreventTxReschedule to prevent this
    *              function from calling scheduleTransmit(). Use only if caller
    *              will call scheduleTransmit(), or sendControlPacket().
@@ -1408,7 +1408,7 @@ namespace openbfdd
     }
 
     // We can always change this immediately, but it will not effect transmit timing
-    // until getUseDesiredMinTxInterval() is changed. 
+    // until getUseDesiredMinTxInterval() is changed.
     m_desiredMinTxInterval = newValue;
 
     if (m_sessionState != bfd::State::Up || newValue <= getUseDesiredMinTxInterval())
@@ -1445,25 +1445,25 @@ namespace openbfdd
       LogVerify(transitionPollState(PollState::Requested));
     }
 
-    if(oldDesiredMinTxInterval != m_desiredMinTxInterval)
+    if (oldDesiredMinTxInterval != m_desiredMinTxInterval)
     {
       // Change in control packets should cause an immediate send (per v10/6.8.7)
       m_immediateControlPacket = true;
 
-      if((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
+      if ((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
         scheduleTransmit(); // schedule immediate transmit.
     }
     else if (oldUseDesiredMinTxInterval !=  getUseDesiredMinTxInterval())
     {
       // Change in scheduling (not immediate, just a reschedule)
-      if((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
+      if ((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
         scheduleTransmit(); // schedule immediate transmit.
     }
   }
 
   /**
-   * @param newValue 
-   *  
+   * @param newValue
+   *
    * @param flags [in] - SetValueFlags::PreventTxReschedule to prevent this
    *              function from calling scheduleTransmit(). Use only if caller
    *              will call scheduleTransmit(), or sendControlPacket().
@@ -1513,12 +1513,12 @@ namespace openbfdd
       LogVerify(transitionPollState(PollState::Requested));
     }
 
-    if(oldRequiredMinRxInterval != m_requiredMinRxInterval)
+    if (oldRequiredMinRxInterval != m_requiredMinRxInterval)
     {
       // Change in control packets should cause an immediate send (per v10/6.8.7)
       m_immediateControlPacket = true;
 
-      if((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
+      if ((flags & SetValueFlags::PreventTxReschedule) != SetValueFlags::PreventTxReschedule)
         scheduleTransmit(); // schedule immediate transmit.
     }
 
@@ -1548,5 +1548,3 @@ namespace openbfdd
     }
   }
 }
-
-

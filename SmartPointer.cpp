@@ -1,4 +1,4 @@
-/************************************************************** 
+/**************************************************************
 * Copyright (c) 2010, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
@@ -10,7 +10,7 @@
 
 using namespace std;
 
-namespace openbfdd 
+namespace openbfdd
 {
 
   void CloseFileDescriptor(int val)
@@ -24,8 +24,3 @@ namespace openbfdd
   }
 
 }
-
-
-
-
-
