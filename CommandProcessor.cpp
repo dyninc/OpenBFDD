@@ -189,7 +189,7 @@ namespace openbfdd
         return false;
       }
 
-      m_listenSocket.SetLogName(FormatShortStr("Control listen socket on port %"PRIu16, m_port));
+      m_listenSocket.SetLogName(FormatShortStr("Control listen socket on port %" PRIu16, m_port));
 
       if (!m_listenSocket.OpenTCP(Addr::IPv4))
         return false;
@@ -1998,7 +1998,7 @@ namespace openbfdd
         }
 
 
-        messageReplyF("Consuming %"PRIi64"K memory.\n", val64);
+        messageReplyF("Consuming %" PRIi64 "K memory.\n", val64);
         try
         {
           for (index = 0; index < val64; index++)
@@ -2013,7 +2013,7 @@ namespace openbfdd
           return;
         }
 
-        messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+        messageReplyF("Consumed %" PRIi64 "K memory.\n", val64);
       }
       else if(0 == strcmp(itemString, "consume_beacon"))
       {
@@ -2034,9 +2034,9 @@ namespace openbfdd
         if(doBeaconOperation(&CommandProcessorImp::doHandleConsumeBeacon, &val64, &result))
         {  
           if (result)
-            messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+            messageReplyF("Consumed %" PRIi64 "K memory.\n", val64);
           else
-            messageReplyF("Consumed %"PRIi64"K memory. Exception thrown.\n", val64);
+            messageReplyF("Consumed %" PRIi64 "K memory. Exception thrown.\n", val64);
         }
       }
       else
