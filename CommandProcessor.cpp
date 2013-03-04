@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -37,7 +37,7 @@ namespace openbfdd
     // These are protected by m_mainLock
     //
     QuickLock m_mainLock;
-    uint16_t m_port; /// port to listen on.
+    SockAddr m_address; /// address and port to listen on.
     pthread_t m_listenThread;
     volatile bool m_isThreadRunning;
     volatile bool m_threadInitComplete; // Set to true after  m_isThreadRunning set true the first time
@@ -70,7 +70,7 @@ namespace openbfdd
     /**
      * See CommandProcessor::BeginListening().
      */
-    virtual bool BeginListening(uint16_t port)
+    virtual bool BeginListening(const SockAddr& addr)
     {
       AutoQuickLock lock(m_mainLock, true);
 
@@ -86,7 +86,7 @@ namespace openbfdd
         return false;
       pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);  // we will handle synchronizing
 
-      m_port = port;
+      m_address = addr;
       m_isThreadRunning = false;
       m_threadInitComplete = false;
       m_threadStartupSuccess = true;
@@ -188,9 +188,9 @@ namespace openbfdd
         return false;
       }
 
-      m_listenSocket.SetLogName(FormatShortStr("Control listen socket on port %"PRIu16, m_port));
+      m_listenSocket.SetLogName(FormatShortStr("Control listen socket on %s", m_address.ToString()));
 
-      if (!m_listenSocket.OpenTCP(Addr::IPv4))
+      if (!m_listenSocket.OpenTCP(m_address.Type()))
         return false;
 
       if (!m_listenSocket.SetBlocking(false))
@@ -199,15 +199,14 @@ namespace openbfdd
       if (!m_listenSocket.SetReusePort(true))
         return false;
 
-      // TODO: listen address should be settable.
-      SockAddr addr("127.0.0.1", m_port);
-
-      if (!m_listenSocket.Bind(addr))
+      if (!m_listenSocket.Bind(m_address))
         return false;
 
       if (!m_listenSocket.Listen(3))
         return false;
 
+      gLog.Optional(Log::App, "Listening for commands on %s", m_address.ToString());
+     
       return true;
     }
 
@@ -312,7 +311,7 @@ namespace openbfdd
 
       Result::Type waitResult;
       Socket connectedSocket;
-      RiaaNullBase<CommandProcessorImp, closeSyncReplySocket> syncConnectedSocket(this);
+      RaiiNullBase<CommandProcessorImp, closeSyncReplySocket> syncConnectedSocket(this);
 
 
       // Since we have a non-blocking socket, we must wait for a connection
@@ -762,7 +761,7 @@ namespace openbfdd
       if (sessionId.HasIpAddresses())
         return beacon->FindSessionIp(sessionId.whichRemoteAddr, sessionId.whichLocalAddr);
 
-      return false;
+      return NULL;
     }
 
 
@@ -1999,7 +1998,7 @@ namespace openbfdd
         }
 
 
-        messageReplyF("Consuming %"PRIi64"K memory.\n", val64);
+        messageReplyF("Consuming %" PRIi64"K memory.\n", val64);
         try
         {
           for (index = 0; index < val64; index++)
@@ -2014,7 +2013,7 @@ namespace openbfdd
           return;
         }
 
-        messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+        messageReplyF("Consumed %" PRIi64"K memory.\n", val64);
       }
       else if (0 == strcmp(itemString, "consume_beacon"))
       {
@@ -2035,9 +2034,9 @@ namespace openbfdd
         if (doBeaconOperation(&CommandProcessorImp::doHandleConsumeBeacon, &val64, &result))
         {
           if (result)
-            messageReplyF("Consumed %"PRIi64"K memory.\n", val64);
+            messageReplyF("Consumed %" PRIi64"K memory.\n", val64);
           else
-            messageReplyF("Consumed %"PRIi64"K memory. Exception thrown.\n", val64);
+            messageReplyF("Consumed %" PRIi64"K memory. Exception thrown.\n", val64);
         }
       }
       else

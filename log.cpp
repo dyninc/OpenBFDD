@@ -1,10 +1,11 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "standard.h"
 #include "log.h"
+#include "compat.h"
 #include <syslog.h>
 #include <errno.h>
 #include <string.h>
@@ -238,7 +239,9 @@ namespace openbfdd
     newFile = ::fopen(logFilePath, "a");
     if (!newFile)
     {
-      LogError("Failed to open logfile %s: %s", logFilePath, strerror(errno));
+      char buf[1024];
+      compat_strerror_r(errno, buf, sizeof(buf));
+      LogError("Failed to open logfile %s: %s", logFilePath, buf);
       return false;
     }
     closeLogFile();
@@ -519,7 +522,9 @@ namespace openbfdd
 
   void Log::ErrnoError(int errnum, const char *mgs)
   {
-    LogError("%s: %s", mgs, strerror(errnum));
+    char buf[1024];
+    compat_strerror_r(errnum, buf, sizeof(buf));
+    LogError("%s: %s", mgs, buf);
   }
 
 

@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <cstdarg>
+#include <unistd.h>
 
 using namespace std;
 
@@ -460,9 +461,9 @@ namespace openbfdd
     va_end(args);
 
     if (!m_logName.empty())
-      gLog.LogError("%s : %s : (%d) %s", m_logName.c_str(), str, error, strerror(error));
+      gLog.LogError("%s : %s : (%d) %s", m_logName.c_str(), str, error, SystemErrorToString(error));
     else
-      gLog.LogError("%s : (%d) %s", str, error, strerror(error));
+      gLog.LogError("%s : (%d) %s", str, error, SystemErrorToString(error));
     return false;
   }
 

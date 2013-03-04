@@ -126,9 +126,9 @@ namespace openbfdd
   private:
     void clear();
   private:
-    Riaa<uint8_t>::DeleteArray m_controlBuffer; // Not using vector, because we do not want initialization.
+    Raii<uint8_t>::DeleteArray m_controlBuffer; // Not using vector, because we do not want initialization.
     size_t m_controlBufferSize;
-    Riaa<uint8_t>::DeleteArray m_dataBuffer; // Not using vector, because we do not want initialization.
+    Raii<uint8_t>::DeleteArray m_dataBuffer; // Not using vector, because we do not want initialization.
     size_t m_dataBufferSize;
     size_t m_dataBufferValidSize;  // Only valid after successful DoRecvMsg
     SockAddr m_sourceAddress;

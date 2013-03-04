@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -387,7 +387,7 @@ namespace openbfdd
 
     // Our state variables
     PollState::Value m_pollState; // Current state of polling.
-    bool m_pollRecieved; // Should we set the final bit on the next transmit
+    bool m_pollReceived; // Should we set the final bit on the next transmit
     uint8_t m_remoteDetectMult;
     uint32_t m_remoteDesiredMinTxInterval;   // in microseconds
     bfd::Diag::Value m_remoteDiag;  // last diag from remote system.
@@ -436,8 +436,8 @@ namespace openbfdd
 
     // Timers
     void deleteTimer(Timer *timer);
-    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_receiveTimeoutTimer; // Timer for the receive packet timeout.
-    RiaaClassCall<Timer, Session, &Session::deleteTimer> m_transmitNextTimer;  // Timer for the next control packet.
+    RaiiClassCall<Timer, Session, &Session::deleteTimer> m_receiveTimeoutTimer; // Timer for the receive packet timeout.
+    RaiiClassCall<Timer, Session, &Session::deleteTimer> m_transmitNextTimer;  // Timer for the next control packet.
   };
 
   inline Session::SetValueFlags::Flag operator|(Session::SetValueFlags::Flag f1, Session::SetValueFlags::Flag f2) { return Session::SetValueFlags::Flag((int)f1 | (int)f2);}

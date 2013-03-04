@@ -1,15 +1,19 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 // Base header for the beacon and control
 #include "common.h"
 #include "utils.h"
+#include "compat.h"
+#include <errno.h>
 #include <string.h>
 #include <stdarg.h>
-#include <errno.h>
+#include <unistd.h>
 #include <sys/stat.h>
+#include <sys/param.h>
+#include <sys/socket.h>
 
 using namespace std;
 
@@ -24,6 +28,7 @@ static const size_t bigBufferMaxSize = 4096;
 
 namespace openbfdd
 {
+
   struct UtilsTLSData
   {
     UtilsTLSData() :
@@ -38,7 +43,7 @@ namespace openbfdd
       delete[] bigBuffer;
     }
 
-    char formatShortBuffers[formatShortBuffersCount][formatShortBuffersSize]; // For "human readable" numbers. Big enough for a signed int64_t with commas.
+    char formatShortBuffers[formatShortBuffersCount][formatShortBuffersSize];   // For "human readable" numbers. Big enough for a signed int64_t with commas.
     uint32_t nextFormatShortBuffer;
 
     char formatMediumBuffers[formatMediumBuffersCount][formatMediumBuffersSize]; // Big Enough for domain name as text
@@ -80,6 +85,7 @@ namespace openbfdd
   }
 
 
+
   bool UtilsInit()
   {
     if (gHasUtilsTLSKey)
@@ -89,6 +95,20 @@ namespace openbfdd
     if (ret != 0)
       return false;
     gHasUtilsTLSKey = true;
+
+    // This is a 'kludgy' attempt to detect when the pthread libraries have been
+    // 'stubbed', as there are on FreeBSD without the -pthread flag.
+
+    if (0 != pthread_setspecific(gUtilsTLSKey, (void *)(uintptr_t)(0xbefed)))
+      return false;
+
+    void *data = pthread_getspecific(gUtilsTLSKey);
+    if ((uintptr_t)data != (uintptr_t)(0xbefed))
+      return false;
+
+    if (0 != pthread_setspecific(gUtilsTLSKey, NULL))
+      return false;
+
     return true;
   }
 
@@ -207,7 +227,11 @@ namespace openbfdd
 
     value = 0;
     if (!arg)
+    {
+      if (outNext)
+        *outNext = NULL;
       return false;
+    }
 
     next = SkipWhite(arg);
 
@@ -223,10 +247,17 @@ namespace openbfdd
     }
 
     if (!isdigit(*next))
+    {
+      if (outNext)
+        *outNext = next;
       return false;
+    }
 
     for (; isdigit(*next); next++)
       val = val * 10 + *next - '0';
+
+    if (outNext)
+      *outNext = next;
 
     if (negative)
       val *= -1;
@@ -234,9 +265,6 @@ namespace openbfdd
 
     if (!::isspace(*next) && *next != '\0')
       return false;
-
-    if (outNext)
-      *outNext = next;
 
     return true;
   }
@@ -260,32 +288,61 @@ namespace openbfdd
 
     value = 0;
     if (!arg)
+    {
+      if (outNext)
+        *outNext = NULL;
       return false;
+    }
 
     next = SkipWhite(arg);
 
     if (*next == '+')
       next++;
     else if (*next == '-')
+    {
+      if (outNext)
+        *outNext = next;
       return false;
+    }
 
     if (!isdigit(*next))
+    {
+      if (outNext)
+        *outNext = next;
       return false;
+    }
 
     for (; isdigit(*next); next++)
       val = val * 10 + *next - '0';
+
+    if (outNext)
+      *outNext = next;
 
     value = val;
 
     if (!::isspace(*next) && *next != '\0')
       return false;
 
-    if (outNext)
-      *outNext = next;
 
     return true;
   }
 
+  bool PartialStringToInt(const char *arg, uint64_t &value, const char **outNext)
+  {
+    const char *next;
+    bool ret = StringToInt(arg, value, &next);
+    if (outNext)
+      *outNext = next;
+    if (ret)
+      return true;
+    // We may have failed due to non-number characters after a number, which is ok for this function.
+    if (!next || *next == '\0' || next == arg)
+      return false;
+    // We have consumed at least one character. We want to return true if any numbers were read.
+    if (isdigit(*(next - 1)))
+      return true;
+    return false;
+  }
 
 
 
@@ -305,7 +362,7 @@ namespace openbfdd
   const char*  SkipNonWhite(const char *str)
   {
     /* EOS \0 is not a space */
-    while (!::isspace(*str))
+    while (*str != '\0' && !::isspace(*str))
       str++;
     return str;
   }
@@ -315,6 +372,19 @@ namespace openbfdd
     return const_cast<char *>(SkipNonWhite((const char *)str));
   }
 
+  void TrimTrailingWhite(char *str)
+  {
+    char *lastNonWhite = NULL;
+    while (*str != '\0')
+    {
+      /* EOS \0 is not a space */
+      if (!::isspace(*str))
+        lastNonWhite = str;
+      str++;
+    }
+    if (lastNonWhite != NULL && *lastNonWhite != '\0')
+      lastNonWhite[1] = '\0';
+  }
 
 #define NSEC_PER_SEC 1000000000L
 
@@ -435,10 +505,10 @@ namespace openbfdd
       return "<memerror>";
 
     sprintf(buf, "%hhu.%hhu.%hhu.%hhu",
-            ((uint8_t *)&address)[0],
-            ((uint8_t *)&address)[1],
-            ((uint8_t *)&address)[2],
-            ((uint8_t *)&address)[3]
+            (uint8_t)((uint8_t *)&address)[0],
+            (uint8_t)((uint8_t *)&address)[1],
+            (uint8_t)((uint8_t *)&address)[2],
+            (uint8_t)((uint8_t *)&address)[3]
             );
 
     return buf;
@@ -549,7 +619,6 @@ namespace openbfdd
     return buf;
   }
 
-
   const char* FormatBigStr(const char *format, ...)
   {
     char *buf;
@@ -564,15 +633,13 @@ namespace openbfdd
     return buf;
   }
 
-
-
   bool GetMonolithicTime(struct timespec &now)
   {
     if (0 == clock_gettime(CLOCK_MONOTONIC, &now))
       return true;
 
     LogAssertFalse("clock_gettime failed");
-    gLog.Optional(Log::Critical, "clock_gettime failed.%s", strerror(errno));
+    gLog.Optional(Log::Critical, "clock_gettime failed.%s", ErrnoToString());
     now.tv_sec = 0;
     now.tv_nsec = 0;
     return false;
@@ -584,7 +651,7 @@ namespace openbfdd
       return true;
 
     LogAssertFalse("clock_gettime failed");
-    gLog.Optional(Log::Critical, "clock_gettime failed.%s", strerror(errno));
+    gLog.Optional(Log::Critical, "clock_gettime failed.%s", ErrnoToString());
     now.tv_sec = 0;
     now.tv_nsec = 0;
     return false;
@@ -679,6 +746,8 @@ namespace openbfdd
       return false;
     if (arg[len] == '\0')
       return true;
+    if (::isspace(arg[len]))
+      return (*SkipWhite(&arg[len]) == '\0');
     if (arg[len] != '=')
       return false;
     *outParam = &arg[len] + 1;
@@ -749,6 +818,26 @@ namespace openbfdd
   }
 
 
+  bool ParseIPv4Part(const char *str, uint32_t *out_addr, const char **next /*NULL*/)
+  {
+    const char *localNext;
+
+    if (!parseIPv4Start(str, out_addr, &localNext))
+      return false;
+    if (next)
+      *next = localNext;
+    return true;
+  }
+
+  bool ParseIPv4Part(char *str, uint32_t *out_addr, char **next /*NULL*/)
+  {
+    return ParseIPv4Part(const_cast<const char *>(str),
+                         out_addr,
+                         const_cast<const char **>(next)
+                         );
+  }
+
+
   bool ParseIPv4(const char *str, uint32_t *out_addr, const char **next /*NULL*/)
   {
     const char *localNext;
@@ -760,6 +849,14 @@ namespace openbfdd
     if (next)
       *next = localNext;
     return true;
+  }
+
+  bool ParseIPv4(char *str, uint32_t *out_addr, char **next /*NULL*/)
+  {
+    return ParseIPv4(const_cast<const char *>(str),
+                     out_addr,
+                     const_cast<const char **>(next)
+                     );
   }
 
   bool ParseIPv4Port(const char *str, uint32_t *out_addr, uint16_t *outPort)
@@ -796,6 +893,62 @@ namespace openbfdd
       return false;
     *out_bits = (uint8_t)bits;
     return true;
+  }
+
+
+  bool ParseIPv6Part(const char *str, uint8_t *inOutStorage, const char **outNext /*NULL*/)
+  {
+    // First determine if it is IPv4 or IPv6
+    str = SkipWhite(str);
+    const char *firstColon = strchr(str, ':');
+    const char *last, *next;
+
+    if (!firstColon)
+      return false;
+
+    char addrStr[INET6_ADDRSTRLEN];
+
+    if (*str == '[')
+    {
+      ++str;
+      last = strchr(str,  ']');
+      if (!last)
+        return false;
+      next = last + 1;
+    }
+    else
+    {
+      // walk to find first non numeric, and non ':' and non '.' character
+      for (last = str; *last != '\0'; ++last)
+      {
+        if (*last != ':' && *last != '.' && !isxdigit(*last))
+          break;
+      }
+      next = last;
+    }
+
+    if (last == str || size_t(last - str) >= sizeof(addrStr))
+      return false;
+
+    memcpy(addrStr, str, last - str);
+    addrStr[last - str] = '\0';
+    if (1 != inet_pton(AF_INET6, addrStr, inOutStorage))
+      return false;
+
+    if (outNext)
+      *outNext = next;
+
+    return true;
+
+  }
+
+  bool ParseIPv6Part(char *str, uint8_t *inOutStorage, char **outNext /*NULL*/)
+  {
+    return ParseIPv6Part(const_cast<const char *>(str),
+                         inOutStorage,
+                         const_cast<const char **>(outNext)
+                         );
+
   }
 
 
@@ -860,6 +1013,65 @@ namespace openbfdd
       return false;
     return (path[1] == '/'
             || (path[1] == '.' && path[2] == '/'));
+  }
+
+  string StripFileName(const string &path)
+  {
+    size_t pos = path.find_last_of('/');
+    if (pos == string::npos)
+      return string();
+
+    return path.substr(0, pos + 1);
+  }
+
+  std::string StripFilePath(const std::string &path)
+  {
+    size_t pos = path.find_last_of('/');
+    if (pos == string::npos)
+      return path;
+
+    return path.substr(pos + 1);
+  }
+
+  string GetCwd()
+  {
+    // Using an allocated buffer avoids the huge stack hit, at the expense of an
+    // allocation. Not sure if the tradeoff is worthwhile.
+    const size_t bufSize = MAXPATHLEN;
+    char *buffer = new char[bufSize];
+
+    if (::getcwd(buffer, bufSize) == NULL)
+    {
+      delete[] buffer;
+      return string();
+    }
+
+    string result = buffer;
+    delete[] buffer;
+    return result;
+  }
+
+
+  const char* SystemErrorToString(int errnum)
+  {
+    int olderr = errno;
+
+    char *buf = nextFormatMeduimBuffer();
+    if (!buf)
+    {
+      errno = olderr;
+      return "tls_error";
+    }
+
+    compat_strerror_r(errnum, buf, formatMediumBuffersSize);
+    errno = olderr;
+
+    return buf;
+  }
+
+  const char* ErrnoToString()
+  {
+    return SystemErrorToString(errno);
   }
 
 }

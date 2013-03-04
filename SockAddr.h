@@ -1,54 +1,26 @@
 /**************************************************************
-* Copyright (c) 2011, Dynamic Network Services, Inc.
-* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
-* Distributed under the FreeBSD License - see LICENSE
+* Copyright (c) 2013, Dynamic Network Services, Inc. Jake Montgomery
+* (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com) Distributed under the FreeBSD
+* License - see LICENSE
 ***************************************************************/
 #pragma once
 
+#include "AddrType.h"
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 namespace openbfdd
 {
+
   class IpAddr;
 
-  struct Addr
-  {
-    enum Type
-    {
-      Invalid,
-      IPv4,
-      IPv6
-    };
-
-    /**
-     * Returns IPv4, IPv6 or <Unknown>
-     *
-     * @param type
-     *
-     * @return const char*
-     */
-    static const char* TypeToString(Addr::Type type);
-
-    /**
-     * Converts an address family to a Addr::Type
-     */
-    static Addr::Type FamilyToType(int af);
-
-    /**
-     * Converts a Addr::Type to an address family.
-     */
-    static int TypeToFamily(Addr::Type type);
-
-  };
-
-  /**
-   * Do not use this class directly. This is a base class for SockAddr and IpAddr.
-   *
-   * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
-   * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
-   * sockaddr_in6" or "sockaddr_in".
-   */
+	/**
+	 * Do not use this class directly. This is a base class for SockAddr and IpAddr.
+	 *
+	 * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
+	 * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
+	 * sockaddr_in6" or "sockaddr_in".
+	 */
   class sockAddrBase
   {
   public:
@@ -90,7 +62,7 @@ namespace openbfdd
      * This will be invalid only if the default constructor was used, or the
      * constructor failed, or it is a copy of another invalid address.
      */
-    bool IsValid() const { return m_isValid;}
+    bool IsValid() const;
 
     /**
      * Checks if it is an ipv6 address
@@ -181,7 +153,6 @@ namespace openbfdd
      * This can be used with hash_map
      */
     size_t hash() const;
-
 
     /**
      * Sets the address from a string.
@@ -287,17 +258,16 @@ namespace openbfdd
     const sockaddr_in* getIPv4Storage() const;
 
     sockaddr_storage m_addr;
-    bool m_isValid;
     const bool m_allowPort;
   };
 
 
 
-  /**
-   * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
-   * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
-   * sockaddr_in6" or "sockaddr_in"
-   */
+/**
+ * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
+ * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
+ * sockaddr_in6" or "sockaddr_in"
+ */
   class SockAddr : public sockAddrBase
   {
   public:
@@ -381,12 +351,12 @@ namespace openbfdd
   };
 
 
-  /**
-   * This is a subclass of sockAddrBase that never has a port.
-   * It is more than just the base IP address, at least for IPv6, so that it can
-   * contain things like the sin6_scope_id.
-   * This is a bit kludgy.
-   */
+/**
+ * This is a subclass of sockAddrBase that never has a port.
+ * It is more than just the base IP address, at least for IPv6, so that it can
+ * contain things like the sin6_scope_id.
+ * This is a bit kludgy.
+ */
   class IpAddr : public sockAddrBase
   {
   public:

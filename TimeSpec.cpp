@@ -8,6 +8,7 @@
 #include "utils.h"
 #include <errno.h>
 #include <string.h>
+#include <strings.h>
 
 using namespace std;
 
@@ -54,7 +55,7 @@ namespace openbfdd
     if (0 == clock_gettime(CLOCK_MONOTONIC, &now))
       return now;
 
-    gLog.Optional(Log::Critical, "clock_gettime(CLOCK_MONOTONIC) failed.%s", strerror(errno));
+    gLog.Optional(Log::Critical, "clock_gettime(CLOCK_MONOTONIC) failed.%s", ErrnoToString());
     LogAssertFalse("clock_gettime(CLOCK_MONOTONIC) failed");
     return TimeSpec();
   }
@@ -66,7 +67,7 @@ namespace openbfdd
     if (0 == clock_gettime(CLOCK_REALTIME, &now))
       return now;
 
-    gLog.Optional(Log::Critical, "clock_gettime(CLOCK_REALTIME) failed.%s", strerror(errno));
+    gLog.Optional(Log::Critical, "clock_gettime(CLOCK_REALTIME) failed.%s", ErrnoToString());
     LogAssertFalse("clock_gettime(CLOCK_REALTIME) failed");
     return TimeSpec();
   }

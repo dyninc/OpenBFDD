@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -10,20 +10,10 @@
 #include <errno.h>
 #include <fstream>
 #include <string.h>
+#include <unistd.h>
 #include "utils.h"
 
 using namespace std;
-
-namespace openbfdd
-{
-  static int bfdMain(int argc, char *argv[]);
-
-}
-
-int main(int argc, char *argv[])
-{
-  return openbfdd::bfdMain(argc,  argv);
-}
 
 namespace openbfdd
 {
@@ -40,28 +30,29 @@ namespace openbfdd
    *
    * @return bool
    */
-  static bool SendData(const char *message, size_t message_size, uint16_t port, const char *outPrefix = NULL)
+  static bool SendData(const char *message, size_t message_size, const SockAddr &connectAddr, const char *outPrefix = NULL)
   {
     size_t totalLength;
-    SockAddr saddr;
 
     vector<char> buffer(max(MaxReplyLineSize,  MaxCommandSize));
     Socket sendSocket;
     FileHandle fileHandle;
     uint32_t magic;
 
-    if (!sendSocket.OpenTCP(Addr::IPv4))
+    if (!sendSocket.OpenTCP(connectAddr.Type()))
     {
-      fprintf(stderr, "Error creating socket: %s", strerror(sendSocket.GetLastError()));
+      fprintf(stderr, "Error creating %s socket: %s\n", 
+              Addr::TypeToString(connectAddr.Type()),
+              SystemErrorToString(sendSocket.GetLastError()));
       return false;
     }
 
-    // TODO: listen address should be settable.
-    saddr.FromString("127.0.0.1", port);
 
-    if (!sendSocket.Connect(saddr))
+    if (!sendSocket.Connect(connectAddr))
     {
-      fprintf(stderr, "Error connecting to beacon: %s", strerror(sendSocket.GetLastError()));
+      fprintf(stderr, "Error connecting to beacon on %s: %s\n", 
+              connectAddr.ToString(), 
+              SystemErrorToString(sendSocket.GetLastError()));
       return false;
     }
 
@@ -80,7 +71,7 @@ namespace openbfdd
     // Send our message.
     if (!sendSocket.Send(&buffer.front(), totalLength))
     {
-      fprintf(stderr, "Error sending command to beacon: %s", strerror(sendSocket.GetLastError()));
+      fprintf(stderr, "Error sending command to beacon: %s\n", SystemErrorToString(sendSocket.GetLastError()));
       return false;
     }
 
@@ -133,7 +124,7 @@ namespace openbfdd
     memcpy(&buffer[pos], param,  length);
   }
 
-  static bool doLoadScript(const char *path, uint16_t port)
+  static bool doLoadScript(const char *path, const SockAddr &connectAddr)
   {
     ifstream file;
     string line;
@@ -144,7 +135,7 @@ namespace openbfdd
     file.open(path);
     if (!file.is_open())
     {
-      fprintf(stderr, "Failed to open file <%s> : %s\n", path, strerror(errno));
+      fprintf(stderr, "Failed to open file <%s> : %s\n", path, ErrnoToString());
       return false;
     }
 
@@ -183,14 +174,14 @@ namespace openbfdd
 
         // buffer is double null terminated.
         buffer.push_back('\0');
-        if (!SendData(&buffer.front(), buffer.size(), port, "   "))
+        if (!SendData(&buffer.front(), buffer.size(), connectAddr, "   "))
           return false;
       }
     }
 
     if (!file.eof())
     {
-      fprintf(stderr, "Failed to read from file <%s>. %d lines processed: %s\n", path, lines, strerror(errno));
+      fprintf(stderr, "Failed to read from file <%s>. %d lines processed: %s\n", path, lines, ErrnoToString());
       return false;
     }
 
@@ -198,14 +189,15 @@ namespace openbfdd
     return true;
   }
 
-  int bfdMain(int argc, char *argv[])
+  static int bfddMain(int argc, char *argv[])
   {
     int argIndex;
-    uint16_t port = PORTNUM;
+    SockAddr connectAddr;
+    const char *valueString;
 
     //gLog.LogToFile("/tmp/bfd.log");
     UtilsInit();
-    gLog.LogToSyslog("bfd-control", false);
+    gLog.LogToSyslog("bfdd-control", false);
     gLog.Optional(Log::App, "Startup %x", getpid());
 
     //Parse command line options
@@ -213,7 +205,33 @@ namespace openbfdd
     {
       if (0 == strcmp("--altport", argv[argIndex]))
       {
-        port = ALT_PORTNUM;
+        if (connectAddr.IsValid())
+        {
+          fprintf(stderr, "Only a single --altport or --control option is allowed.\n");
+          exit (1);
+        }
+        // Backwards compatability only ... use --control
+        connectAddr.FromString("127.0.0.1", ALT_PORTNUM);
+      }           
+      else if (CheckArg("--control", argv[argIndex], &valueString))
+      {
+        if (!valueString || *valueString == '\0')
+        {
+          fprintf(stderr, "--control must be followed by an '=' and a ip address with a port.\n");
+          exit (1);
+        }
+
+        if (!connectAddr.FromString(valueString))
+        {
+          fprintf(stderr, "--control address <%s> is not an IPv4 or IPv6 address.\n", valueString);
+          exit (1);
+        }
+
+        if (!connectAddr.HasPort())
+        {
+          fprintf(stderr, "--control address must have a port specified. The address <%s> does not conatin a port.\n", valueString);
+          exit (1);
+        }
       }
       else if (0 == strncmp("--", argv[argIndex], 2))
       {
@@ -235,6 +253,10 @@ namespace openbfdd
     {
       fprintf(stdout, "%s v%s\n", ControlAppName, SofwareVesrion);
     }
+    
+    if (!connectAddr.IsValid())
+      connectAddr.FromString("127.0.0.1", PORTNUM);
+    
 
     // "load" is special because we send a series of commands..
     if (0 == strcmp(argv[argIndex], "load"))
@@ -248,7 +270,7 @@ namespace openbfdd
       }
 
       fprintf(stdout,  "Running script from file <%s>\n", argv[argIndex]);
-      if (!doLoadScript(argv[argIndex], port))
+      if (!doLoadScript(argv[argIndex], connectAddr))
       {
         fprintf(stderr, "Script load failed.\n");
         exit(1);
@@ -277,9 +299,16 @@ namespace openbfdd
     // argIndex is double null terminated.
     buffer.push_back('\0');
 
-    if (!SendData(&buffer.front(), buffer.size(), port))
+    if (!SendData(&buffer.front(), buffer.size(), connectAddr))
       exit(1);
 
     exit(0);
   }
 }
+
+int main(int argc, char *argv[])
+{
+  return openbfdd::bfddMain(argc,  argv);
+}
+
+

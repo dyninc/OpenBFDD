@@ -1,11 +1,13 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 // Logging routines
 #pragma once
 #include <string>
+#include <stdio.h>
+#include <cstdarg>
 
 namespace openbfdd
 {

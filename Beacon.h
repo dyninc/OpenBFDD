@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -13,9 +13,11 @@
 #include "threads.h"
 #include "hash_map.h"
 #include "RecvMsg.h"
+#include "SockAddr.h"
 #include <deque>
 #include <vector>
 #include <set>
+#include <list>
 
 struct sockaddr_in;
 
@@ -29,7 +31,19 @@ namespace openbfdd
   public:
     Beacon();
     ~Beacon();
-    int Run();
+    
+    /**
+     * Start the beacon. 
+     * 
+     * @param controlPorts [in] - A list of address and port combinations on which 
+     *                     to listen for control commands.
+     * @param listenAddrs [in] - A list of address on which to listen for new BDF 
+     *                    sessions. 'ANY' is allowed.
+     * 
+     * 
+     * @return - false on failure
+     */
+    bool Run(const std::list<SockAddr> &controlPorts, const std::list<IpAddr> &listenAddrs);
 
     typedef void (*OperationCallback)(Beacon *beacon, void *userdata);
 
@@ -196,9 +210,9 @@ namespace openbfdd
 
   private:
 
-    void makeListenSocket(Addr::Type type, Socket &outSocket);
+    void makeListenSocket(const IpAddr &listenAddr, Socket &outSocket);
     static void handleListenSocketCallback(int socket, void *userdata);
-    void handleListenSocket(Socket *socket);
+    void handleListenSocket(Socket &socket);
 
     static void handleSelfMessageCallback(int sigId, void *userdata) { reinterpret_cast<Beacon *>(userdata)->handleSelfMessage(sigId);}
     void handleSelfMessage(int sigId);
@@ -210,12 +224,6 @@ namespace openbfdd
     Session* findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr);
 
   private:
-    struct listenCallbackData
-    {
-      Beacon *beacon;
-      Socket *socket;
-    };
-
     struct  SourceMapKey
     {
       SourceMapKey(IpAddr remoteAddr, IpAddr localAddr) :  remoteAddr(remoteAddr), localAddr(localAddr) { }

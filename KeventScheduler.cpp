@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "KeventScheduler.h"
+#include "utils.h"
 #include <errno.h>
 
 using namespace std;
@@ -39,7 +40,7 @@ namespace openbfdd
     if (m_foundEvents < 0)
     {
       m_foundEvents = 0;
-      gLog.LogError("kevent failed: %s", strerror(errno));
+      gLog.LogError("kevent failed: %s", ErrnoToString());
     }
     else if (m_foundEvents == 0)
     {
@@ -69,7 +70,7 @@ namespace openbfdd
       else
       {
         // We should only have socket events
-        gLog.LogError("Unexpected kevent event %"PRIuPTR" got result of %hu",
+        gLog.LogError("Unexpected kevent event %" PRIuPTR" got result of %hu",
                       m_events[m_nextCheckEvent].ident,
                       m_events[m_nextCheckEvent].filter);
       }
@@ -85,7 +86,7 @@ namespace openbfdd
     if (!LogVerify(m_kqueue != -1))
       return false;
 
-    EV_SET(&change, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, NULL, NULL);
+    EV_SET(&change, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     if (kevent(m_kqueue, &change, 1, NULL, 0, NULL) < 0)
     {
       gLog.ErrnoError(errno, "Failed to add socket to kqueue");
@@ -104,7 +105,7 @@ namespace openbfdd
 
     LogAssert(m_kqueue != -1);
 
-    EV_SET(&change, fd, EVFILT_READ, EV_DELETE, 0, NULL, NULL);
+    EV_SET(&change, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
     if (kevent(m_kqueue, &change, 1, NULL, 0, NULL) < 0)
       gLog.ErrnoError(errno, "Failed to remove socket to kqueue");
     else

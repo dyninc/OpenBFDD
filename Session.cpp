@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -63,7 +63,7 @@ namespace openbfdd
      m_xmitAuthSeq(rand() % UINT32_MAX),
      m_authSeqKnown(false),
      m_pollState(PollState::None),
-     m_pollRecieved(false),
+     m_pollReceived(false),
      m_remoteDetectMult(0),
      m_remoteDesiredMinTxInterval(0),
      m_remoteDiag(bfd::Diag::None),
@@ -168,7 +168,10 @@ namespace openbfdd
     m_localAddr = localAddr;
     m_isActive = true;
 
-    // Start the timers now, and begin sending connection packets
+    // Start the timers now, and begin sending connection packets.
+    // We set m_immediateControlPacket because this is a new connection, and there
+    // is no point in waiting.
+    m_immediateControlPacket = true;
     scheduleTransmit();
     return true;
   }
@@ -426,7 +429,7 @@ namespace openbfdd
     {
       // If poll was received than send a final response asap, "without respect to
       // the transmission timer" (v10/6.8.7)
-      m_pollRecieved = true;
+      m_pollReceived = true;
       sendControlPacket();
     }
 
@@ -779,7 +782,7 @@ namespace openbfdd
 
     // Poll packet responses are handled immediately, so this routine should not be
     // involved.
-    LogAssert(!m_pollRecieved);
+    LogAssert(!m_pollReceived);
 
     if (m_immediateControlPacket)
     {
@@ -867,7 +870,7 @@ namespace openbfdd
     if (!ensureSendSocket())
       return;
 
-    poll = (!m_pollRecieved && (m_pollState == PollState::Requested || m_pollState == PollState::Polling));
+    poll = (!m_pollReceived && (m_pollState == PollState::Requested || m_pollState == PollState::Polling));
 
     packet = BfdPacket();
 
@@ -877,7 +880,7 @@ namespace openbfdd
     header.SetDiag(m_localDiag);
     header.SetState(m_sessionState);
     header.SetPoll(poll);
-    header.SetFinal(m_pollRecieved);
+    header.SetFinal(m_pollReceived);
     header.SetControlPlaneIndependent(m_controlPlaneIndependent);
     // The next few are always false, so we could skip setting them. Included for
     // completeness.
@@ -892,7 +895,7 @@ namespace openbfdd
     header.rxRequiredMinEchoInt = htonl(0);  // no echo allowed for this system.
 
     // Since we have sent a poll response, we are done unless we get another.
-    m_pollRecieved = false;
+    m_pollReceived = false;
 
     // Since we are sending the packet, we have fulfilled m_immediateControlPacket
     m_immediateControlPacket = false;
@@ -952,7 +955,7 @@ namespace openbfdd
     char tmp[255];
     sendSocket.SetLogName(FormatStr(tmp, sizeof(tmp), "Session %d sock", m_id));
 
-    // Not that all sockets will log errors, so we do not have to.
+    // NotE that all sockets will log errors, so we do not have to.
     if (!sendSocket.OpenUDP(m_localAddr.Type()))
       return false;
 
@@ -968,7 +971,7 @@ namespace openbfdd
     sendAddr = SockAddr(m_localAddr, startPort);
 
     // We need the socket to be quiet so we do not get warnings for each port tried.
-    RiaaObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket);
+    RaiiObjCallVar<bool, Socket, bool, &Socket::SetQuiet> m_socketQuiet(&sendSocket);
     m_socketQuiet = sendSocket.SetQuiet(true);
 
     while (!sendSocket.Bind(sendAddr))
@@ -976,9 +979,9 @@ namespace openbfdd
       switch (sendSocket.GetLastError())
       {
       default:
-        gLog.LogError("Unable to open socket for session %"PRIu32" %s : (%d) %s",
+        gLog.LogError("Unable to open socket for session %" PRIu32" %s : (%d) %s",
                       m_id, sendAddr.ToString(false),
-                      sendSocket.GetLastError(), strerror(sendSocket.GetLastError()));
+                      sendSocket.GetLastError(), SystemErrorToString(sendSocket.GetLastError()));
         return false;
         break;
       case EAGAIN:
