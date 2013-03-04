@@ -70,7 +70,7 @@ namespace openbfdd
       else
       {
         // We should only have socket events
-        gLog.LogError("Unexpected kevent event %" PRIuPTR" got result of %hu",
+        gLog.LogError("Unexpected kevent event %" PRIuPTR " got result of %hu",
                       m_events[m_nextCheckEvent].ident,
                       m_events[m_nextCheckEvent].filter);
       }
