@@ -2,33 +2,46 @@
 <HTML><HEAD><TITLE>Man page of bfdd-control</TITLE>
 </HEAD><BODY>
 <H1>bfdd-control</H1>
-Section: OpenBFDD v0.4.0 (8)<BR>Updated: December 3, 2010<BR><A HREF="#index">Index</A>
+Section: OpenBFDD v0.5.0 (8)<BR>Updated: February 5, 2013<BR><A HREF="#index">Index</A>
 
 <A NAME="lbAB">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
 
 <B style="color: #996600;">bfdd-control</B> - control utility for <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8)
 <A NAME="lbAC">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
 
 <B style="color: #996600;">bfdd-control</B> [<i style="color: #008000;"> options </I>] <i style="color: #008000;"> command </I>
 <A NAME="lbAD">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
 
 <B style="color: #996600;">bfdd-control</B> is a control and configuration application for <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). 
 It is part of the OpenBFDD package. 
 <A NAME="lbAE">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
 
 The optional <i style="color: #008000;">options</I> parameter can be one or more of the following:
 <DL COMPACT>
 <DT><B style="color: #996600;">--altport </B>
 
 <DD>
-Causes the &quot;alternate&quot; communications port to be used for connecting to <B style="color: #996600;">bfdd-beacon</B>. This can be used if there is a problem with the primary port. It could also be used to keep the main port free for normal control if commands are being sent repeatedly in a loop, such as a continual &quot;monitoring&quot; script.
+Causes the &quot;alternate&quot; communications port on 127.0.0.1 to be used 
+for connecting to <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). 
+This can be used if there is a problem with the primary port. 
+It could also be used to keep the main port free for normal control 
+if commands are being sent repeatedly in a loop, such as a continual &quot;monitoring&quot; script.
+This is provided for backwards compatibility purposes. 
+The <B style="color: #996600;">--control</B> statement is the preferred method for setting the communications channel.
+<DT><B style="color: #996600;">--control </B><i style="color: #008000;">ip</I><B style="color: #996600;">:</B><i style="color: #008000;">port</I>
+
+<DD>
+Sets the communication channel to use for communicating with <B style="color: #996600;">bfdd-beacon</B>. 
+This should match one of the <B style="color: #996600;">--control</B> options used to start <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8).
+This option may only appear once, and may not be used in conjunction with <B style="color: #996600;">--altport</B>.
+If neither this, nor <B style="color: #996600;">--altport</B>, is supplied, then the default communication channel is used.
 </DL>
 <A NAME="lbAF">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COMMANDS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COMMANDS</p><DL><DD>
 
 The <i style="color: #008000;">command</I> parameter consists of a command to send to <B style="color: #996600;">bfdd-beacon</B> followed by one or more parameters for that command. The commands are:
 <DL COMPACT>
@@ -115,7 +128,7 @@ Enables or disables a workaround that prevents rapid Up-&gt;AdminDown-&gt;Up fro
 
 </DL>
 <A NAME="lbAG">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">PARAMETERS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">PARAMETERS</p><DL><DD>
 
 Some of the parameters used in the <B style="color: #996600;">COMMANDS</B> section require some additional explanation.
 <DL COMPACT>
@@ -128,13 +141,15 @@ An IPv4 address muse use dotted quad notation, in the form:
 An IPv6 address can use full notation, in the form:
 &quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh</B>&quot;
 or shorthand notation, such as: &quot;<B style="color: #996600;">hhhh:hhhh::hhhh</B>&quot;.
+Dotted-quad notation may be used for Ipv6 addresses, to specify the final 32 bits. 
+For example <B style="color: #996600;">::ffff:192.0.2.128</B> is equivalent to <B style="color: #996600;">::ffff:c000:0280</B>.
 Link-local addresses must also be followed by an interface name, using the form: 
 &quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%</B><i style="color: #008000;">ifname</I>&quot;, where <i style="color: #008000;">ifname</I> is the name of the interface to which the link local address applies. An interface may <B style="color: #996600;">only</B> be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
 <DT><i style="color: #008000;">ip-pair</I> <DD>
 This parameter describes a pair of ip addresses. It should take the form &quot;<B style="color: #996600;">local</B> <i style="color: #008000;">ip</I> <B style="color: #996600;">remote</B> <i style="color: #008000;">ip</I>&quot;, where <i style="color: #008000;">ip</I> is an ip address as described above. The &quot;<B style="color: #996600;">local</B> <i style="color: #008000;">ip</I>&quot; describes the ip address on the local system that will be used for the bfd session. The &quot;<B style="color: #996600;">remote</B> <i style="color: #008000;">ip</I>&quot; describes the ip address on the remote system that will be used for the bfd session. The <B style="color: #996600;">local</B> and <B style="color: #996600;">remote</B> addresses may be specified in any order in an <B style="color: #996600;">ip-pair</B>.
 </DL>
 <A NAME="lbAH">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">STATUS ITEMS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">STATUS ITEMS</p><DL><DD>
 
 The <B style="color: #996600;">status</B> command returns a number of status items. Below is a brief description of some of these items.
 This assumes an understanding of the Bidirectional Forwarding Detection (BFD) protocol 
@@ -178,29 +193,29 @@ The lowest interval (highest rate) at which the remote system can receive packet
 <P>
 </DL>
 <A NAME="lbAI">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
 
 Currently the program only exits with an error if it fails to make or maintain a connection with <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). If the beacon rejects the command, or the command fails to execute, this still exits with an exit code of 0 (success). This could change in the future.
 <A NAME="lbAJ">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
 
 No know bugs at this time.
 <A NAME="lbAK">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
 
 <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8)
 <A NAME="lbAL">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
 
 Jake Montgomery for Dynamic Network Services, Inc.
 <A NAME="lbAM">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
 
-Copyright (c) 2010, Dynamic Network Services, Inc.
+Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 <P>
 
 <HR>
-<A NAME="index">&nbsp;</A></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
+<A NAME="index">&nbsp;</A></DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
 <DL>
 <DT><A HREF="#lbAB">NAME</A><DD>
 <DT><A HREF="#lbAC">SYNOPSIS</A><DD>
