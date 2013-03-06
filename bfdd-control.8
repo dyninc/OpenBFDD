@@ -1,5 +1,5 @@
 .\" Manpage for bfdd-control.
-.TH "bfdd-control" "8" "December 14, 2010" "OpenBFDD v0.4.1" "OpenBFDD v0.4.1" 
+.TH "bfdd-control" "8" "February 5, 2013" "OpenBFDD v0.5.0" "OpenBFDD v0.5.0" 
 .SH NAME
 \fBbfdd-control\fR - control utility for \fBbfdd-beacon\fR(8)
 .SH SYNOPSIS
@@ -11,7 +11,19 @@ It is part of the OpenBFDD package.
 The optional \fIoptions\fR parameter can be one or more of the following:
 .TP
 .B --altport 
-Causes the "alternate" communications port to be used for connecting to \fBbfdd-beacon\fR. This can be used if there is a problem with the primary port. It could also be used to keep the main port free for normal control if commands are being sent repeatedly in a loop, such as a continual "monitoring" script.
+Causes the "alternate" communications port on 127.0.0.1 to be used 
+for connecting to \fBbfdd-beacon\fR(8). 
+This can be used if there is a problem with the primary port. 
+It could also be used to keep the main port free for normal control 
+if commands are being sent repeatedly in a loop, such as a continual "monitoring" script.
+This is provided for backwards compatibility purposes. 
+The \fB--control\fR statement is the preferred method for setting the communications channel.
+.TP
+.B --control \fIip\fB:\fIport\fR
+Sets the communication channel to use for communicating with \fBbfdd-beacon\fR. 
+This should match one of the \fB--control\fR options used to start \fBbfdd-beacon\fR(8).
+This option may only appear once, and may not be used in conjunction with \fB--altport\fR.
+If neither this, nor \fB--altport\fR, is supplied, then the default communication channel is used.
 .SH COMMANDS
 The \fIcommand\fR parameter consists of a command to send to \fBbfdd-beacon\fR followed by one or more parameters for that command. The commands are:
 .TP 
@@ -122,6 +134,8 @@ An IPv4 address muse use dotted quad notation, in the form:
 An IPv6 address can use full notation, in the form:
 "\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh\fR"
 or shorthand notation, such as: "\fBhhhh:hhhh::hhhh\fR".
+Dotted-quad notation may be used for Ipv6 addresses, to specify the final 32 bits. 
+For example \fB::ffff:192.0.2.128\fR is equivalent to \fB::ffff:c000:0280\fR.
 Link-local addresses must also be followed by an interface name, using the form: 
 "\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%\fR\fIifname\fR", where \fIifname\fR is the name of the interface to which the link local address applies. An interface may \fBonly\fR be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
 .TP 
@@ -192,4 +206,4 @@ No know bugs at this time.
 .SH AUTHOR
 Jake Montgomery for Dynamic Network Services, Inc.
 .SH COPYRIGHT
-Copyright (c) 2010, Dynamic Network Services, Inc.
+Copyright (c) 2010-2013, Dynamic Network Services, Inc.

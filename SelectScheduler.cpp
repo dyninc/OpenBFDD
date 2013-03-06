@@ -1,16 +1,16 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "config.h"
 #ifndef USE_KEVENT_SCHEDULER
 
-  #include "common.h"
-  #include "SelectScheduler.h"
-  #include "utils.h"
-  #include <errno.h>
-  #include <string.h>
+#include "common.h"
+#include "SelectScheduler.h"
+#include "utils.h"
+#include <errno.h>
+#include <string.h>
 
 using namespace std;
 
@@ -18,9 +18,9 @@ namespace openbfdd
 {
 
 
-  SelectScheduler::SelectScheduler() : SchedulerBase() ,
-    m_foundEvents(0),
-    m_nextCheckEvent(0)
+  SelectScheduler::SelectScheduler() : SchedulerBase(),
+     m_foundEvents(0),
+     m_nextCheckEvent(0)
   {
   }
 
@@ -49,12 +49,12 @@ namespace openbfdd
       largestSocket = max(largestSocket,  *it);
     }
 
-    m_foundEvents = ::select(largestSocket+1, &watchSet, NULL, NULL, &tv);
+    m_foundEvents = ::select(largestSocket + 1, &watchSet, NULL, NULL, &tv);
 
     if (m_foundEvents < 0)
-    {                    
+    {
       m_foundEvents = 0;
-      gLog.LogError("select failed: %s", strerror(errno));
+      gLog.LogError("select failed: %s", ErrnoToString());
     }
     else if (m_foundEvents == 0)
     {
@@ -73,7 +73,7 @@ namespace openbfdd
         if (FD_ISSET(*it, &watchSet))
         {
           if (!LogVerify(actuallyFound < (int)m_foundSockets.size()))
-              break;
+            break;
           m_foundSockets[actuallyFound++] = *it;
         }
       }
@@ -88,7 +88,7 @@ namespace openbfdd
   int SelectScheduler::getNextSocketEvent()
   {
     if (!LogVerify(m_foundEvents <= int(m_foundSockets.size())))
-        m_foundEvents = m_foundSockets.size();
+      m_foundEvents = m_foundSockets.size();
 
     if (m_nextCheckEvent < m_foundEvents)
       return m_foundSockets[m_nextCheckEvent++];
@@ -117,14 +117,14 @@ namespace openbfdd
   }
 
   /**
-   * resizes m_foundSockets. 
-   *  
-   * Note that m_foundSockets is maintained a vector big enough to hold all 
-   * events so that resizing would occur only when adding or removing sockets. 
-   * This prevents exceptions being thrown during regular operation. 
-   * 
+   * resizes m_foundSockets.
+   *
+   * Note that m_foundSockets is maintained a vector big enough to hold all
+   * events so that resizing would occur only when adding or removing sockets.
+   * This prevents exceptions being thrown during regular operation.
+   *
    * @throw - May throw.
-   * 
+   *
    */
   void SelectScheduler::resizeFoundSockets()
   {
@@ -137,9 +137,3 @@ namespace openbfdd
 
 }
 #endif  // !USE_KEVENT_SCHEDULER
-
-
-
-
-
-

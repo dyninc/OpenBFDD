@@ -1,5 +1,5 @@
 #************************************************************** 
-# Copyright (c) 2010, Dynamic Network Services, Inc.
+# Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 # Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 # Distributed under the FreeBSD License - see LICENSE
 #**************************************************************
@@ -37,7 +37,6 @@ AC_DEFUN(
       fi
    ]
 )
-
 
 # AHX_CONFIG_UNORDERED_MAP
 # Sets up for use of the c++0x unordered_map class.
@@ -143,3 +142,77 @@ AC_DEFUN(
    ]
 )
 
+# AHX_CHECK_STRERROR_R
+# Checks the vailability and type of strerror_r
+# Note that checks are done under C++
+AC_DEFUN(
+   [AHX_CHECK_STRERROR_R],
+   [
+      AC_LANG_PUSH(C++)
+      AC_REQUIRE_CPP()
+      AC_SUBST(HAS_STRERROR_R)
+      AC_SUBST(IS_ISO_STRERROR_R)
+      AC_SUBST(IS_GNU_STRERROR_R)
+      ac_save_CXXFLAGS="$CXXFLAGS"
+      CXXFLAGS="$CXXFLAGS -Werror"
+      dyn_has_strerror_r=no
+      dyn_has_iso_strerror_r=no
+      if test $dyn_has_strerror_r = no; then
+         AC_MSG_CHECKING(whether strerror_r is available)
+         AC_COMPILE_IFELSE(
+            [AC_LANG_PROGRAM(
+               [#include <string.h>],
+               [[
+                  char b[1];
+                  strerror_r(1, b, 1);
+               ]]
+            )],   
+            dyn_has_strerror_r=yes
+         )
+         if test $dyn_has_strerror_r = yes; then
+            AC_DEFINE(HAS_STRERROR_R, 1, [Whether strerror_r is available])
+         fi
+         AC_MSG_RESULT($dyn_has_unordered_map)
+      fi
+      if test $dyn_has_strerror_r = yes; then
+         AC_MSG_CHECKING(whether strerror_r is the modern IEEE Std 1003.1-2001 version)
+         AC_COMPILE_IFELSE(
+            [AC_LANG_PROGRAM(
+               [#include <string.h>],
+               [[
+                  int(*f)(int,char*,size_t); 
+                  f=strerror_r;
+                  f(0,0,0);
+               ]]
+            )],   
+            dyn_has_iso_strerror_r=yes
+         )
+         if test $dyn_has_iso_strerror_r = yes; then
+            AC_DEFINE(IS_ISO_STRERROR_R, 1, [Whether strerror_r is the modern IEEE Std 1003.1-2001 version])
+         fi
+         AC_MSG_RESULT($dyn_has_iso_strerror_r)
+         if test $dyn_has_iso_strerror_r != yes; then
+            dyn_has_gnu_strerror_r=no
+            AC_MSG_CHECKING(whether strerror_r is the old GNU version)
+            AC_COMPILE_IFELSE(
+               [AC_LANG_PROGRAM(
+                  [#include <string.h>],
+                  [[
+                     char*(*f)(int,char*,size_t); 
+                     f=strerror_r;
+                     f(0,0,0);
+                  ]]
+               )],   
+               dyn_has_gnu_strerror_r=yes
+            )
+            if test $dyn_has_gnu_strerror_r = yes; then
+               AC_DEFINE(IS_GNU_STRERROR_R, 1, [Whether strerror_r is the old GNU version])
+            fi
+            AC_MSG_RESULT($dyn_has_gnu_strerror_r)
+         fi
+      fi
+
+      CXXFLAGS="$ac_save_CXXFLAGS"
+      AC_LANG_POP(C++)
+   ]
+)

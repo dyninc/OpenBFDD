@@ -1,5 +1,5 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -14,17 +14,25 @@ using namespace std;
 
 namespace openbfdd
 {
+  struct ListenCallbackData
+  {
+    Beacon *beacon;
+    Socket socket;
+  };
+  typedef list<ListenCallbackData *> ListenCallbackDataList;
+  typedef list<CommandProcessor *> CommandProcessorList;
+
   Beacon::Beacon() :
-  m_scheduler(NULL),
-  m_discMap(32),
-  m_IdMap(32),
-  m_sourceMap(32),
-  m_allowAnyPassiveIP(false),
-  m_strictPorts(false),
-  m_initialSessionParams(),
-  m_selfSignalId(-1),
-  m_paramsLock(true),
-  m_shutownRequested (false)
+     m_scheduler(NULL),
+     m_discMap(32),
+     m_IdMap(32),
+     m_sourceMap(32),
+     m_allowAnyPassiveIP(false),
+     m_strictPorts(false),
+     m_initialSessionParams(),
+     m_selfSignalId(-1),
+     m_paramsLock(true),
+     m_shutownRequested(false)
   {
     // Do as little as possible. Logging not even initialized.
   }
@@ -35,99 +43,107 @@ namespace openbfdd
 
   void Beacon::handleListenSocketCallback(int ATTR_UNUSED(socket), void *userdata)
   {
-    Beacon::listenCallbackData *data;
-    data = reinterpret_cast<Beacon::listenCallbackData *>(userdata);
+    ListenCallbackData *data;
+    data = reinterpret_cast<ListenCallbackData *>(userdata);
     data->beacon->handleListenSocket(data->socket);
   }
 
-  int Beacon::Run()
+  void closeCommandProcessorList(CommandProcessorList *addrList)
   {
-    Riaa<CommandProcessor>::Delete commandProcessor(MakeCommandProcessor(*this));
-    Riaa<CommandProcessor>::Delete altCommandProcessor(MakeCommandProcessor(*this));
-    int returnVal = 1;
 
-    Socket socketIPv4, socketIPv6;
-    listenCallbackData socketIPv4data, socketIPv6data;
+    if (addrList != NULL)
+    {
+      for (CommandProcessorList::iterator it = addrList->begin(); it != addrList->end(); ++it)
+        delete *it;
+    }
+    delete addrList;
+  }
 
+
+  void closeListenCallbackDataList(ListenCallbackDataList *callbackList)
+  {
+
+    if (callbackList != NULL)
+    {
+      for (ListenCallbackDataList::iterator it = callbackList->begin(); it != callbackList->end(); ++it)
+        delete *it;
+    }
+    delete callbackList;
+  }
+
+  bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenAddrs)
+  {
     if (m_scheduler != NULL)
     {
       gLog.LogError("Can not call Beacon::Run twice. Aborting.");
-      return 1;
+      return false;
     }
 
-    if (!commandProcessor->BeginListening(PORTNUM))
+    if (controlPorts.empty())
     {
-      gLog.LogError("Failed to start command processing thread. Aborting.");
-      return 1;
+      gLog.LogError("At least one control port is required. Aborting.");
+      return false;
     }
 
-    if (!altCommandProcessor->BeginListening(ALT_PORTNUM))
+    RaiiNullBase<CommandProcessorList, closeCommandProcessorList> commandProcessors(new CommandProcessorList);
+
+    for (list<SockAddr>::const_iterator it = controlPorts.begin(); it != controlPorts.end(); ++it)
     {
-      gLog.LogError("Failed to start alternate command processing thread. Aborting.");
-      return 1;
+      CommandProcessor *processor = MakeCommandProcessor(*this);
+      commandProcessors->push_back(processor);
+      if (!processor->BeginListening(*it))
+      {
+        gLog.LogError("Failed to start command processing thread on %s.  Aborting.", it->ToString());
+        return false;
+      }
     }
 
 #ifdef USE_KEVENT_SCHEDULER
     m_scheduler = new KeventScheduler();
 #else
     m_scheduler = new SelectScheduler();
-#endif 
-
-    makeListenSocket(Addr::IPv4, socketIPv4);
-    if (socketIPv4.empty())
-    {
-      gLog.LogError("Failed to start create IPv4 listen socket on BFD port %hd.", bfd::ListenPort);
-      return 1;
-    }
-
-    makeListenSocket(Addr::IPv6, socketIPv6);
-    if (socketIPv6.empty())
-    {
-      gLog.LogError("Failed to start create IPv6 listen socket on BFD port %hd.", bfd::ListenPort);
-      return 1;
-    }
+#endif
 
     m_packet.AllocBuffers(bfd::MaxPacketSize,
                           Socket::GetMaxControlSizeReceiveDestinationAddress() +
                           Socket::GetMaxControlSizeRecieveTTLOrHops() +
-                           + 8 /*just in case*/ );
-
+                          +8 /*just in case*/);
 
     // We use this "signal channel" to communicate back to ourself in the Scheduler
     // thread.
     if (!m_scheduler->CreateSignalChannel(&m_selfSignalId, handleSelfMessageCallback, this))
     {
       gLog.LogError("Failed to create  self signal handling. Aborting.");
-      return 1;
+      return false;
     }
 
-    socketIPv4data.beacon = this;
-    socketIPv4data.socket = &socketIPv4;
-    if (!m_scheduler->SetSocketCallback(*socketIPv4data.socket, handleListenSocketCallback, &socketIPv4data))
+    RaiiNullBase<ListenCallbackDataList, closeListenCallbackDataList> callbackData(new ListenCallbackDataList);
+    for (list<IpAddr>::const_iterator it = listenAddrs.begin(); it != listenAddrs.end(); ++it)
     {
-      gLog.LogError("Failed to set m_scheduler IPv4 socket processing thread. Aborting.");
-      return 1;
+      ListenCallbackData *data = new ListenCallbackData;
+      data->beacon = this;
+      callbackData->push_back(data);
+
+      makeListenSocket(*it, data->socket);
+      if (data->socket.empty())
+      {
+        gLog.LogError("Failed to create listen socket for %s on BFD port %hd.", it->ToString(), bfd::ListenPort);
+        return false;
+      }
+      if (!m_scheduler->SetSocketCallback(data->socket, handleListenSocketCallback, data))
+      {
+        gLog.LogError("Failed to set m_scheduler socket processing for %s. Aborting.", it->ToString());
+        return false;
+      }
     }
 
-    socketIPv6data.beacon = this;
-    socketIPv6data.socket = &socketIPv6;
-    if (!m_scheduler->SetSocketCallback(*socketIPv6data.socket, handleListenSocketCallback, &socketIPv6data))
-    {
-      gLog.LogError("Failed to set m_scheduler IPv6 socket processing thread. Aborting.");
-      return 1;
-    }
-
-
+    bool returnVal = false;
     if (!m_scheduler->Run())
       gLog.LogError("Failed to start m_scheduler. Aborting.");
     else
-      returnVal = 0;
+      returnVal = true;
 
-    commandProcessor->StopListening();
-    commandProcessor.Dispose();
-
-    altCommandProcessor->StopListening();
-    altCommandProcessor.Dispose();
+    commandProcessors.Dispose();
 
     // In theory we should not be using m_scheduler except on the scheduler
     // callbacks, which end when Scheduler::Run() ends
@@ -148,52 +164,52 @@ namespace openbfdd
     if (session)
     {
       if (session->IsActiveSession())
-        return true; 
+        return true;
       if (!session->UpgradeToActiveSession())
       {
         LogOptional(Log::Session, "Failed to upgrade Session id=%u for %s to %s is to an active session.",
-                    session->GetId(), 
-                    localAddr.ToString(),  
-                    remoteAddr.ToString()  
-                   );
+                    session->GetId(),
+                    localAddr.ToString(),
+                    remoteAddr.ToString()
+                    );
         return false;
       }
 
 
       LogOptional(Log::Session, "Session id=%u for %s to %s is now an active session.",
-                  session->GetId(), 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString()  
-                 );
+                  session->GetId(),
+                  localAddr.ToString(),
+                  remoteAddr.ToString()
+                  );
       return true;
     }
     else
     {
-      session = addSession(remoteAddr, localAddr); 
+      session = addSession(remoteAddr, localAddr);
       if (!session)
         return false;
 
-      LogOptional(Log::Session, "Manually added new session for %s to %s id=%u.", 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString(),  
+      LogOptional(Log::Session, "Manually added new session for %s to %s id=%u.",
+                  localAddr.ToString(),
+                  remoteAddr.ToString(),
                   session->GetId());
 
 
       if (!session->StartActiveSession(remoteAddr, localAddr))
       {
         LogOptional(Log::Session, "Failed to start active session id=%u for %s to %s.",
-                    session->GetId(), 
-                    localAddr.ToString(),  
-                    remoteAddr.ToString()  
-                   );
+                    session->GetId(),
+                    localAddr.ToString(),
+                    remoteAddr.ToString()
+                    );
         return false;
       }
 
       LogOptional(Log::Session, "Session id=%u for %s to %s is started as an active session.",
-                  session->GetId(), 
-                  localAddr.ToString(),  
-                  remoteAddr.ToString()  
-                 );
+                  session->GetId(),
+                  localAddr.ToString(),
+                  remoteAddr.ToString()
+                  );
       return true;
     }
   }
@@ -235,7 +251,7 @@ namespace openbfdd
     return m_shutownRequested;
   }
 
-  Session *Beacon::FindSessionId(uint32_t id)
+  Session* Beacon::FindSessionId(uint32_t id)
   {
     LogAssert(m_scheduler->IsMainThread());
 
@@ -246,20 +262,20 @@ namespace openbfdd
   }
 
 
-  Session *Beacon::FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::FindSessionIp(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
     return findInSourceMap(remoteAddr, localAddr);
   }
 
   /**
-   * 
-   * @param remoteAddr [in] - Port ignored 
-   * @param localAddr [in] - Port ignored 
-   * 
-   * @return Session* - NULL on failure 
+   *
+   * @param remoteAddr [in] - Port ignored
+   * @param localAddr [in] - Port ignored
+   *
+   * @return Session* - NULL on failure
    */
-  Session *Beacon::findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::findInSourceMap(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     LogAssert(m_scheduler->IsMainThread());
     SourceMapIt found = m_sourceMap.find(SourceMapKey(remoteAddr, localAddr));
@@ -276,7 +292,7 @@ namespace openbfdd
     outList.clear();
     outList.reserve(m_IdMap.size());
 
-    for (IdMapIt found=m_IdMap.begin(); found != m_IdMap.end(); found++)
+    for (IdMapIt found = m_IdMap.begin(); found != m_IdMap.end(); found++)
     {
       outList.push_back(found->first);
     }
@@ -291,13 +307,13 @@ namespace openbfdd
 
     LogAssert(m_scheduler->IsMainThread());
 
-    LogVerify(1==m_discMap.erase(session->GetLocalDiscriminator()));
-    LogVerify(1==m_IdMap.erase(session->GetId()));
-    LogVerify(1==m_sourceMap.erase(SourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
+    LogVerify(1 == m_discMap.erase(session->GetLocalDiscriminator()));
+    LogVerify(1 == m_IdMap.erase(session->GetId()));
+    LogVerify(1 == m_sourceMap.erase(SourceMapKey(session->GetRemoteAddress(), session->GetLocalAddress())));
 
-    LogOptional(Log::Session, "Removed session %s to %s id=%d.", 
-                session->GetLocalAddress().ToString(), 
-                session->GetRemoteAddress().ToString(), 
+    LogOptional(Log::Session, "Removed session %s to %s id=%d.",
+                session->GetLocalAddress().ToString(),
+                session->GetRemoteAddress().ToString(),
                 session->GetId());
 
     delete session;
@@ -310,7 +326,7 @@ namespace openbfdd
     WaitCondition condition(false);
     PendingOperation operation;
     PendingOperation *useOperation;
-    Riaa<PendingOperation>::Delete allocOperation;
+    Raii<PendingOperation>::Delete allocOperation;
 
 
     if (!callback)
@@ -372,19 +388,22 @@ namespace openbfdd
   }
 
   /**
-   * Creates the a listen socket on the bfd listen port. 
-   *  
-   * outSocket will be empty on failure. 
-   *  
+   * Creates the a listen socket on the bfd listen port.
+   *
+   * @param listenAddr [in] - May be "ANY" (0.0.0.0 or ::)
+   *
+   * outSocket will be empty on failure.
+   *
+   *
    */
-  void Beacon::makeListenSocket(Addr::Type family, Socket &outSocket)
+  void Beacon::makeListenSocket(const IpAddr &listenAddr, Socket &outSocket)
   {
     Socket listenSocket;
 
     outSocket.Close();
     // Any socket error will get logged, so we don't need to log them again.
-    listenSocket.SetLogName(FormatShortStr("BFD %s listen socket", Addr::TypeToString(family)));
-    listenSocket.OpenUDP(family);
+    listenSocket.SetLogName(FormatShortStr("BFD %s listen socket", listenAddr.ToString()));
+    listenSocket.OpenUDP(listenAddr.Type());
     if (listenSocket.empty())
       return;
 
@@ -397,30 +416,32 @@ namespace openbfdd
     if (!listenSocket.SetReceiveDestinationAddress(true))
       return;
 
-    if (family == Addr::IPv6)
+    if (listenAddr.Type() == Addr::IPv6)
     {
       if (!listenSocket.SetIPv6Only(true))
         return;
-    }   
-     
-    if (!listenSocket.Bind(SockAddr(family, bfd::ListenPort)))
+    }
+
+    if (!listenSocket.Bind(SockAddr(listenAddr, bfd::ListenPort)))
       return;
 
     // Take ownership
     outSocket.Transfer(listenSocket);
     outSocket.SetLogName(listenSocket.LogName());
+
+    gLog.Optional(Log::App, "Listening for BFD connections on %s", SockAddr(listenAddr, bfd::ListenPort).ToString());
   }
 
-  void Beacon::handleListenSocket(Socket *socket)
+  void Beacon::handleListenSocket(Socket &socket)
   {
     SockAddr sourceAddr;
     IpAddr destIpAddr, sourceIpAddr;
-    uint8_t ttl; 
+    uint8_t ttl;
     BfdPacket packet;
     bool found;
     Session *session = NULL;
 
-    if (!m_packet.DoRecvMsg(*socket))
+    if (!m_packet.DoRecvMsg(socket))
     {
       gLog.ErrnoError(m_packet.GetLastError(), "Error receiving on BFD listen socket");
       return;
@@ -440,14 +461,14 @@ namespace openbfdd
 
     ttl = m_packet.GetTTLorHops(&found);
     if (!found)
-    {      
+    {
       gLog.LogError("Could not get ttl for packet from %s.", sourceAddr.ToString());
       return;
     }
 
     LogOptional(Log::Packet, "Received bfd packet %zu bytes from %s to %s", m_packet.GetDataSize(), sourceAddr.ToString(), destIpAddr.ToString());
 
-    // 
+    //
     // Check ip specific stuff. See draft-ietf-bfd-v4v6-1hop-11.txt
     //
 
@@ -512,7 +533,7 @@ namespace openbfdd
           return;
         }
 
-        session = addSession(sourceIpAddr, destIpAddr); 
+        session = addSession(sourceIpAddr, destIpAddr);
         if (!session)
           return;
         if (!session->StartPassiveSession(sourceAddr, destIpAddr))
@@ -524,21 +545,21 @@ namespace openbfdd
       }
     }
 
-    // 
-    //  We have a session that can handle the rest. 
-    // 
+    //
+    //  We have a session that can handle the rest.
+    //
     session->ProcessControlPacket(packet, sourceAddr.Port());
   }
 
   /**
    * Adds a session
-   * 
+   *
    * @return Session* - NULL on failure
    */
-  Session *Beacon::addSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
+  Session* Beacon::addSession(const IpAddr &remoteAddr, const IpAddr &localAddr)
   {
     uint32_t newDisc = makeUniqueDiscriminator();
-    Riaa<Session>::Delete session;
+    Raii<Session>::Delete session;
 
     try
     {
@@ -568,9 +589,9 @@ namespace openbfdd
 
   /**
    * Call from any thread to trigger handleSelfMessage on main thread.
-   * 
-   * 
-   * @return bool 
+   *
+   *
+   * @return bool
    */
   bool Beacon::triggerSelfMessage()
   {
@@ -582,8 +603,8 @@ namespace openbfdd
 
   /**
    * Called on the m_scheduler main thread when we have signaled ourselves.
-   * 
-   * @param sigId 
+   *
+   * @param sigId
    */
   void Beacon::handleSelfMessage(int sigId)
   {
@@ -611,7 +632,7 @@ namespace openbfdd
       else
       {
         lock.Lock();
-        operation->completed=true;
+        operation->completed = true;
         lock.SignalAndUnlock(*operation->waitCondition);
       }
 
@@ -626,13 +647,13 @@ namespace openbfdd
   }
 
   /**
-   * This creates a "unique" discriminator value. Could be done more methodically to 
-   * absolutely ensure that we do not re-use a discriminator after a session is 
-   * removed ... but for now this is probably good enough. 
-   *  
-   * @note call only from main thread. 
-   *  
-   * @return uint32_t 
+   * This creates a "unique" discriminator value. Could be done more methodically to
+   * absolutely ensure that we do not re-use a discriminator after a session is
+   * removed ... but for now this is probably good enough.
+   *
+   * @note call only from main thread.
+   *
+   * @return uint32_t
    */
   uint32_t Beacon::makeUniqueDiscriminator()
   {
@@ -693,5 +714,3 @@ namespace openbfdd
 
 
 }
-
-

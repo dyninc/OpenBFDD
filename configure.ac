@@ -4,7 +4,7 @@
 AC_PREREQ(2.61)
 sinclude(acx_nlnetlabs.m4)
 
-AC_INIT(openbfdd, 0.4.1)
+AC_INIT(openbfdd, 0.5.0)
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([BeaconMain.cpp])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -24,6 +24,7 @@ ACD_CHECK_CPP_FLAG(Wall, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wall"])
 ACD_CHECK_CPP_FLAG(Wextra, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wextra"])
                                             
 AHX_CONFIG_UNORDERED_MAP
+AHX_CHECK_STRERROR_R
 
 # debug mode
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Enable debug warnings and asserts]))

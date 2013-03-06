@@ -1,8 +1,25 @@
+2013-03-06  Jake Montgomery Update Version to 0.5.0
+	* Variable number of configurable control channels now supported.
+
+	* Configurable BFD listening addresses. 
+
+	* Portability improvements.
+
+	* Replaced potentially unsafe strerror().
+
+	* Fixed - Active sessions now start immediately.
+
+	* A number of small bug fixes.
+
+	* Widespread formatting changes. 
+
+
+
 2011-11-14  Jake Montgomery Update Version to 0.4.1
 
    * Added GitHub Wiki
 
-   * Documentaion changes.
+   * Documentation changes.
     
    * The --enable-silent-rules configuration option is now the default.
 

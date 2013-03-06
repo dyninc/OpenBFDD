@@ -1,5 +1,5 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -19,7 +19,7 @@ namespace openbfdd
 
   /**
    * A timer class for use with SchedulerBase
-   * 
+   *
    */
   class TimerImpl : public Timer
   {
@@ -37,19 +37,19 @@ namespace openbfdd
 
   public:
     TimerImpl(SchedulerBase &scheduler, SchedulerBase::timer_set *timerSet, const char *name) : Timer(),
-    m_scheduler(&scheduler),
-    m_activeTimers(timerSet),
-    m_callback(NULL),
-    m_userdata(NULL),
-    m_stopped(true),
-    m_name(NULL),
-    m_priority(Timer::Priority::Hi)
+       m_scheduler(&scheduler),
+       m_activeTimers(timerSet),
+       m_callback(NULL),
+       m_userdata(NULL),
+       m_stopped(true),
+       m_name(NULL),
+       m_priority(Timer::Priority::Hi)
     {
       if (name)
         m_name = strdup(name);
       else
       {
-        char *tempName= (char *)malloc(32); 
+        char *tempName = (char *)malloc(32);
         snprintf(tempName, 32, "%p", this);
         m_name = tempName;
       }
@@ -58,7 +58,7 @@ namespace openbfdd
       m_expireTime.tv_nsec = 0;
     };
 
-    ~TimerImpl() 
+    ~TimerImpl()
     {
       // This will remove it from the active list.
       Stop();
@@ -67,7 +67,7 @@ namespace openbfdd
     };
 
 
-    void SetCallback( Timer::Callback callback, void *userdata)
+    void SetCallback(Timer::Callback callback, void *userdata)
     {
       LogAssert(m_scheduler->IsMainThread());
       m_callback = callback;
@@ -98,7 +98,7 @@ namespace openbfdd
     bool SetMsTimer(uint32_t ms)
     {
       // no check for overflow. But that would be a lot of years ;-)
-      return SetMicroTimer(uint64_t(ms)*1000);
+      return SetMicroTimer(uint64_t(ms) * 1000);
     }
 
 
@@ -146,11 +146,11 @@ namespace openbfdd
     }
 
     /**
-     * Get the time that this will expire. 
-     *  
-     * @note Call only on main thread. See IsMainThread(). 
-     * 
-     * @return const struct TimeSpec& 
+     * Get the time that this will expire.
+     *
+     * @note Call only on main thread. See IsMainThread().
+     *
+     * @return const struct TimeSpec&
      */
     const TimeSpec& GetExpireTime() const
     {
@@ -159,8 +159,8 @@ namespace openbfdd
 
     /**
      * Called by the Scheduler to mark the timer as stopped and run its action. Will
-     * Remove the timer from the active list. 
-     * 
+     * Remove the timer from the active list.
+     *
      */
     void ExpireTimer()
     {
@@ -169,15 +169,15 @@ namespace openbfdd
       Stop();
 
       LogOptional(Log::TimerDetail, "Expired timer %s calling callback", m_name);
-      m_callback(this, m_userdata); 
+      m_callback(this, m_userdata);
     }
 
     /**
      * Gets the name
-     * 
-     * @return const char* 
+     *
+     * @return const char*
      */
-    const char *Name()
+    const char* Name()
     {
       return  m_name;
     }
@@ -185,12 +185,12 @@ namespace openbfdd
   private:
 
     /**
-     * Changes the start and expire time for the timer. 
-     * 
-     * @param startTime - The time of the last timer start. May be m_startTime. 
-     * @param micro - Time to expire from startTime in microseconds. 
-     *  
-     * @return bool - false on failure.  
+     * Changes the start and expire time for the timer.
+     *
+     * @param startTime - The time of the last timer start. May be m_startTime.
+     * @param micro - Time to expire from startTime in microseconds.
+     *
+     * @return bool - false on failure.
      */
     bool setExpireTime(const struct timespec &startTime,  uint64_t micro)
     {
@@ -206,22 +206,22 @@ namespace openbfdd
 
       if (!expireChange && !startChange)
       {
-        LogOptional(Log::TimerDetail, "Timer %s no change.  %" PRIu64 "  microseconds. Expires:%jd:%09ld", m_name, micro, (intmax_t)expireTime.tv_sec, expireTime.tv_nsec );
+        LogOptional(Log::TimerDetail, "Timer %s no change.  %" PRIu64 "  microseconds. Expires:%jd:%09ld", m_name, micro, (intmax_t)expireTime.tv_sec, expireTime.tv_nsec);
         return true;
       }
 
-      LogOptional(Log::TimerDetail, "%s timer %s for %" PRIu64 " microseconds from %jd:%09ld. Expires:%jd:%09ld", 
-                  m_stopped ? "Starting": startChange ? "Resetting":"Advancing", 
-                  m_name, 
-                  micro, 
-                  (intmax_t)startTime.tv_sec, 
+      LogOptional(Log::TimerDetail, "%s timer %s for %" PRIu64 " microseconds from %jd:%09ld. Expires:%jd:%09ld",
+                  m_stopped ? "Starting" : startChange ? "Resetting" : "Advancing",
+                  m_name,
+                  micro,
+                  (intmax_t)startTime.tv_sec,
                   startTime.tv_nsec,
-                  (intmax_t)expireTime.tv_sec, 
-                  expireTime.tv_nsec 
-                 );
+                  (intmax_t)expireTime.tv_sec,
+                  expireTime.tv_nsec
+                  );
 
       // Start time does not effect sorting in active timer list, so we can set it now.
-      // Stopped also should not matter. 
+      // Stopped also should not matter.
       if (startChange)
         m_startTime = startTime;
       m_stopped = false;
@@ -256,19 +256,19 @@ namespace openbfdd
         }
       }
 
-      //LogOptional(Log::Temp, "Timer %s after change %zu items",m_name, m_activeTimers->size()); 
+      //LogOptional(Log::Temp, "Timer %s after change %zu items",m_name, m_activeTimers->size());
       return true;
     }
 
 
     /**
-     * Checks if the timer item is still in proper order. 
-     * 
-     * @param item [in] - an iterator to the item to check in  m_activeTimers-> Must 
+     * Checks if the timer item is still in proper order.
+     *
+     * @param item [in] - an iterator to the item to check in  m_activeTimers-> Must
      *             be a valid item (not end())
-     * @param expireTime [in] - The proposed new expire time. 
-     * 
-     * @return bool - true if the item is would still be in sorted order.  
+     * @param expireTime [in] - The proposed new expire time.
+     *
+     * @return bool - true if the item is would still be in sorted order.
      */
     bool willTimerBeSorted(const SchedulerBase::timer_set_it item, const struct timespec &expireTime)
     {
@@ -277,11 +277,11 @@ namespace openbfdd
       if (item != m_activeTimers->begin())
       {
         // We want the timer to be later than, or equal to, the previous item
-        if (0 > timespecCompare(expireTime, (*(--(temp=item)))->GetExpireTime()))
+        if (0 > timespecCompare(expireTime, (*(--(temp = item)))->GetExpireTime()))
           return false;
       }
 
-      (temp=item)++;
+      (temp = item)++;
       if (temp != m_activeTimers->end())
       {
         // we want the timer to be earlier or equal to the next item.
@@ -295,10 +295,10 @@ namespace openbfdd
 
 
   SchedulerBase::SchedulerBase() : Scheduler(),
-  m_isStarted(false),
-  m_wantsShutdown(false),
-  m_activeTimers(compareTimers),
-  m_timerCount(0)
+     m_isStarted(false),
+     m_wantsShutdown(false),
+     m_activeTimers(compareTimers),
+     m_timerCount(0)
   {
     m_mainThread = pthread_self();
   }
@@ -314,7 +314,7 @@ namespace openbfdd
 
   bool SchedulerBase::Run()
   {
-    uint32_t iter=0;
+    uint32_t iter = 0;
     TimeSpec timeout;
     TimeSpec immediate;
     bool gotEvents;
@@ -333,18 +333,18 @@ namespace openbfdd
       if (m_wantsShutdown)
         break;
 
-      // 
-      //  Get event, or timeout. 
-      // 
+      //
+      //  Get event, or timeout.
+      //
       gLog.Optional(Log::TimerDetail, "checking events (%u)", iter);
       gotEvents = waitForEvents(timeout);
 
       // By default the next event check is immediately.
-      timeout = immediate;  
+      timeout = immediate;
 
-      // 
-      // High priority timers, if any, get handled now 
-      // 
+      //
+      // High priority timers, if any, get handled now
+      //
       while (!m_wantsShutdown && expireTimer(Timer::Priority::Hi))
       { //nothing
       }
@@ -352,9 +352,9 @@ namespace openbfdd
       if (m_wantsShutdown)
         break;
 
-      // 
+      //
       //  Handle any events.
-      // 
+      //
       if (gotEvents)
       {
         int socketId;
@@ -383,11 +383,11 @@ namespace openbfdd
               int result;
               size_t reads = 0;
 
-              while ( 0 < (result = ::read(socketId, drain, sizeof(drain))))
+              while (0 < (result = ::read(socketId, drain, sizeof(drain))))
                 reads++;
 
               if (reads == 0 && result < 0)
-                gLog.LogError("Failed to read from pipe %d: %s", socketId, strerror(errno));
+                gLog.LogError("Failed to read from pipe %d: %s", socketId, ErrnoToString());
               else if (result == 0)
                 gLog.LogError("Signaling pipe write end for %d closed", socketId);
 
@@ -407,13 +407,13 @@ namespace openbfdd
           break;
       }
 
-      // 
+      //
       //  Handle a low priority timer if there are no events.
       //  TODO: starvation is a potential problem for low priority timers.
-      // 
+      //
       if (!gotEvents && !expireTimer(Timer::Priority::Low))
       {
-        // No events and no more timers, so we are ready to sleep again. 
+        // No events and no more timers, so we are ready to sleep again.
         timeout = getNextTimerTimeout();
       }
 
@@ -426,24 +426,24 @@ namespace openbfdd
 
 
   /**
-   * Helper for Run(). 
-   *  
-   * Gets the timeout period between now and the next timer. 
-   * 
-   * @return - The timeout value 
+   * Helper for Run().
+   *
+   * Gets the timeout period between now and the next timer.
+   *
+   * @return - The timeout value
    */
   TimeSpec SchedulerBase::getNextTimerTimeout()
   {
-    // 
-    //  Calculate next scheduled timer time. 
-    // 
+    //
+    //  Calculate next scheduled timer time.
+    //
     if (m_activeTimers.empty())
     {
       // Just for laughs ... and because we do not run on low power machines, wake up
       // every few seconds.
-      return TimeSpec(3,0);
+      return TimeSpec(3, 0);
     }
-    
+
     TimeSpec now(TimeSpec::MonoNow());
 
     if (now.empty())
@@ -455,11 +455,11 @@ namespace openbfdd
     return result;
   }
 
-  /** 
-   *  
-   * Helper for Run(). 
-   * Expires the next timer with priority of minPri or higher. 
-   *  
+  /**
+   *
+   * Helper for Run().
+   * Expires the next timer with priority of minPri or higher.
+   *
    * @return - false if there are no more timers.
    */
   bool SchedulerBase::expireTimer(Timer::Priority::Value minPri)
@@ -471,9 +471,9 @@ namespace openbfdd
 
     for (timer_set_it nextTimer = m_activeTimers.begin(); nextTimer != m_activeTimers.end(); nextTimer++)
     {
-      TimerImpl *timer = *nextTimer; 
+      TimerImpl *timer = *nextTimer;
 
-      if ( 0 < timespecCompare(timer->GetExpireTime(), now))
+      if (0 < timespecCompare(timer->GetExpireTime(), now))
         return false;  // non-expired timer ... we are done!
 
       if (timer->GetPriority() >= minPri)
@@ -481,7 +481,7 @@ namespace openbfdd
 #ifdef BFD_TEST_TIMERS
         TimeSpec dif = now -  timer->GetExpireTime();
         gLog.Optional(Log::Temp, "Timer %s is off by %.4f ms",
-                      timer->Name(), 
+                      timer->Name(),
                       timespecToSeconds(dif) * 1000.0);
 #endif
 
@@ -609,7 +609,7 @@ namespace openbfdd
 
     if (1 != ::write(sigId, &sig, 1))
     {
-      gLog.LogError("Failed to signal on pipe %d: %s", sigId, strerror(errno) );
+      gLog.LogError("Failed to signal on pipe %d: %s", sigId, ErrnoToString());
       return false;
     }
 
@@ -627,8 +627,8 @@ namespace openbfdd
     {
       if (sig->second.fdWrite == sigId)
       {
-        int readPipe = sig->second.fdRead; 
-        int writePipe = sig->second.fdWrite; 
+        int readPipe = sig->second.fdRead;
+        int writePipe = sig->second.fdWrite;
         m_signals.erase(sig);
         unWatchSocket(readPipe);
         ::close(readPipe);
@@ -647,7 +647,7 @@ namespace openbfdd
   }
 
 
-  Timer *SchedulerBase::MakeTimer(const char *name)
+  Timer* SchedulerBase::MakeTimer(const char *name)
   {
     m_timerCount++;
     return new TimerImpl(*this, &m_activeTimers, name);
@@ -655,8 +655,8 @@ namespace openbfdd
 
   /**
    * Call when completely done with a timer.
-   * 
-   * @param timer 
+   *
+   * @param timer
    */
   void SchedulerBase::FreeTimer(Timer *timer)
   {
@@ -671,7 +671,7 @@ namespace openbfdd
   }
 
   // Return true if lhs should be before rhs.
-  bool SchedulerBase::compareTimers(const TimerImpl * lhs, const TimerImpl * rhs)
+  bool SchedulerBase::compareTimers(const TimerImpl *lhs, const TimerImpl *rhs)
   {
     // Stopped timers should not be in the list.
     LogAssert(!lhs->IsStopped() && !rhs->IsStopped());
@@ -679,17 +679,8 @@ namespace openbfdd
 
     // We want the "earliest" timers first. So we return true if lhs is earlier than
     // rhs. -1 if left is earlier.
-    return(0 > timespecCompare(lhs->GetExpireTime(), rhs->GetExpireTime()));
+    return (0 > timespecCompare(lhs->GetExpireTime(), rhs->GetExpireTime()));
   }
 
 
 }
-
-
-
-
-
-
-
-
-
