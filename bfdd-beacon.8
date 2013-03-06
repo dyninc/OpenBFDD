@@ -1,5 +1,5 @@
 .\" Manpage for bfdd-beacon.
-.TH "bfdd-beacon" "8" "December 14, 2010" "OpenBFDD v0.4.1" "OpenBFDD v0.4.1" 
+.TH "bfdd-beacon" "8" "February 5, 2013" "OpenBFDD v0.5.0" "OpenBFDD v0.5.0" 
 .SH NAME
 \fBbfdd-beacon\fR - a Bidirectional Forwarding Detection (BFD) beacon daemon.
 .SH SYNOPSIS
@@ -24,6 +24,39 @@ Logging will not be sent to stdout. This is the default for release builds.
 .TP
 .B --nofork
 Prevents the beacon from running as a daemon. This is useful for debugging.
+.TP
+.B --control \fIip\fB:\fIport\fR
+Adds a communication channel to use for communicating with \fBbfdd-beacon\fR(8). 
+\fIip\fR may be an IPv4 or Ipv6 address. A \fIport\fR must be supplied.
+This option may appear multiple times, to create multiple control channels. 
+If no \fB--control\fR option is supplied, then two default control channels 
+are created on \fB127.0.0.1\fR.
+When specifying an IPv6 \fIip\fR address, the address must be contained in brackets, 
+to allow for a \fIport\fR specification. For example \fB[::1]:10001\fR. 
+See the \fBPARAMETERS\fR section for more details on specifying an \fIip\fR address.
+.TP
+.B --listen \fIip\fB
+Adds an address on which to listen for new incoming BFD connections. 
+\fIip\fR may be an IPv4 or Ipv6 address. 
+The IPv4 address of \fB0.0.0.0.0\fR, or the IPv6 address \fB::\fR may be used to 
+listen on all available IPv4 or IPv6 interfaces, respectively. 
+This option may appear multiple times, to listen on multiple addresses.
+If no \fB--listen\fR option is supplied, then \fBbfdd-beacon\fR will listen on all available IPv4 and IPv6 addresses. 
+See the \fBPARAMETERS\fR section for more details on specifying an \fIip\fR address.
+.SH PARAMETERS
+Some of the parameters used in the \fBCOMMANDS\fR section require some additional explanation.
+.TP 
+\fIip\fR 
+This parameter describes an ip address. An IPv4 or IPv6 address may be supplied. 
+An IPv4 address muse use dotted quad notation, in the form: 
+"\fBddd.ddd.ddd.ddd\fR"
+An IPv6 address can use full notation, in the form:
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh\fR"
+or shorthand notation, such as: "\fBhhhh:hhhh::hhhh\fR".
+Dotted-quad notation may be used for Ipv6 addresses, to specify the final 32 bits. 
+For example \fB::ffff:192.0.2.128\fR is equivalent to \fB::ffff:c000:0280\fR.
+Link-local addresses must also be followed by an interface name, using the form: 
+"\fBhhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%\fR\fIifname\fR", where \fIifname\fR is the name of the interface to which the link local address applies. An interface may \fBonly\fR be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
 .SH CONTROL
 When \fBbfdd-beacon\fP is running commands can be issued to the beacon using the \fBbfdd-control\fR(8) utility. 
 See \fBbfdd-control\fR(8) documentation for more details.

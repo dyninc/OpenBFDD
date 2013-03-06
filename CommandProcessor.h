@@ -6,16 +6,16 @@
 // Class for handling command communication with the control app.
 #pragma once
 
-#include "SockAddr.h" 
+#include "SockAddr.h"
 
 namespace openbfdd
 {
   class Beacon;
 
   /**
-   * Interface factory. Use delete to free this. 
-   *  
-   * Requires UtilsInit() to have been called. 
+   * Interface factory. Use delete to free this.
+   *
+   * Requires UtilsInit() to have been called.
    *
    * @throw - May throw an exception.
    *
@@ -36,14 +36,14 @@ namespace openbfdd
     /**
      *
      * Starts listening, and handling commands, on the given address aand port. This
-     * will block until socket communication can be established. This should not be 
-     * called from different threads simultaneously. 
+     * will block until socket communication can be established. This should not be
+     * called from different threads simultaneously.
      *
      * @param addr [in] - The address and port on which to listen.
      *
      * @return bool - false if communication could not be set up.
      */
-    virtual bool BeginListening(const SockAddr& addr) = 0;
+    virtual bool BeginListening(const SockAddr &addr) = 0;
 
     /**
      * Halts listening and waits for the listen thread to terminate.

@@ -21,7 +21,7 @@ namespace openbfdd
   };
   typedef list<ListenCallbackData *> ListenCallbackDataList;
   typedef list<CommandProcessor *> CommandProcessorList;
-  
+
   Beacon::Beacon() :
      m_scheduler(NULL),
      m_discMap(32),
@@ -47,47 +47,47 @@ namespace openbfdd
     data = reinterpret_cast<ListenCallbackData *>(userdata);
     data->beacon->handleListenSocket(data->socket);
   }
-  
+
   void closeCommandProcessorList(CommandProcessorList *addrList)
   {
-    
+
     if (addrList != NULL)
     {
-      for (CommandProcessorList::iterator it = addrList->begin(); it != addrList->end(); ++it) 
+      for (CommandProcessorList::iterator it = addrList->begin(); it != addrList->end(); ++it)
         delete *it;
     }
     delete addrList;
   }
 
-  
+
   void closeListenCallbackDataList(ListenCallbackDataList *callbackList)
   {
-    
+
     if (callbackList != NULL)
     {
-      for (ListenCallbackDataList::iterator it = callbackList->begin(); it != callbackList->end(); ++it) 
+      for (ListenCallbackDataList::iterator it = callbackList->begin(); it != callbackList->end(); ++it)
         delete *it;
     }
     delete callbackList;
   }
-  
-  bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenAddrs )
+
+  bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenAddrs)
   {
     if (m_scheduler != NULL)
     {
       gLog.LogError("Can not call Beacon::Run twice. Aborting.");
       return false;
     }
-    
+
     if (controlPorts.empty())
     {
       gLog.LogError("At least one control port is required. Aborting.");
       return false;
     }
-    
+
     RaiiNullBase<CommandProcessorList, closeCommandProcessorList> commandProcessors(new CommandProcessorList);
-    
-    for (list<SockAddr>::const_iterator it = controlPorts.begin(); it != controlPorts.end(); ++it) 
+
+    for (list<SockAddr>::const_iterator it = controlPorts.begin(); it != controlPorts.end(); ++it)
     {
       CommandProcessor *processor = MakeCommandProcessor(*this);
       commandProcessors->push_back(processor);
@@ -97,7 +97,7 @@ namespace openbfdd
         return false;
       }
     }
-    
+
 #ifdef USE_KEVENT_SCHEDULER
     m_scheduler = new KeventScheduler();
 #else
@@ -118,12 +118,12 @@ namespace openbfdd
     }
 
     RaiiNullBase<ListenCallbackDataList, closeListenCallbackDataList> callbackData(new ListenCallbackDataList);
-    for (list<IpAddr>::const_iterator it = listenAddrs.begin(); it != listenAddrs.end(); ++it) 
+    for (list<IpAddr>::const_iterator it = listenAddrs.begin(); it != listenAddrs.end(); ++it)
     {
       ListenCallbackData *data = new ListenCallbackData;
       data->beacon = this;
       callbackData->push_back(data);
-      
+
       makeListenSocket(*it, data->socket);
       if (data->socket.empty())
       {
@@ -389,11 +389,11 @@ namespace openbfdd
 
   /**
    * Creates the a listen socket on the bfd listen port.
-   *  
+   *
    * @param listenAddr [in] - May be "ANY" (0.0.0.0 or ::)
-   *  
-   * outSocket will be empty on failure. 
-   *  
+   *
+   * outSocket will be empty on failure.
+   *
    *
    */
   void Beacon::makeListenSocket(const IpAddr &listenAddr, Socket &outSocket)
@@ -428,8 +428,8 @@ namespace openbfdd
     // Take ownership
     outSocket.Transfer(listenSocket);
     outSocket.SetLogName(listenSocket.LogName());
-    
-    gLog.Optional(Log::App, "Listening for BFD connections on %s", SockAddr(listenAddr, bfd::ListenPort).ToString()); 
+
+    gLog.Optional(Log::App, "Listening for BFD connections on %s", SockAddr(listenAddr, bfd::ListenPort).ToString());
   }
 
   void Beacon::handleListenSocket(Socket &socket)

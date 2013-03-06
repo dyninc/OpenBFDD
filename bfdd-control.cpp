@@ -42,7 +42,7 @@ namespace openbfdd
 
     if (!sendSocket.OpenTCP(connectAddr.Type()))
     {
-      fprintf(stderr, "Error creating %s socket: %s\n", 
+      fprintf(stderr, "Error creating %s socket: %s\n",
               Addr::TypeToString(connectAddr.Type()),
               SystemErrorToString(sendSocket.GetLastError()));
       return false;
@@ -51,8 +51,8 @@ namespace openbfdd
 
     if (!sendSocket.Connect(connectAddr))
     {
-      fprintf(stderr, "Error connecting to beacon on %s: %s\n", 
-              connectAddr.ToString(), 
+      fprintf(stderr, "Error connecting to beacon on %s: %s\n",
+              connectAddr.ToString(),
               SystemErrorToString(sendSocket.GetLastError()));
       return false;
     }
@@ -209,29 +209,29 @@ namespace openbfdd
         if (connectAddr.IsValid())
         {
           fprintf(stderr, "Only a single --altport or --control option is allowed.\n");
-          exit (1);
+          exit(1);
         }
         // Backwards compatability only ... use --control
         connectAddr.FromString("127.0.0.1", ALT_PORTNUM);
-      }           
+      }
       else if (CheckArg("--control", argv[argIndex], &valueString))
       {
         if (!valueString || *valueString == '\0')
         {
           fprintf(stderr, "--control must be followed by an '=' and a ip address with a port.\n");
-          exit (1);
+          exit(1);
         }
 
         if (!connectAddr.FromString(valueString))
         {
           fprintf(stderr, "--control address <%s> is not an IPv4 or IPv6 address.\n", valueString);
-          exit (1);
+          exit(1);
         }
 
         if (!connectAddr.HasPort())
         {
           fprintf(stderr, "--control address must have a port specified. The address <%s> does not conatin a port.\n", valueString);
-          exit (1);
+          exit(1);
         }
       }
       else if (0 == strncmp("--", argv[argIndex], 2))
@@ -254,10 +254,10 @@ namespace openbfdd
     {
       fprintf(stdout, "%s v%s\n", ControlAppName, SofwareVesrion);
     }
-    
+
     if (!connectAddr.IsValid())
       connectAddr.FromString("127.0.0.1", PORTNUM);
-    
+
 
     // "load" is special because we send a series of commands..
     if (0 == strcmp(argv[argIndex], "load"))
@@ -311,5 +311,3 @@ int main(int argc, char *argv[])
 {
   return openbfdd::bfddMain(argc,  argv);
 }
-
-

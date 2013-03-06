@@ -14,13 +14,13 @@ namespace openbfdd
 
   class IpAddr;
 
-	/**
-	 * Do not use this class directly. This is a base class for SockAddr and IpAddr.
-	 *
-	 * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
-	 * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
-	 * sockaddr_in6" or "sockaddr_in".
-	 */
+  /**
+   * Do not use this class directly. This is a base class for SockAddr and IpAddr.
+   *
+   * Class that can holds an IPv4 or IPv6 socket address, and optionally a port,
+   * and other information. This is essentially a "struct sockaddr" a.k.a. "struct
+   * sockaddr_in6" or "sockaddr_in".
+   */
   class sockAddrBase
   {
   public:

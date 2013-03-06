@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
   openbfdd::Beacon app;
   bool tee = false;
   bool doFork = true;
-  int argIndex;   
+  int argIndex;
   list<SockAddr> controlPorts;
   list<IpAddr> listenAddrs;
   const char *valueString;
@@ -53,43 +53,43 @@ int main(int argc, char *argv[])
     else if (CheckArg("--control", argv[argIndex], &valueString))
     {
       SockAddr addrVal;
-      
+
       if (!valueString || *valueString == '\0')
       {
         fprintf(stderr, "--control must be followed by an '=' and a ip address with a port.\n");
-        exit (1);
+        exit(1);
       }
-      
+
       if (!addrVal.FromString(valueString))
       {
         fprintf(stderr, "--control address <%s> is not an IPv4 or IPv6 address.\n", valueString);
-        exit (1);
+        exit(1);
       }
-      
+
       if (!addrVal.HasPort())
       {
         fprintf(stderr, "--control address must have a port specified. The address <%s> does not conatin a port.\n", valueString);
-        exit (1);
+        exit(1);
       }
-        
+
       controlPorts.push_back(addrVal);
     }
     else if (CheckArg("--listen", argv[argIndex], &valueString))
     {
       IpAddr addrVal;
-      
+
       if (!valueString || *valueString == '\0')
       {
         fprintf(stderr, "--listen must be followed by an '=' and a ip address (may be 0.0.0.0 or ::).\n");
-        exit (1);
+        exit(1);
       }
-      
+
       if (!addrVal.FromString(valueString))
       {
         fprintf(stderr, "--listen address <%s> is not an IPv4 or IPv6 address.\n", valueString);
-        exit (1);
+        exit(1);
       }
-      
+
       listenAddrs.push_back(addrVal);
     }
     else
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
       exit(1);
     }
   }
-  
+
   if (doFork)
   {
     tee = false;
@@ -125,8 +125,8 @@ int main(int argc, char *argv[])
     addr.FromString("127.0.0.1", ALT_PORTNUM);
     controlPorts.push_back(addr);
   }
-  
-  
+
+
   if (listenAddrs.empty())
   {
     IpAddr addr;
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     addr.FromString("::");
     listenAddrs.push_back(addr);
   }
-  
+
   // Setup logging first
   //  openbfdd::gLog.SetLogLevel(openbfdd::Log::Detail);
   openbfdd::gLog.LogToSyslog("bfdd-beacon", tee);
@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
   ret = app.Run(controlPorts, listenAddrs);
 
   openbfdd::gLog.Message(openbfdd::Log::App, "Shutdown %d", getpid());
-  
-  return ret ? 0:1;
+
+  return ret ? 0 : 1;
 }
 
 namespace openbfdd

@@ -13,11 +13,11 @@
 namespace openbfdd
 {
 
-	/**
-	 * Sets the address to invalid, and m_addr to the default for the given type.
-	 *
-	 * @param type
-	 */
+  /**
+   * Sets the address to invalid, and m_addr to the default for the given type.
+   *
+   * @param type
+   */
   void sockAddrBase::init(Addr::Type type)
   {
     switch (type)
@@ -342,25 +342,25 @@ namespace openbfdd
     return (sockaddr_in6 *)&m_addr;
   }
 
-	/**
-	 * @warning does no checking at all
-	 */
+  /**
+   * @warning does no checking at all
+   */
   inline sockaddr_in* sockAddrBase::getIPv4Storage()
   {
     return (sockaddr_in *)&m_addr;
   }
 
-	/**
-	 * @warning does no checking at all
-	 */
+  /**
+   * @warning does no checking at all
+   */
   inline const sockaddr_in6* sockAddrBase::getIPv6Storage() const
   {
     return (const sockaddr_in6 *)&m_addr;
   }
 
-	/**
-	 * @warning does no checking at all
-	 */
+  /**
+   * @warning does no checking at all
+   */
   inline const sockaddr_in* sockAddrBase::getIPv4Storage() const
   {
     return (const sockaddr_in *)&m_addr;
@@ -434,26 +434,26 @@ namespace openbfdd
       return "<Invalid Address>";
   }
 
-	/**
-	 * Compares two addresses.
-	 * Invalid addresses always compare the same, and below anything else.
-	 * IPv4 addresses always compare smaller than IPv6.
-	 * Assumes that IPv4 Addresses are in network order.
-	 *
-	 * If is IPv6 then comparison is:
-	 *    sin6_addr
-	 *    sin6_scope_id
-	 *    sin6_port
-	 *    sin6_flowinfo
-	 *
-	 * If is IPv4 then comparison is:
-	 *    sin_addr
-	 *    sin_port
-	 *
-	 * @param rhs
-	 *
-	 * @return: -1, 0, or 1 like strcmp.
-	 */
+  /**
+   * Compares two addresses.
+   * Invalid addresses always compare the same, and below anything else.
+   * IPv4 addresses always compare smaller than IPv6.
+   * Assumes that IPv4 Addresses are in network order.
+   *
+   * If is IPv6 then comparison is:
+   *    sin6_addr
+   *    sin6_scope_id
+   *    sin6_port
+   *    sin6_flowinfo
+   *
+   * If is IPv4 then comparison is:
+   *    sin_addr
+   *    sin_port
+   *
+   * @param rhs
+   *
+   * @return: -1, 0, or 1 like strcmp.
+   */
   int sockAddrBase::compare(const sockAddrBase &rhs, bool comparePort) const
   {
     if (Type() != rhs.Type())
@@ -501,13 +501,12 @@ namespace openbfdd
     }
   }
 
-	/**
-	 * This needs a  to match compare.
-	 *
-	 *
-	 * @return size_t
-	 */
-	size_t sockAddrBase::hash() const
+  /**
+   * This needs a  to match compare.
+   *
+   * @return size_t
+   */
+  size_t sockAddrBase::hash() const
   {
 
     /**

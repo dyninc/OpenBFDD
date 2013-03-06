@@ -70,7 +70,7 @@ namespace openbfdd
     /**
      * See CommandProcessor::BeginListening().
      */
-    virtual bool BeginListening(const SockAddr& addr)
+    virtual bool BeginListening(const SockAddr &addr)
     {
       AutoQuickLock lock(m_mainLock, true);
 
@@ -206,7 +206,7 @@ namespace openbfdd
         return false;
 
       gLog.Optional(Log::App, "Listening for commands on %s", m_address.ToString());
-     
+
       return true;
     }
 
