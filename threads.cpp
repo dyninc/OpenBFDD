@@ -1,5 +1,5 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -11,14 +11,14 @@
 
 using namespace std;
 
-namespace openbfdd 
+namespace openbfdd
 {
 
   /**
    * @param create - If true then the lock is created and initialized.
    */
   QuickLock::QuickLock(bool create /*false*/) :
-  m_initialized(false)
+     m_initialized(false)
   {
     if (create)
       Create();
@@ -155,7 +155,7 @@ namespace openbfdd
 
 
   WaitCondition::WaitCondition(bool init) :
-  m_initDone(false)
+     m_initDone(false)
   {
     if (init)
       Init();
@@ -177,7 +177,7 @@ namespace openbfdd
 
     if (LogVerify(!pthread_cond_init(&m_condition, NULL)))
       m_initDone = true;
-    
+
     return m_initDone;
   }
 
@@ -207,7 +207,7 @@ namespace openbfdd
       struct timespec waitTime;
       clock_gettime(CLOCK_REALTIME, &waitTime);
       timespecAddMs(waitTime, msTimeout);
-      ret = pthread_cond_timedwait(&m_condition, lock, &waitTime); 
+      ret = pthread_cond_timedwait(&m_condition, lock, &waitTime);
     }
     else
       ret = pthread_cond_wait(&m_condition, lock);
@@ -227,7 +227,7 @@ namespace openbfdd
    * @param create - If true then the lock is created and initialized.
    */
   ReadWriteLock::ReadWriteLock(bool create /*false*/) :
-  m_initialized(false)
+     m_initialized(false)
   {
     if (create)
       Create();
@@ -352,11 +352,3 @@ namespace openbfdd
 
 
 }
-
-
-
-
-
-
-
-

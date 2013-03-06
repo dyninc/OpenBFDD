@@ -6,8 +6,8 @@
 #
 set -e
 set -x
-autoheader 
 aclocal 
+autoheader 
 automake --add-missing --copy --foreign
 autoconf 
 echo autogen completed

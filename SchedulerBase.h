@@ -1,12 +1,12 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 /**
- 
+
   Base class for implementations of the Scheduler interface.
-    
+
  */
 #pragma once
 
@@ -24,7 +24,7 @@ namespace openbfdd
   class SchedulerBase : public Scheduler
   {
   public:
-    typedef  std::multiset<TimerImpl *, bool(*)(const TimerImpl *,const TimerImpl *)> timer_set;
+    typedef  std::multiset<TimerImpl *, bool (*)(const TimerImpl *, const TimerImpl *)> timer_set;
     typedef  timer_set::iterator timer_set_it;
 
   public:
@@ -39,61 +39,61 @@ namespace openbfdd
     virtual bool Signal(int sigId);
     virtual void RemoveSignalChannel(int sigId);
     virtual void RequestShutdown();
-    virtual Timer *MakeTimer(const char *name);
+    virtual Timer* MakeTimer(const char *name);
     virtual void FreeTimer(Timer *timer);
 
   protected:
-    /** 
-     * Constructor  
-     * The thread that calls this is considered the "main thread". See 
-     * Scheduler::IsMainThread(). 
+    /**
+     * Constructor
+     * The thread that calls this is considered the "main thread". See
+     * Scheduler::IsMainThread().
      */
     SchedulerBase();
 
-    /** 
-     *  
+    /**
+     *
      * Called to add a socket or  pipe to the list of watched events.
-     *  
-     * @note Called only on main thread. See Scheduler::IsMainThread(). 
-     * 
-     * @param fd 
-     * 
+     *
+     * @note Called only on main thread. See Scheduler::IsMainThread().
+     *
+     * @param fd
+     *
      * @return bool - false on failure
      */
     virtual bool watchSocket(int fd) = 0;
 
-    /** 
-     *  
-     * Called to remove a socket or  pipe to the list of watched events. 
-     *  
-     * @note Called only on main thread. See Scheduler::IsMainThread(). 
-     * 
-     * @param fd 
-     * 
+    /**
+     *
+     * Called to remove a socket or  pipe to the list of watched events.
+     *
+     * @note Called only on main thread. See Scheduler::IsMainThread().
+     *
+     * @param fd
+     *
      */
     virtual void unWatchSocket(int fd) = 0;
 
 
-    /** 
-     * Called to wait for events. 
-     *  
-     * Subsequent calls to getNextSocketEvent() are based on this call. 
-     *  
-     * @note Called only on main thread. See Scheduler::IsMainThread(). 
-     * 
+    /**
+     * Called to wait for events.
+     *
+     * Subsequent calls to getNextSocketEvent() are based on this call.
+     *
+     * @note Called only on main thread. See Scheduler::IsMainThread().
+     *
      * @param timeout - The maximum time to wait.
-     * 
+     *
      * @return bool - True if there was an actual socket event.
      */
     virtual bool waitForEvents(const struct timespec &timeout) = 0;
 
-    /** 
-     * Iterate over socket events found in last call to waitForEvents. Each 
-     * subsequent call should return the next socket event (in any order). 
-     *  
-     * @note Called only on main thread. See Scheduler::IsMainThread(). 
-     *  
-     * @return int - The next socket that was found in waitForEvents. -1 if there 
+    /**
+     * Iterate over socket events found in last call to waitForEvents. Each
+     * subsequent call should return the next socket event (in any order).
+     *
+     * @note Called only on main thread. See Scheduler::IsMainThread().
+     *
+     * @return int - The next socket that was found in waitForEvents. -1 if there
      *         are no more sockets.
      */
     virtual int getNextSocketEvent() = 0;
@@ -102,29 +102,29 @@ namespace openbfdd
 
     TimeSpec getNextTimerTimeout();
     bool expireTimer(Timer::Priority::Value minPri);
-    static bool compareTimers(const TimerImpl * lhs, const TimerImpl * rhs);
+    static bool compareTimers(const TimerImpl *lhs, const TimerImpl *rhs);
 
     pthread_t m_mainThread; // This is the thread under which Run was called.
-    //
-    // Only access these from the Main scheduler thread. See IsMainThread().
-    // 
-    bool m_isStarted; // True if Run was called. 
+                            //
+                            // Only access these from the Main scheduler thread. See IsMainThread().
+                            //
+    bool m_isStarted; // True if Run was called.
 
     struct schedulerSignalItem
     {
       Scheduler::SignalCallback callback;
-      void * userdata;
+      void *userdata;
       int fdWrite;  // write end of pipe  (also the signalId)
       int fdRead; // read end of pipe
     };
 
     typedef  hash_map<int, schedulerSignalItem>::Type SignalItemHashMap;
-    
+
     struct schedulerSocketItem
     {
       Scheduler::SocketCallback callback;
-      void * userdata;
-      int socket; 
+      void *userdata;
+      int socket;
     };
 
     typedef  hash_map<int, schedulerSocketItem>::Type SocketItemHashMap;
@@ -133,7 +133,7 @@ namespace openbfdd
     SignalItemHashMap m_signals;
 
     bool m_wantsShutdown;
-    timer_set m_activeTimers; 
+    timer_set m_activeTimers;
     int m_timerCount;   // only used for debugging
   };
 

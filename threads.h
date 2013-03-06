@@ -1,5 +1,5 @@
-/************************************************************** 
-* Copyright (c) 2010, Dynamic Network Services, Inc.
+/**************************************************************
+* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -27,20 +27,20 @@ namespace openbfdd
 
     /**
      * Only call if this is not created with init == true;
-     * 
+     *
      * @return bool - false on failure
      */
     bool Init();
 
     /**
-     * Waits on the signal and lock. Note that spurious wakeups can occur. 
-     * On failure other than timeout the mutex and signal state will not have 
-     * changed.  
-     * 
-     * @param lock [in]- Must not be NULL. 
-     * @param msTimeout [in] - The timeout time, or 0 for no timeout. 
-     * 
-     * @return int - 0 on success. 1 on timeout, -1 on other failure. 
+     * Waits on the signal and lock. Note that spurious wakeups can occur.
+     * On failure other than timeout the mutex and signal state will not have
+     * changed.
+     *
+     * @param lock [in]- Must not be NULL.
+     * @param msTimeout [in] - The timeout time, or 0 for no timeout.
+     *
+     * @return int - 0 on success. 1 on timeout, -1 on other failure.
      */
     int Wait(pthread_mutex_t *lock, uint32_t msTimeout = 0);
 
@@ -54,32 +54,32 @@ namespace openbfdd
   /**
    * Wrapper for a simple mutex.
    */
-  class QuickLock 
+  class QuickLock
   {
   public:
     /**
      * @param create - If true then the lock is created and initialized.
      */
-    QuickLock(bool create = false); 
+    QuickLock(bool create = false);
     ~QuickLock();
 
     /**
-     * Use to create the lock, if constructor was not called with create. 
-     * 
+     * Use to create the lock, if constructor was not called with create.
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
-    bool Create(); 
+    bool Create();
 
     /**
-     * Permanently destroys the lock. Do not call any other methods after this 
-     * unless Create is called. 
+     * Permanently destroys the lock. Do not call any other methods after this
+     * unless Create is called.
      */
-    void Destroy();  
+    void Destroy();
 
     /**
      *  Locks the lock. Normally use an AutoQuickLock on the stack to ensure that
      *  this gets unlocked.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool Lock();
@@ -87,30 +87,30 @@ namespace openbfdd
     /**
      *  Unlocks the lock. Normally use an AutoQuickLock on the stack to ensure that
      *  this gets unlocked.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool UnLock();
 
 
-    /** 
-     * Signal a condition.  
-     * Lock must be locked by us. 
+    /**
+     * Signal a condition.
+     * Lock must be locked by us.
      * On return, this is always unlocked. (even on failure)
-     * 
-     * @param condition 
+     *
+     * @param condition
      */
     void SignalAndUnlock(WaitCondition &condition);
 
-    /** 
-     *  
-     * Waits on a condition. Lock must be locked by us. 
+    /**
+     *
+     * Waits on a condition. Lock must be locked by us.
      * On return, this is still locked.
-     * 
-     * @param condition 
-     * @param msTimeout [in] - The timeout time, or 0 for no timeout. 
-     * 
-     * @return int - 0 on success. 1 on timeout, -1 on other failure. 
+     *
+     * @param condition
+     * @param msTimeout [in] - The timeout time, or 0 for no timeout.
+     *
+     * @return int - 0 on success. 1 on timeout, -1 on other failure.
      */
     int LockWait(WaitCondition &condition, uint32_t msTimeout = 0);
 
@@ -125,10 +125,10 @@ namespace openbfdd
   {
   public:
     /**
-     * 
-     * 
+     *
+     *
      * @param threadLock - The lock.
-     * @param lockInitial - Should the lock start in the locked state. Use 
+     * @param lockInitial - Should the lock start in the locked state. Use
      *                    IsLockedByMe to check for failure. Will log on failure.
      */
     AutoQuickLock(QuickLock &threadLock, bool lockInitial = true);
@@ -136,44 +136,44 @@ namespace openbfdd
 
     /**
      * Lock the lock.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool Lock();
 
     /**
      * Check if this object had locked the lock.
-     * 
+     *
      * @return bool - true if this object had locked the lock.
      */
     bool IsLockedByMe();
 
     /**
-     *  Unlock the lock. 
+     *  Unlock the lock.
      *  Called automatically when this is destroyed.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
-    bool UnLock();  
+    bool UnLock();
 
-    /** 
-     * Signal a condition.  
-     * Lock must be locked by us. 
-     * On return, this is always unlocked. (even on failure) 
-     * 
-     * @param condition 
+    /**
+     * Signal a condition.
+     * Lock must be locked by us.
+     * On return, this is always unlocked. (even on failure)
+     *
+     * @param condition
      */
     void SignalAndUnlock(WaitCondition &condition);
 
-    /** 
-     *  
-     * Waits on a condition. Lock must be locked by us. 
+    /**
+     *
+     * Waits on a condition. Lock must be locked by us.
      * On return, this is still locked.
-     * 
-     * @param condition 
-     * @param msTimeout [in] - The timeout time, or 0 for no timeout. 
-     * 
-     * @return int - 0 on success. 1 on timeout, -1 on other failure. 
+     *
+     * @param condition
+     * @param msTimeout [in] - The timeout time, or 0 for no timeout.
+     *
+     * @return int - 0 on success. 1 on timeout, -1 on other failure.
      */
     int LockWait(WaitCondition &condition, uint32_t msTimeout = 0);
 
@@ -188,33 +188,33 @@ namespace openbfdd
   /**
    * Wrapper for a read/write lock.
    */
-  class ReadWriteLock 
+  class ReadWriteLock
   {
   public:
 
     /**
      * @param create - If true then the lock is created and initialized.
      */
-    ReadWriteLock(bool create = false); 
+    ReadWriteLock(bool create = false);
     ~ReadWriteLock();
 
     /**
-     * Use to create the lock, if constructor was not called with create. 
-     * 
+     * Use to create the lock, if constructor was not called with create.
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
-    bool Create(); 
+    bool Create();
 
     /**
-     * Permanently destroys the lock. Do not call any other methods after this 
-     * unless Create is called. 
+     * Permanently destroys the lock. Do not call any other methods after this
+     * unless Create is called.
      */
-    void Destroy();  
+    void Destroy();
 
     /**
      *  Shared locks the lock. Normally use an AutoReadWriteLock on the stack
      *  to ensure that this gets unlocked.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool ReadLock();
@@ -222,7 +222,7 @@ namespace openbfdd
     /**
      *  Exclusive locks the lock . Normally use an AutoReadWriteLock on the stack to ensure
      *  that this gets unlocked.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool WriteLock();
@@ -230,7 +230,7 @@ namespace openbfdd
     /**
      *  Unlocks the lock. Normally use an AutoRWriteLock on the stack to ensure that
      *  this gets unlocked.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool UnLock();
@@ -254,10 +254,10 @@ namespace openbfdd
     };
 
     /**
-     * 
-     * 
+     *
+     *
      * @param threadLock - The lock.
-     * @param lockInitial - Should the lock start in the locked state. Use 
+     * @param lockInitial - Should the lock start in the locked state. Use
      *                    IsLockedByMe to check for failure. Will log on failure.
      */
     AutoReadWriteLock(ReadWriteLock &threadLock, AutoReadWriteLock::LockType lockInitial);
@@ -265,32 +265,32 @@ namespace openbfdd
 
     /**
      * Read lock the lock.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool ReadLock();
 
     /**
      * Exclusive lock the lock.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
     bool WriteLock();
 
     /**
      * Check if this object had locked the lock.
-     * 
+     *
      * @return bool - true if this object had locked the lock.
      */
     bool IsLockedByMe();
 
     /**
-     *  Unlock the lock. 
+     *  Unlock the lock.
      *  Called automatically when this is destroyed.
-     * 
+     *
      *  @return bool - false on failure. (Will log failure.)
      */
-    bool UnLock();  
+    bool UnLock();
 
   private:
     ReadWriteLock *m_rwLock;
@@ -299,9 +299,3 @@ namespace openbfdd
 
 
 };
-
-
-
-
-
-
