@@ -2,24 +2,24 @@
 <HTML><HEAD><TITLE>Man page of bfdd-beacon</TITLE>
 </HEAD><BODY>
 <H1>bfdd-beacon</H1>
-Section: OpenBFDD v0.4.0 (8)<BR>Updated: December 3, 2010<BR><A HREF="#index">Index</A>
+Section: OpenBFDD v0.5.0 (8)<BR>Updated: February 5, 2013<BR><A HREF="#index">Index</A>
 
 <A NAME="lbAB">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
 
 <B style="color: #996600;">bfdd-beacon</B> - a Bidirectional Forwarding Detection (BFD) beacon daemon.
 <A NAME="lbAC">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SYNOPSIS</p><DL><DD>
 
 <B style="color: #996600;">bfdd-beacon</B> [<i style="color: #008000;"> options </I>]
 <A NAME="lbAD">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">DESCRIPTION</p><DL><DD>
 
 <B style="color: #996600;">bfdd-beacon</B> is software implementation of the Bidirectional Forwarding Detection (BFD) protocol. 
 When <B style="color: #996600;">bfdd-beacon</B> is running commands can be issued to the beacon using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility.
 It is part of the OpenBFDD package. 
 <A NAME="lbAE">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">OPTIONS </p><DL><DD>
 
 The <i style="color: #008000;">options</I> parameter can be one or more of the following:
 <DL COMPACT>
@@ -41,21 +41,59 @@ Logging will not be sent to stdout. This is the default for release builds.
 
 <DD>
 Prevents the beacon from running as a daemon. This is useful for debugging.
+<DT><B style="color: #996600;">--control </B><i style="color: #008000;">ip</I><B style="color: #996600;">:</B><i style="color: #008000;">port</I>
+
+<DD>
+Adds a communication channel to use for communicating with <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). 
+<i style="color: #008000;">ip</I> may be an IPv4 or Ipv6 address. A <i style="color: #008000;">port</I> must be supplied.
+This option may appear multiple times, to create multiple control channels. 
+If no <B style="color: #996600;">--control</B> option is supplied, then two default control channels 
+are created on <B style="color: #996600;">127.0.0.1</B>.
+When specifying an IPv6 <i style="color: #008000;">ip</I> address, the address must be contained in brackets, 
+to allow for a <i style="color: #008000;">port</I> specification. For example <B style="color: #996600;">[::1]:10001</B>. 
+See the <B style="color: #996600;">PARAMETERS</B> section for more details on specifying an <i style="color: #008000;">ip</I> address.
+<DT><B style="color: #996600;">--listen </B><i style="color: #008000;">ip</I><B style="color: #996600;"></B>
+
+<DD>
+Adds an address on which to listen for new incoming BFD connections. 
+<i style="color: #008000;">ip</I> may be an IPv4 or Ipv6 address. 
+The IPv4 address of <B style="color: #996600;">0.0.0.0.0</B>, or the IPv6 address <B style="color: #996600;">::</B> may be used to 
+listen on all available IPv4 or IPv6 interfaces, respectively. 
+This option may appear multiple times, to listen on multiple addresses.
+If no <B style="color: #996600;">--listen</B> option is supplied, then <B style="color: #996600;">bfdd-beacon</B> will listen on all available IPv4 and IPv6 addresses. 
+See the <B style="color: #996600;">PARAMETERS</B> section for more details on specifying an <i style="color: #008000;">ip</I> address.
 </DL>
 <A NAME="lbAF">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">CONTROL</p><DL><DD>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">PARAMETERS</p><DL><DD>
+
+Some of the parameters used in the <B style="color: #996600;">COMMANDS</B> section require some additional explanation.
+<DL COMPACT>
+<DT><i style="color: #008000;">ip</I> <DD>
+This parameter describes an ip address. An IPv4 or IPv6 address may be supplied. 
+An IPv4 address muse use dotted quad notation, in the form: 
+&quot;<B style="color: #996600;">ddd.ddd.ddd.ddd</B>&quot;
+An IPv6 address can use full notation, in the form:
+&quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh</B>&quot;
+or shorthand notation, such as: &quot;<B style="color: #996600;">hhhh:hhhh::hhhh</B>&quot;.
+Dotted-quad notation may be used for Ipv6 addresses, to specify the final 32 bits. 
+For example <B style="color: #996600;">::ffff:192.0.2.128</B> is equivalent to <B style="color: #996600;">::ffff:c000:0280</B>.
+Link-local addresses must also be followed by an interface name, using the form: 
+&quot;<B style="color: #996600;">hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh:hhhh%</B><i style="color: #008000;">ifname</I>&quot;, where <i style="color: #008000;">ifname</I> is the name of the interface to which the link local address applies. An interface may <B style="color: #996600;">only</B> be specified for link-local addresses. Of course, shorthand notation may also be used with link local addresses. 
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">CONTROL</p><DL><DD>
 
 When <B style="color: #996600;">bfdd-beacon</B> is running commands can be issued to the beacon using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility. 
 See <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) documentation for more details.
-<A NAME="lbAG">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">LOGGING</p><DL><DD>
+<A NAME="lbAH">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">LOGGING</p><DL><DD>
 
 Currently log messages go to syslog. The <B style="color: #996600;">--tee</B> command can be used to also send log messages to stdout. 
 The identity &quot;bfdd-beacon&quot; is used for all syslog logging. 
 Logging is fully configurable.                
 See <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) documentation for more details. 
-<A NAME="lbAH">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
+<A NAME="lbAI">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NOTES</p><DL><DD>
 
 when <B style="color: #996600;">bfdd-beacon</B> is first started it will not accept any connections.
 This allows <B style="color: #996600;">bfdd-beacon</B> to be configured using the <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8) utility before any sessions begin. 
@@ -64,38 +102,39 @@ The <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B
 The current implementation of the BFD protocol was tested specifically with the Juniper router's BFD (JUNOS 8.5). Demand mode is not currently supported. 
 Echo mode is not currently supported. 
 Authentication is not supported. 
-<A NAME="lbAI">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
+<A NAME="lbAJ">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">BUGS</p><DL><DD>
 
 No known bugs at this time.
-<A NAME="lbAJ">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
+<A NAME="lbAK">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">SEE ALSO</p><DL><DD>
 
 <B style="color: #996600;"><A HREF="bfdd-control.8.html">bfdd-control</A></B>(8)
-<A NAME="lbAK">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
+<A NAME="lbAL">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">AUTHOR</p><DL><DD>
 
 Jake Montgomery for Dynamic Network Services, Inc.
-<A NAME="lbAL">&nbsp;</A>
-</DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
+<A NAME="lbAM">&nbsp;</A>
+</DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
 
-Copyright (c) 2010, Dynamic Network Services, Inc.
+Copyright (c) 2010-2013, Dynamic Network Services, Inc.
 <P>
 
 <HR>
-<A NAME="index">&nbsp;</A></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
+<A NAME="index">&nbsp;</A></DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">Index</p><DL><DD>
 <DL>
 <DT><A HREF="#lbAB">NAME</A><DD>
 <DT><A HREF="#lbAC">SYNOPSIS</A><DD>
 <DT><A HREF="#lbAD">DESCRIPTION</A><DD>
 <DT><A HREF="#lbAE">OPTIONS </A><DD>
-<DT><A HREF="#lbAF">CONTROL</A><DD>
-<DT><A HREF="#lbAG">LOGGING</A><DD>
-<DT><A HREF="#lbAH">NOTES</A><DD>
-<DT><A HREF="#lbAI">BUGS</A><DD>
-<DT><A HREF="#lbAJ">SEE ALSO</A><DD>
-<DT><A HREF="#lbAK">AUTHOR</A><DD>
-<DT><A HREF="#lbAL">COPYRIGHT</A><DD>
+<DT><A HREF="#lbAF">PARAMETERS</A><DD>
+<DT><A HREF="#lbAG">CONTROL</A><DD>
+<DT><A HREF="#lbAH">LOGGING</A><DD>
+<DT><A HREF="#lbAI">NOTES</A><DD>
+<DT><A HREF="#lbAJ">BUGS</A><DD>
+<DT><A HREF="#lbAK">SEE ALSO</A><DD>
+<DT><A HREF="#lbAL">AUTHOR</A><DD>
+<DT><A HREF="#lbAM">COPYRIGHT</A><DD>
 </DL>
 </BODY>
 </HTML>
