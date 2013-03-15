@@ -164,7 +164,7 @@ AC_DEFUN(
                [#include <string.h>],
                [[
                   char b[1];
-                  strerror_r(1, b, 1);
+                  if (strerror_r(1, b, 1)) return 0;
                ]]
             )],   
             dyn_has_strerror_r=yes
@@ -172,7 +172,7 @@ AC_DEFUN(
          if test $dyn_has_strerror_r = yes; then
             AC_DEFINE(HAS_STRERROR_R, 1, [Whether strerror_r is available])
          fi
-         AC_MSG_RESULT($dyn_has_unordered_map)
+         AC_MSG_RESULT($dyn_has_strerror_r)
       fi
       if test $dyn_has_strerror_r = yes; then
          AC_MSG_CHECKING(whether strerror_r is the modern IEEE Std 1003.1-2001 version)
