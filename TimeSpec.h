@@ -176,15 +176,14 @@ namespace openbfdd
       double nsec = tv_nsec * mult;
       double sec = tv_sec * mult;
 
-
       tv_sec = time_t(sec);
       sec -= tv_sec;
-      nsec += (sec / NSecPerSec);
+      nsec += (sec * NSecPerSec);
       if (nsec > NSecPerSec)
       {
         time_t addSec = time_t(nsec / NSecPerSec);
         nsec -= double(addSec) * NSecPerSec;
-        sec += addSec;
+        tv_sec += addSec;
       }
 
       tv_nsec = (long)nsec;
@@ -192,7 +191,6 @@ namespace openbfdd
 
       return *this;
     }
-
 
     TimeSpec operator*(double mult) const
     { return TimeSpec(*this) *= mult;}

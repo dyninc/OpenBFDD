@@ -73,7 +73,7 @@ AC_DEFUN(
          fi
          AC_MSG_RESULT($dyn_has_unordered_map)
       fi
-      if test $dyn_has_unordered_map = no; then
+      if test "$dyn_has_unordered_map" = "no" -a "$cpp11_enabled" != "no"; then
          AC_MSG_CHECKING(whether the unordered_map class is available with c++0x)
          ac_save2_CXXFLAGS=$CXXFLAGS
          CXXFLAGS="$CXXFLAGS -std=c++0x"

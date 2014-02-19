@@ -451,7 +451,7 @@ namespace openbfdd
         || olduseDesiredMinTxInterval != getUseDesiredMinTxInterval()
         || oldRemoteMinRxInterval > m_remoteMinRxInterval // v10/6.8.3p6
         || (oldRemoteMinRxInterval == 0 && oldRemoteMinRxInterval != m_remoteMinRxInterval) // basically the same as above.
-        )
+       )
     {
       scheduleTransmit();
     }
@@ -692,7 +692,7 @@ namespace openbfdd
 
         if (m_wantsPollForNewDesiredMinTxInterval
             || m_wantsPollForNewRequiredMinRxInterval
-            )
+           )
           return transitionPollState(PollState::Requested);
 
         return true;
@@ -1297,7 +1297,7 @@ namespace openbfdd
                  remoteAddr.ToString(),
                  inHostOrder ? header.myDisc : ntohl(header.myDisc),
                  inHostOrder ? header.yourDisc : ntohl(header.yourDisc)
-                 );
+                );
 
     gLog.Message(Log::PacketContents, "  v=%hhd state=<%s> flags=[%s%s%s%s%s%s] diag=<%s> len=%hhd",
                  header.GetVersion(),
@@ -1310,7 +1310,7 @@ namespace openbfdd
                  header.GetMultipoint() ? "M" : "",
                  bfd::DiagShortString(header.GetDiag()),
                  header.length
-                 );
+                );
 
 
     gLog.Message(Log::PacketContents, "  Multi=%hhu MinTx=%u MinRx=%u MinEchoRx=%u",
@@ -1318,7 +1318,7 @@ namespace openbfdd
                  inHostOrder ? header.txDesiredMinInt :     htonl(header.txDesiredMinInt),
                  inHostOrder ? header.rxRequiredMinInt :    htonl(header.rxRequiredMinInt),
                  inHostOrder ? header.rxRequiredMinEchoInt : htonl(header.rxRequiredMinEchoInt)
-                 );
+                );
   }
 
   void Session::SetMulti(uint8_t val)
@@ -1376,7 +1376,7 @@ namespace openbfdd
                   m_id,
                   m_adminUpPollWorkaround ? "enabled" : "disabled",
                   enable ? "enabled" : "disabled"
-                  );
+                 );
 
     m_adminUpPollWorkaround = enable;
   }

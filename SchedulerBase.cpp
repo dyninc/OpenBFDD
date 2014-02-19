@@ -218,7 +218,7 @@ namespace openbfdd
                   startTime.tv_nsec,
                   (intmax_t)expireTime.tv_sec,
                   expireTime.tv_nsec
-                  );
+                 );
 
       // Start time does not effect sorting in active timer list, so we can set it now.
       // Stopped also should not matter.

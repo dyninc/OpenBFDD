@@ -24,7 +24,7 @@ namespace openbfdd
   class sockAddrBase
   {
   public:
-    sockAddrBase &operator = (const sockAddrBase &src);
+    sockAddrBase &operator=(const sockAddrBase &src);
 
     /**
      * @return - True if this is a valid address, but the address is 'any'. Port is
@@ -329,7 +329,7 @@ namespace openbfdd
      */
     void SetAny(Addr::Type type, in_port_t port = 0) { sockAddrBase::SetAny(type,  port);}
 
-    SockAddr &operator = (const SockAddr &src) { sockAddrBase::operator = (src); return *this;}
+    SockAddr &operator=(const SockAddr &src) { sockAddrBase::operator =(src); return *this;}
 
     bool operator==(const SockAddr &other) const { return 0 == compare(other,  true);}
     bool operator!=(const SockAddr &other) const { return 0 != compare(other,  true);}
@@ -399,7 +399,7 @@ namespace openbfdd
 
     explicit IpAddr(const SockAddr &src) : sockAddrBase(false, src) { }
 
-    IpAddr &operator = (const IpAddr &src) { sockAddrBase::operator = (src); return *this;}
+    IpAddr &operator=(const IpAddr &src) { sockAddrBase::operator =(src); return *this;}
 
     void SetAny(Addr::Type type) { sockAddrBase::SetAny(type,  0);}
 

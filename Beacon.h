@@ -31,16 +31,16 @@ namespace openbfdd
   public:
     Beacon();
     ~Beacon();
-    
+
     /**
-     * Start the beacon. 
-     * 
-     * @param controlPorts [in] - A list of address and port combinations on which 
+     * Start the beacon.
+     *
+     * @param controlPorts [in] - A list of address and port combinations on which
      *                     to listen for control commands.
-     * @param listenAddrs [in] - A list of address on which to listen for new BDF 
+     * @param listenAddrs [in] - A list of address on which to listen for new BDF
      *                    sessions. 'ANY' is allowed.
-     * 
-     * 
+     *
+     *
      * @return - false on failure
      */
     bool Run(const std::list<SockAddr> &controlPorts, const std::list<IpAddr> &listenAddrs);
@@ -231,7 +231,7 @@ namespace openbfdd
       IpAddr localAddr;
       bool operator==(const SourceMapKey &other) const { return remoteAddr == other.remoteAddr &&  localAddr == other.localAddr;}
       struct hasher
-      {size_t operator()(const SourceMapKey &me) const { return me.remoteAddr.hash() + me.localAddr.hash();}
+      {size_t operator ()(const SourceMapKey &me) const { return me.remoteAddr.hash() + me.localAddr.hash();}
       };
     };
 

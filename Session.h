@@ -444,5 +444,5 @@ namespace openbfdd
   inline Session::SetValueFlags::Flag operator|=(Session::SetValueFlags::Flag &f1, Session::SetValueFlags::Flag f2) { f1 = f1 | f2; return f1;}
   inline Session::SetValueFlags::Flag operator&(Session::SetValueFlags::Flag f1, Session::SetValueFlags::Flag f2) { return Session::SetValueFlags::Flag((int)f1 & (int)f2);}
   inline Session::SetValueFlags::Flag operator&=(Session::SetValueFlags::Flag &f1, Session::SetValueFlags::Flag f2) { f1 = f1 & f2; return f1;}
-  inline Session::SetValueFlags::Flag operator~(Session::SetValueFlags::Flag f1) { return Session::SetValueFlags::Flag(~(int)f1);}
+  inline Session::SetValueFlags::Flag operator ~(Session::SetValueFlags::Flag f1) { return Session::SetValueFlags::Flag(~(int)f1);}
 }

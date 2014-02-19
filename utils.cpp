@@ -432,9 +432,9 @@ namespace openbfdd
   int timespecCompare(const struct timespec &tsl, const struct timespec &tsr)
   {
     if (tsl.tv_sec == tsr.tv_sec)
-      return(tsl.tv_nsec > tsr.tv_nsec) ? 1 : (tsl.tv_nsec == tsr.tv_nsec) ? 0 : -1;
+      return (tsl.tv_nsec > tsr.tv_nsec) ? 1 : (tsl.tv_nsec == tsr.tv_nsec) ? 0 : -1;
 
-    return(tsl.tv_sec > tsr.tv_sec) ? 1 : -1;
+    return (tsl.tv_sec > tsr.tv_sec) ? 1 : -1;
   }
 
   void timespecSubtract(struct timespec &result, const struct timespec &tsl, const struct timespec &tsr)
@@ -509,7 +509,7 @@ namespace openbfdd
             (uint8_t)((uint8_t *)&address)[1],
             (uint8_t)((uint8_t *)&address)[2],
             (uint8_t)((uint8_t *)&address)[3]
-            );
+           );
 
     return buf;
   }
@@ -542,7 +542,7 @@ namespace openbfdd
             (uint8_t)data[2],
             (uint8_t)data[3],
             (unsigned int)port
-            );
+           );
 
     return buf;
 
@@ -834,7 +834,7 @@ namespace openbfdd
     return ParseIPv4Part(const_cast<const char *>(str),
                          out_addr,
                          const_cast<const char **>(next)
-                         );
+                        );
   }
 
 
@@ -856,7 +856,7 @@ namespace openbfdd
     return ParseIPv4(const_cast<const char *>(str),
                      out_addr,
                      const_cast<const char **>(next)
-                     );
+                    );
   }
 
   bool ParseIPv4Port(const char *str, uint32_t *out_addr, uint16_t *outPort)
@@ -947,7 +947,7 @@ namespace openbfdd
     return ParseIPv6Part(const_cast<const char *>(str),
                          inOutStorage,
                          const_cast<const char **>(outNext)
-                         );
+                        );
 
   }
 

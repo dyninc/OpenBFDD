@@ -22,7 +22,21 @@ AC_SUBST(OTHERCXXFLAGS)
                     
 ACD_CHECK_CPP_FLAG(Wall, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wall"])
 ACD_CHECK_CPP_FLAG(Wextra, [WARNINGCXXFLAGS="$WARNINGCXXFLAGS -Wextra"])
-                                            
+                  
+                          
+# Do not try c++0x (c++11)
+AC_ARG_ENABLE(cpp11, AC_HELP_STRING([--disable-cpp11], [Use tr1 instead of c++0x/c++11 for advanced features.]))
+cpp11_enabled="$enable_cpp11"
+AC_SUBST(cpp11_enabled)
+case "$cpp11_enabled" in
+        no)
+		# nothing to do.
+		;;
+	yes|*)
+        cpp11_enabled=yes
+		;;
+esac
+                          
 AHX_CONFIG_UNORDERED_MAP
 AHX_CHECK_STRERROR_R
 

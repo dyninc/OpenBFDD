@@ -499,10 +499,12 @@ namespace openbfdd
       {
         handle_Session(message);
       }
+#ifdef BFD_DEBUG
       else if (0 == strcasecmp(message, "test"))
       {
         handle_Test(message);
       }
+#endif
       else
       {
         messageReplyF("Unknown command <%s>\n", message);
@@ -1146,7 +1148,7 @@ namespace openbfdd
                       bfd::StateName(info.extState.localState),
                       info.extState.isHoldingState ? "<Forced>" : "",
                       info.extState.isSuspended ? "<Suspended>" : ""
-                      );
+                     );
       }
       else if (level >= 2)
       {
@@ -1171,7 +1173,7 @@ namespace openbfdd
                       sep,
                       info.remoteDisc,
                       level > 2 ? sep : "\n"
-                      );
+                     );
       }
 
       if (level >= 3)
@@ -1184,7 +1186,7 @@ namespace openbfdd
                       sep,
                       FormatInteger(info.extState.detectionTime, useCommas),
                       level > 2 ? sep : "\n"
-                      );
+                     );
       }
 
       if (level >= 4)
@@ -1194,7 +1196,7 @@ namespace openbfdd
                       "%sLocalDesiredMinTx=%s us %s%s"
                       "%sLocalRequiredMinRx=%s us %s"
                       "%sRemoteDetectMulti=%hhu "
-                      "%sRemoteDesiredMinTx%s us "
+                      "%sRemoteDesiredMinTx=%s us "
                       "%sRemoteRequiredMinRx=%s us "
                       "%s",
                       info.extState.detectMult,
@@ -1215,7 +1217,7 @@ namespace openbfdd
                       sep,
                       FormatInteger(info.extState.remoteMinRxInterval, useCommas),
                       "\n"
-                      );
+                     );
       }
     }
 

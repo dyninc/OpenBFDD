@@ -367,7 +367,7 @@ namespace openbfdd
      *
      * @note The new socket is NOT owned.
      */
-    Socket &operator = (const Socket &src);
+    Socket &operator=(const Socket &src);
 
   private:
     bool setIntSockOpt(int level, int optname, const char *name, int value);

@@ -103,7 +103,7 @@ namespace openbfdd
       if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
       {
         if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(int))))
-          m_ttlOrHops = (uint8_t) * (int *)CMSG_DATA(cmsg);
+          m_ttlOrHops = (uint8_t)*(int *)CMSG_DATA(cmsg);
       }
       else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVTTL)
       {
@@ -112,7 +112,7 @@ namespace openbfdd
       else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_HOPLIMIT)
       {
         if (LogVerify(cmsg->cmsg_len >= CMSG_LEN(sizeof(int))))
-          m_ttlOrHops = (uint8_t) * (int *)CMSG_DATA(cmsg);
+          m_ttlOrHops = (uint8_t)*(int *)CMSG_DATA(cmsg);
       }
 #ifdef IP_RECVDSTADDR
       else if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR)

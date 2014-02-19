@@ -23,7 +23,7 @@ namespace openbfdd
     RaiiBase(const T val) : val(val) { }
     ~RaiiBase() { Dispose();}
     operator T() const  { return val;}
-    T operator = (T newval) { Dispose(); val = newval; return newval;}
+    T operator=(T newval) { Dispose(); val = newval; return newval;}
     bool operator==(T cmp) const { return val == cmp;}
     T Detach() { T old = val; val = nullval; return old;} // detach without freeing
     void Dispose() { if (!isNull())
@@ -32,7 +32,7 @@ namespace openbfdd
   protected:
     bool isNull() const { return val == nullval;}
   private:
-    RaiiBase & operator = (RaiiBase<T, nullval, freeFn> &src); // don't want two RaiiBase freeing the same object
+    RaiiBase & operator=(RaiiBase<T, nullval, freeFn> &src); // don't want two RaiiBase freeing the same object
     RaiiBase(const RaiiBase<T, nullval, freeFn> &src); // never use this.
   };
 
@@ -52,7 +52,7 @@ namespace openbfdd
     RaiiNullBase(T *val) : val(val) { }
     ~RaiiNullBase() { Dispose();}
     operator T*() const  { return val;}
-    T * operator = (T *newval) { Dispose(); val = newval; return newval;}
+    T * operator=(T *newval) { Dispose(); val = newval; return newval;}
     bool operator==(T *cmp) const { return val == cmp;}
     T* Detach() { T *old = val; val = NULL; return old;} // detach without freeing
     void Dispose() { if (!isNull())
@@ -62,7 +62,7 @@ namespace openbfdd
   protected:
     bool isNull() const { return val == NULL;}
   private:
-    RaiiNullBase & operator = (RaiiNullBase<T, freeFn> &src); // don't want two RaiiNullBase freeing the same object
+    RaiiNullBase & operator=(RaiiNullBase<T, freeFn> &src); // don't want two RaiiNullBase freeing the same object
     RaiiNullBase(const RaiiNullBase<T, freeFn> &src); // never use this.
   };
 
@@ -112,7 +112,7 @@ namespace openbfdd
     RaiiClassCall(const T *val, C *myClass) : val(val), myClass(myClass) { }
     ~RaiiClassCall() { Dispose();}
     operator T*() const  { return val;}
-    T * operator = (T *newval) { Dispose(); val = newval; return newval;}
+    T * operator=(T *newval) { Dispose(); val = newval; return newval;}
     bool operator==(T *cmp) const { return val == cmp;}
     T* Detach() { T *old = val; val = NULL; return old;} // detach without freeing
     void Dispose() { if (!isNull())
@@ -122,7 +122,7 @@ namespace openbfdd
   protected:
     bool isNull() const { return val == NULL;}
   private:
-    RaiiClassCall & operator = (RaiiClassCall<T, C, freeFn> &src); // don't want two RaiiClassCall freeing the same object
+    RaiiClassCall & operator=(RaiiClassCall<T, C, freeFn> &src); // don't want two RaiiClassCall freeing the same object
     RaiiClassCall(const RaiiClassCall<T, C, freeFn> &src); // never use this.
   };
 
@@ -143,7 +143,7 @@ namespace openbfdd
     RaiiObjCallVar(T val, C *myClass) : val(val), valid(true), myClass(myClass) { }
     ~RaiiObjCallVar() { Dispose();}
     operator T&() { return val;}
-    T & operator = (T newval) { Dispose(); val = newval; valid = true; return val;}
+    T & operator=(T newval) { Dispose(); val = newval; valid = true; return val;}
     bool operator==(T cmp) const { return val == cmp;}
     T& Detach() { valid = false; return val;} // detach without calling the callback
     void Attach(T newval) { val = newval; valid = true;} // change/set without calling the callback.
@@ -153,7 +153,7 @@ namespace openbfdd
     //T& operator->()  { return val; }  //??
   protected:
   private:
-    RaiiObjCallVar & operator = (RaiiObjCallVar<T, C, R, freeFn> &src); // don't want two RaiiObjCallVar freeing the same object
+    RaiiObjCallVar & operator=(RaiiObjCallVar<T, C, R, freeFn> &src); // don't want two RaiiObjCallVar freeing the same object
     RaiiObjCallVar(const RaiiObjCallVar<T, C, R, freeFn> &src); // never use this.
   };
 
@@ -166,9 +166,9 @@ namespace openbfdd
   public:
     RaiiObjCall(C *myClass) : RaiiObjCallVar<T, C, void, freeFn>(myClass) { }
     RaiiObjCall(T val, C *myClass) : RaiiObjCallVar<T, C, void, freeFn>(val, myClass) { }
-    T & operator = (T newval) { return RaiiObjCallVar<T, C, void, freeFn>::operator = (newval);}
+    T & operator=(T newval) { return RaiiObjCallVar<T, C, void, freeFn>::operator =(newval);}
   private:
-    RaiiObjCall & operator = (RaiiObjCall<T, C, freeFn> &src); // don't want two RaiiObjCallVar freeing the same object
+    RaiiObjCall & operator=(RaiiObjCall<T, C, freeFn> &src); // don't want two RaiiObjCallVar freeing the same object
     RaiiObjCall(const RaiiObjCall<T, C, freeFn> &src); // never use this.
   };
 
