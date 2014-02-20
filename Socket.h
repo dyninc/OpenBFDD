@@ -161,9 +161,8 @@ namespace openbfdd
 
     /**
      * @return - The error from the last call. 0 if it succeeded.
-     * @note only calls that specificaly state that they set the error are
-     *       guaranteed to do so. Others may, or may not.
-     *
+     * @note - only calls that specifically state in their comments that they set 
+     *       the error are guaranteed to do so. Others may, or may not.
      */
     int GetLastError() { return m_error;}
 

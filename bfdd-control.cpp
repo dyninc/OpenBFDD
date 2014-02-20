@@ -18,8 +18,6 @@ using namespace std;
 
 namespace openbfdd
 {
-  Log gLog;
-
   /**
    *
    *
@@ -211,7 +209,7 @@ namespace openbfdd
           fprintf(stderr, "Only a single --altport or --control option is allowed.\n");
           exit(1);
         }
-        // Backwards compatability only ... use --control
+        // Backwards compatibility only ... use --control
         connectAddr.FromString("127.0.0.1", ALT_PORTNUM);
       }
       else if (CheckArg("--control", argv[argIndex], &valueString))
@@ -230,7 +228,7 @@ namespace openbfdd
 
         if (!connectAddr.HasPort())
         {
-          fprintf(stderr, "--control address must have a port specified. The address <%s> does not conatin a port.\n", valueString);
+          fprintf(stderr, "--control address must have a port specified. The address <%s> does not contain a port.\n", valueString);
           exit(1);
         }
       }
@@ -249,7 +247,7 @@ namespace openbfdd
       exit(1);
     }
 
-    // "version" is special because we tell first. Than lest the beacon handle it.
+    // "version" is special because we tell first. Than let the beacon handle it.
     if (0 == strcmp(argv[argIndex], "version"))
     {
       fprintf(stdout, "%s v%s\n", ControlAppName, SofwareVesrion);

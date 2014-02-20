@@ -6,7 +6,7 @@
 #pragma once
 
 /**
- * Compatability routines.
+ * Compatibility routines.
  */
 
 /**

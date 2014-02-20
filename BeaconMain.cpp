@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
       if (!addrVal.HasPort())
       {
-        fprintf(stderr, "--control address must have a port specified. The address <%s> does not conatin a port.\n", valueString);
+        fprintf(stderr, "--control address must have a port specified. The address <%s> does not contain a port.\n", valueString);
         exit(1);
       }
 
@@ -138,18 +138,12 @@ int main(int argc, char *argv[])
 
   // Setup logging first
   //  openbfdd::gLog.SetLogLevel(openbfdd::Log::Detail);
-  openbfdd::gLog.LogToSyslog("bfdd-beacon", tee);
-  openbfdd::gLog.Message(openbfdd::Log::App, "Started %d", getpid());
+  gLog.LogToSyslog("bfdd-beacon", tee);
+  gLog.Message(Log::App, "Started %d", getpid());
 
   ret = app.Run(controlPorts, listenAddrs);
 
-  openbfdd::gLog.Message(openbfdd::Log::App, "Shutdown %d", getpid());
+  gLog.Message(Log::App, "Shutdown %d", getpid());
 
   return ret ? 0 : 1;
-}
-
-namespace openbfdd
-{
-  // Global logger;
-  Log gLog;
 }

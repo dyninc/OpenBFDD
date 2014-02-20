@@ -4,10 +4,10 @@ AM_CXXFLAGS = $(INTI_CFLAGS) $(WARNINGCXXFLAGS) $(OTHERCXXFLAGS)
 
 COMMON_INC = common.h utils.h log.h SmartPointer.h threads.h bfd.h standard.h \
              TimeSpec.h Socket.h RecvMsg.h SockAddr.h lookup3.h compat.h \
-             AddrType.h
+             AddrType.h Logger.h LogTypes.h LogException.h
 COMMON_SRC = $(COMMON_INC) common.cpp utils.cpp log.cpp SmartPointer.cpp threads.cpp bfd.cpp \
              TimeSpec.cpp Socket.cpp RecvMsg.cpp SockAddr.cpp lookup3.cpp compat.cpp \
-             AddrType.cpp
+             AddrType.cpp Logger.cpp LogException.cpp
 CONTROL_SRC = bfdd-control.cpp 
 BEACON_INC = Beacon.h CommandProcessor.h Scheduler.h SchedulerBase.h KeventScheduler.h SelectScheduler.h \
              Session.h hash_map.h

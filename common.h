@@ -31,10 +31,6 @@ namespace openbfdd
 
   extern const char *BeaconAppName;
 
-  // both use same logger name
-  extern Log gLog;
-
-
   // This is like gLog.Optional(), but does not evaluate the parameters if logging
   // is off. It incurs extra locking overhead, so only use when parameters include
   // expensive function calls.

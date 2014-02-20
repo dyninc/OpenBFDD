@@ -3,7 +3,6 @@
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
-// Base header for the beacon and control
 #include "common.h"
 #include "utils.h"
 #include "compat.h"

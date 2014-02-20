@@ -35,7 +35,7 @@ namespace openbfdd
 
     /**
      *
-     * Starts listening, and handling commands, on the given address aand port. This
+     * Starts listening, and handling commands, on the given address and port. This
      * will block until socket communication can be established. This should not be
      * called from different threads simultaneously.
      *

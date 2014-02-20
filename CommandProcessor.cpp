@@ -864,13 +864,13 @@ namespace openbfdd
           {
             if (!str.empty())
               str += ", ";
-            str += Log::LogLevelToString(Log::Level(index));
+            str += gLog.LogLevelToString(Log::Level(index));
           }
           messageReplyF("Available log levels: %s\n",  str.c_str());
           return;
         }
 
-        level = Log::StringToLogLevel(levelString);
+        level = gLog.StringToLogLevel(levelString);
         if (level == Log::LevelCount)
         {
           messageReplyF("Unknown level: %s.\n", levelString);
@@ -896,15 +896,17 @@ namespace openbfdd
         if (0 == strcmp("list", paramString))
         {
           string str;
-          str.reserve(Log::TypeCount * 10);
+          str.reserve(Log::TypeCount * 30);
 
-          for (int index = 0; index < Log::TypeCount; index++)
+          for (type = Log::Type(0); type < Log::TypeCount; type = Log::Type(type + 1))
           {
-            if (!str.empty())
-              str += ", ";
-            str += gLog.LogTypeToString(Log::Type(index));
+            const char *desc = gLog.LogTypeDescription(type);
+            if (*desc != '\0')
+              str += FormatMediumStr("    %s - %s\n", gLog.LogTypeToString(Log::Type(type)), desc);
+            else
+              str += FormatMediumStr("    %s\n", gLog.LogTypeToString(Log::Type(type)));
           }
-          messageReplyF("Available log types: %s\n",  str.c_str());
+          messageReplyF("Available log types:\n%s",  str.c_str());
           return;
         }
 
@@ -959,7 +961,7 @@ namespace openbfdd
           return;
         }
 
-        gLog.SetExtendedTimeInfo(enable);
+        gLog.SetExtendedTimeInfo(enable ? Logger::TimeInfo::Mono : Logger::TimeInfo::None);
         messageReplyF("Extended time logging %s.\n", enable ? "enabled" : "disabled");
         return;
       }

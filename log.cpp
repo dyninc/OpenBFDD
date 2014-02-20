@@ -1,549 +1,123 @@
 /**************************************************************
-* Copyright (c) 2010-2013, Dynamic Network Services, Inc.
-* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Copyright (c) 2010-2014, Dynamic Network Services, Inc.
+* Author - Jake Montgomery (jmontgomery@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "standard.h"
 #include "log.h"
-#include "compat.h"
 #include <syslog.h>
-#include <errno.h>
-#include <string.h>
-#include <stdarg.h>
-#include <unistd.h>
 
-namespace openbfdd
+// Global logger;
+LogImp gLog;
+LogImp::LogImp() : Logger()
 {
-  const size_t Log::MaxMessageLen = 1024;
 
-  const char *g_LogLevelNames[] = { "none", "minimal", "normal", "detailed", "dev", "all" };
+  // Defaults have already been set by Logger.
 
-  // We use our own simple auto lock, since the real one uses logging ... which
-  // would be a problem.  Be careful, as this class does not include the same
-  // checks are the full featured one.
+  //
+  // Setup Log Types
+  //
+  m_types[Log::Critical].name = "critical";
+  m_types[Log::Critical].logName = "crit";
+  m_types[Log::Critical].syslogPriority = LOG_CRIT;
 
-  class LogAutoLock
-  {
-  public:
-    enum LockType
-    {
-      None, // not locked
-      Read, // Read locked
-      Write // write locked.
-    };
+  m_types[Log::Error].name = "error";
+  m_types[Log::Error].logName = "error";
+  m_types[Log::Error].syslogPriority = LOG_ERR;
 
-    LogAutoLock(pthread_rwlock_t *lock, LogAutoLock::LockType lockInitial)
+  m_types[Log::Warn].name = "warn";
+  m_types[Log::Warn].logName = "warn";
+  m_types[Log::Warn].syslogPriority = LOG_WARNING;
 
-    {
-      m_rwLock = lock;
-      m_lockedByMeType = LogAutoLock::None;
-      if (lockInitial == LogAutoLock::Read)
-        ReadLock();
-      else if (lockInitial == LogAutoLock::Write)
-        WriteLock();
-    }
+  m_types[Log::App].name = "app";
+  m_types[Log::App].description = "General application messages";
 
-    ~LogAutoLock()
-    {
-      if (m_lockedByMeType != LogAutoLock::None)
-        UnLock();
-    }
+  m_types[Log::AppDetail].name = "app_detail";
+  m_types[Log::AppDetail].description = "Detailed application messages";
 
-    bool ReadLock()
-    {
-      if (pthread_rwlock_rdlock(m_rwLock))
-      {
-        fprintf(stderr,  "pthread_rwlock_rdlock failed");
-        return false;
-      }
-      m_lockedByMeType = LogAutoLock::Read;
-      return true;
-    }
+  m_types[Log::Session].name = "session";
+  m_types[Log::Session].description = "Session creation and state change";
 
-    bool WriteLock()
-    {
-      if (pthread_rwlock_wrlock(m_rwLock))
-      {
-        fprintf(stderr,  "pthread_rwlock_wrlock failed");
-        return false;
-      }
-      m_lockedByMeType = LogAutoLock::Write;
-      return true;
-    }
+  m_types[Log::SessionDetail].name = "session_detail";
+  m_types[Log::SessionDetail].description = "Detailed session creation and state change";
+  m_types[Log::SessionDetail].syslogPriority = LOG_DEBUG;
 
-    bool UnLock()
-    {
+  m_types[Log::Discard].name = "discard";
+  m_types[Log::Discard].logName = "discard";
+  m_types[Log::Discard].description = "Packet discards and errors";
 
-      if (pthread_rwlock_unlock(m_rwLock))
-      {
-        fprintf(stderr,  "pthread_rwlock_unlock failed");
-        return false;
-      }
-      m_lockedByMeType = LogAutoLock::None;
-      return true;
-    }
+  m_types[Log::DiscardDetail].name = "discard_detail";
+  m_types[Log::DiscardDetail].logName = "discard";
+  m_types[Log::DiscardDetail].description = "Contents of (some) discarded packets";
 
-  private:
-    pthread_rwlock_t *m_rwLock;
-    LogAutoLock::LockType m_lockedByMeType;
-  };
+  m_types[Log::Packet].name = "packet";
+  m_types[Log::Packet].logName = "packet";
+  m_types[Log::Packet].description = "Detailed packet info";
+
+  m_types[Log::PacketContents].name = "packet_contents";
+  m_types[Log::PacketContents].logName = "packet";
+  m_types[Log::PacketContents].description = "Log every non-discarded packet";
+  m_types[Log::PacketContents].syslogPriority = LOG_DEBUG;
+
+  m_types[Log::Command].name = "command";
+  m_types[Log::Command].logName = "command";
+  m_types[Log::Command].description = "Incoming commands";
+
+  m_types[Log::CommandDetail].name = "command_detail";
+  m_types[Log::CommandDetail].description = "Detailed info about command processing";
+  m_types[Log::CommandDetail].syslogPriority = LOG_DEBUG;
+
+  m_types[Log::TimerDetail].name = "timer_detail";
+  m_types[Log::TimerDetail].description = "Detailed info about timers and scheduler";
+  m_types[Log::TimerDetail].syslogPriority = LOG_DEBUG;
+
+  m_types[Log::Temp].name = "temp";
+  m_types[Log::Temp].description = "Special temporary developer messages";
+  m_types[Log::Temp].syslogPriority = LOG_DEBUG;
 
 
-  static inline bool idLogTypeValid(Log::Type type)
-  {
-    return type >= 0 && type < Log::TypeCount;
-  }
+  //
+  // Setup log Levels
+  //
 
-  Log::Log() :
-     m_logFile(stderr),
-     m_useSyslog(false),
-     m_extendedTimeInfo(false)
-  {
+  // None
+  m_levelsMap[Log::None].name = "none";
+  setLevelTypes(Log::None,  false);
 
-    if (pthread_rwlock_init(&m_settingsLock, NULL))
-    {
-      fprintf(stderr,  "pthread_rwlock_init failed");
-      exit(1);
-    }
+  // All
+  m_levelsMap[Log::All].name = "all";
+  setLevelTypes(Log::All,  true);
 
-    // Setup all types to defaults
-    for (int index = 0; index < Log::TypeCount; index++)
-    {
-      m_types[index].enabled = false;
-      m_types[index].syslogPriority = LOG_INFO;
-      m_types[index].logName = "info";
-      m_types[index].name = NULL;
-    }
+  // Minimal
+  //
+  m_levelsMap[Log::Minimal].name = "minimal";
+  copyLevelTypes(Log::None, Log::Minimal);
+  m_levelsMap[Log::Minimal].types[Log::Critical] = true;
+  m_levelsMap[Log::Minimal].types[Log::Error] = true;
+  m_levelsMap[Log::Minimal].types[Log::Warn] = true;
 
-    // setup specific types
-    m_types[Critical].name = "critical";
-    m_types[Critical].logName = "crit";
-    m_types[Critical].syslogPriority = LOG_CRIT;
+  // Normal
+  m_levelsMap[Log::Normal].name = "normal";
+  copyLevelTypes(Log::Minimal, Log::Normal);
+  m_levelsMap[Log::Normal].types[Log::App] = true;
+  m_levelsMap[Log::Normal].types[Log::Session] = true;
+  m_levelsMap[Log::Normal].types[Log::Command] = true;
 
-    m_types[Error].name = "error";
-    m_types[Error].logName = "error";
-    m_types[Error].syslogPriority = LOG_ERR;
+  // Detailed
+  m_levelsMap[Log::Detailed].name = "detailed";
+  copyLevelTypes(Log::Normal, Log::Detailed);
+  m_levelsMap[Log::Detailed].types[Log::Discard] = true;
 
-    m_types[Warn].name = "warn";
-    m_types[Warn].logName = "warn";
-    m_types[Warn].syslogPriority = LOG_WARNING;
-
-    m_types[App].name = "app";
-
-    m_types[AppDetail].name = "app_detail";
-
-    m_types[Session].name = "session";
-
-    m_types[SessionDetail].name = "session_detail";
-    m_types[SessionDetail].syslogPriority = LOG_DEBUG;
-
-    m_types[Discard].name = "discard";
-    m_types[Discard].logName = "discard";
-
-    m_types[DiscardDetail].name = "discard_detail";
-    m_types[DiscardDetail].logName = "discard";
-
-    m_types[Packet].name = "packet";
-    m_types[Packet].logName = "packet";
-
-    m_types[PacketContents].name = "packet_contents";
-    m_types[PacketContents].logName = "packet";
-    m_types[PacketContents].syslogPriority = LOG_DEBUG;
-
-
-    m_types[Command].name = "command";
-    m_types[Command].logName = "command";
-
-    m_types[CommandDetail].name = "command_detail";
-    m_types[CommandDetail].syslogPriority = LOG_DEBUG;
-
-    m_types[TimerDetail].name = "timer_detail";
-    m_types[TimerDetail].syslogPriority = LOG_DEBUG;
-
-    m_types[Temp].name = "temp";
-    m_types[Temp].syslogPriority = LOG_DEBUG;
-
-
-    SetLogLevel(Log::Normal);
-
-    if (countof(g_LogLevelNames) != Log::LevelCount)
-    {
-      fprintf(stderr,  "Log Levels Mismatch");
-      exit(1);
-    }
-  }
-
-  Log::~Log()
-  {
-    closeLogFile();
-    closeSyslog();
-
-    if (pthread_rwlock_destroy(&m_settingsLock))
-      fprintf(stderr,  "pthread_rwlock_destroy failed");
-  }
-
-
-  void Log::LogToSyslog(const char *ident, bool teeLogToStderr)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Write);
-
-    int opt = LOG_NDELAY;
-
-    if (teeLogToStderr)
-      opt |= LOG_PERROR;
-
-    closeLogFile();
-    closeSyslog();
-
-    openlog(ident, opt, LOG_DAEMON);
-    m_useSyslog = true;
-    m_ident = ident;
-  }
-
-
-  /**
-   * Closes syslog logging.
-   * Must hold write lock to call.
-   */
-  void Log::closeSyslog()
-  {
-    if (m_useSyslog)
-      closelog();
-    m_useSyslog = false;
-
-  }
-
-
-  /**
-   * All logging goes to the file. Stops syslog logging.
-   *
-   * @param logFilePath [in] - The path of the file to log to.
-   *
-   * @return bool - false if failed to open file.
-   */
-  bool Log::LogToFile(const char *logFilePath)
-  {
-    FILE *newFile;
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Write);
-
-    if (!logFilePath || !logFilePath[0])
-    {
-      closeLogFile();
-      m_logFile = stderr;
-      return true;
-    }
-
-    if (0 == m_logFilePath.compare(logFilePath))
-      return true;
-
-    newFile = ::fopen(logFilePath, "a");
-    if (!newFile)
-    {
-      char buf[1024];
-      compat_strerror_r(errno, buf, sizeof(buf));
-      LogError("Failed to open logfile %s: %s", logFilePath, buf);
-      return false;
-    }
-    closeLogFile();
-    m_logFile = newFile;
-    m_logFilePath = logFilePath;
-    return true;
-  }
-
-  /**
-   * Closes File logging.
-   * Must hold write lock to call.
-   */
-  void Log::closeLogFile()
-  {
-    if (m_logFile && m_logFile != stderr)
-      fclose(m_logFile);
-    m_logFile = NULL;
-    m_logFilePath.clear();
-  }
-
-  void Log::SetLogLevel(Log::Level level)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Write);
-
-    // Clear all log types.
-    for (int index = 0; index < Log::TypeCount; index++)
-      m_types[index].enabled = false;
-
-    switch (level)
-    {
-    default:
-    case None:
-      break;
-
-    case All:
-      for (int index = 0; index < Log::TypeCount; index++)
-        m_types[index].enabled = true;
-      break;
-
-    case Dev:
-      m_types[Packet].enabled = true;
-      m_types[PacketContents].enabled = true;
-      m_types[AppDetail].enabled = true;
-      m_types[SessionDetail].enabled = true;
+  // Dev
+  m_levelsMap[Log::Dev].name = "dev";
+  copyLevelTypes(Log::Detailed, Log::Dev);
+  m_levelsMap[Log::Dev].types[Log::Packet] = true;
+  m_levelsMap[Log::Dev].types[Log::PacketContents] = true;
+  m_levelsMap[Log::Dev].types[Log::AppDetail] = true;
+  m_levelsMap[Log::Dev].types[Log::SessionDetail] = true;
 #ifdef BFD_DEBUG
-      m_types[Temp].enabled = true;
+  m_levelsMap[Log::Dev].types[Log::Temp] = true;
 #endif
-      // Fall through
-    case Detailed:
-      m_types[Discard].enabled = true;
-      // Fall through
-    case Normal:
-      m_types[Session].enabled = true;
-      m_types[App].enabled = true;
-      m_types[Command].enabled = true;
-      // Fall through
-    case Minimal:
-      m_types[Critical].enabled = true;
-      m_types[Error].enabled = true;
-      m_types[Warn].enabled = true;
-      break;
-    }
-  }
 
-  void Log::SetExtendedTimeInfo(bool useExtendedTime)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Write);
-    m_extendedTimeInfo =  useExtendedTime;
-  }
-
-
-
-  const char* Log::LogTypeToString(Log::Type type)
-  {
-    // Since names never change, there is no need for lock
-    if (!idLogTypeValid(type))
-      return "unknown";
-    return m_types[type].name;
-  }
-
-  Log::Type Log::StringToLogType(const char *str)
-  {
-    if (!str)
-      return Log::TypeCount;
-
-    // Since names never change, there is no need for lock
-    for (int index = 0; index < Log::TypeCount; index++)
-    {
-      if (0 == strcmp(m_types[index].name, str))
-        return(Log::Type)index;
-    }
-
-    return Log::TypeCount;
-  }
-
-
-  const char* Log::LogLevelToString(Log::Level level)
-  {
-    if (level < 0 || level >= (Log::Level)countof(g_LogLevelNames))
-      return "unknown";
-    return g_LogLevelNames[level];
-  }
-
-  Log::Level Log::StringToLogLevel(const char *str)
-  {
-    if (!str)
-      return Log::LevelCount;
-
-    for (int index = 0; index < (Log::Level)countof(g_LogLevelNames); index++)
-    {
-      if (0 == strcmp(g_LogLevelNames[index], str))
-        return(Log::Level)index;
-    }
-
-    return Log::LevelCount;
-  }
-
-  void Log::EnableLogType(Log::Type type, bool enable)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Write);
-
-    if (!idLogTypeValid(type))
-      return;
-
-    m_types[type].enabled = enable;
-  }
-
-  bool Log::LogTypeEnabled(Log::Type type)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-
-    if (!idLogTypeValid(type))
-      return false;
-
-    return m_types[type].enabled;
-  }
-
-
-
-  void Log::Optional(Log::Type type, const char *format, ...)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-
-    if (!idLogTypeValid(type))
-      return;
-
-    if (!m_types[type].enabled)
-      return;
-
-    va_list args;
-    va_start(args, format);
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-    va_end(args);
-  }
-
-  void Log::Message(Log::Type type, const char *format, ...)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-
-    if (!idLogTypeValid(type))
-      return;
-
-    va_list args;
-    va_start(args, format);
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-    va_end(args);
-  }
-
-  void Log::MessageVa(Log::Type type, const char *format, va_list args)
-  {
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-
-    if (!idLogTypeValid(type))
-      return;
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-  }
-
-
-  /**
-   *
-   * Do the actual message format and output.
-   * Must hold at least a read lock.
-   *
-   * @param syslogPriority
-   * @param type
-   * @param format
-   * @param args
-   */
-  void Log::logMsg(int syslogPriority, const char *type, const char *format, va_list args)
-  {
-    char message[MaxMessageLen];
-    time_t now;
-    struct timespec extendedNow;
-
-    // Use CLOCK_MONOTONIC, which will be better for "timing" but will not be useful
-    // for determining the real time of events.
-    if (m_extendedTimeInfo)
-    {
-      if (0 > clock_gettime(CLOCK_MONOTONIC, &extendedNow))
-        extendedNow.tv_sec = extendedNow.tv_nsec = 0;
-    }
-
-
-    vsnprintf(message, sizeof(message), format, args);
-
-    if (m_useSyslog)
-    {
-      if (m_extendedTimeInfo)
-      {
-        syslog(syslogPriority, "[%d][%jd:%09ld] %s: %s",
-               (int)getpid(),
-               (intmax_t)extendedNow.tv_sec, extendedNow.tv_nsec,
-               type, message);
-      }
-      else
-      {
-        syslog(syslogPriority, "[%d] %s: %s",
-               (int)getpid(), type, message);
-      }
-      return;
-    }
-
-    if (!m_logFile)
-      return;
-
-    now = (time_t)time(NULL);
-
-    if (m_extendedTimeInfo)
-    {
-
-      fprintf(m_logFile, "[%u] %s[%d][%jd:%09ld] %s: %s\n", (unsigned int)now,
-              m_ident.c_str(), (int)getpid(),
-              (intmax_t)extendedNow.tv_sec, extendedNow.tv_nsec,
-              type, message);
-    }
-    else
-    {
-
-      fprintf(m_logFile, "[%u] %s[%d] %s: %s\n", (unsigned int)now,
-              m_ident.c_str(), (int)getpid(), type, message);
-    }
-
-    fflush(m_logFile);
-  }
-
-  /**
-   * Always logs message.
-   * If using syslog then this uses the LOG_WARNING level.
-   * No newline is needed.
-   */
-  void Log::LogWarn(const char *format, ...)
-  {
-    Log::Type type = Log::Warn;
-
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-    va_list args;
-    va_start(args, format);
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-    va_end(args);
-  }
-
-  /**
-   * Always logs message.
-   * If using syslog then this uses the LOG_ERR level.
-   * No newline is needed.
-   */
-  void Log::LogError(const char *format, ...)
-  {
-    Log::Type type = Log::Error;
-
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-    va_list args;
-    va_start(args, format);
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-    va_end(args);
-  }
-
-
-  void Log::ErrnoError(int errnum, const char *mgs)
-  {
-    char buf[1024];
-    compat_strerror_r(errnum, buf, sizeof(buf));
-    LogError("%s: %s", mgs, buf);
-  }
-
-
-  /**
-   * Logs a message and exits the program.
-   * If using syslog then this uses the LOG_CRIT level.
-   * No newline is needed.
-   */
-  void Log::Fatal(const char *format, ...)
-  {
-    Log::Type type = Log::Critical;
-
-    LogAutoLock lock(&m_settingsLock, LogAutoLock::Read);
-    va_list args;
-    va_start(args, format);
-    logMsg(m_types[type].syslogPriority, m_types[type].logName, format, args);
-    va_end(args);
-
-    exit(1);
-  }
-
+  SetLogLevel(Log::Normal);
 }
