@@ -8,50 +8,47 @@
 
 #include "SockAddr.h"
 
-namespace openbfdd
+class Beacon;
+
+/**
+ * Interface factory. Use delete to free this.
+ *
+ * Requires UtilsInit() to have been called.
+ *
+ * @throw - May throw an exception.
+ *
+ * @return CommandProcessor* - Will not return NULL.
+ */
+class CommandProcessor* MakeCommandProcessor(Beacon &beacon);
+
+/**
+ * This interface handles all communication between this beacon and the control
+ * utility. Most of the processing is done in a worker thread.
+ *
+ */
+class CommandProcessor
 {
-  class Beacon;
+public:
+  virtual ~CommandProcessor() { };
 
   /**
-   * Interface factory. Use delete to free this.
    *
-   * Requires UtilsInit() to have been called.
+   * Starts listening, and handling commands, on the given address and port. This
+   * will block until socket communication can be established. This should not be
+   * called from different threads simultaneously.
    *
-   * @throw - May throw an exception.
+   * @param addr [in] - The address and port on which to listen.
    *
-   * @return CommandProcessor* - Will not return NULL.
+   * @return bool - false if communication could not be set up.
    */
-  class CommandProcessor* MakeCommandProcessor(Beacon &beacon);
+  virtual bool BeginListening(const SockAddr &addr) = 0;
 
   /**
-   * This interface handles all communication between this beacon and the control
-   * utility. Most of the processing is done in a worker thread.
-   *
+   * Halts listening and waits for the listen thread to terminate.
+   * Do not call simultaneously with BeginListening().
    */
-  class CommandProcessor
-  {
-  public:
-    virtual ~CommandProcessor() { };
+  virtual void StopListening() = 0;
 
-    /**
-     *
-     * Starts listening, and handling commands, on the given address and port. This
-     * will block until socket communication can be established. This should not be
-     * called from different threads simultaneously.
-     *
-     * @param addr [in] - The address and port on which to listen.
-     *
-     * @return bool - false if communication could not be set up.
-     */
-    virtual bool BeginListening(const SockAddr &addr) = 0;
-
-    /**
-     * Halts listening and waits for the listen thread to terminate.
-     * Do not call simultaneously with BeginListening().
-     */
-    virtual void StopListening() = 0;
-
-  protected:
-    CommandProcessor(Beacon &) { };
-  };
-}
+protected:
+  CommandProcessor(Beacon &) { };
+};

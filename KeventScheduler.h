@@ -18,40 +18,37 @@
 #include <sys/event.h>
 #include <vector>
 
-namespace openbfdd
+class KeventScheduler : public SchedulerBase
 {
-  class KeventScheduler : public SchedulerBase
-  {
 
-  public:
-    /**
-     * Constructor
-     * The thread that calls this is considered the "main thread". See
-     * Scheduler::IsMainThread().
-     */
-    KeventScheduler();
-    virtual ~KeventScheduler();
+public:
+  /**
+   * Constructor
+   * The thread that calls this is considered the "main thread". See
+   * Scheduler::IsMainThread().
+   */
+  KeventScheduler();
+  virtual ~KeventScheduler();
 
-  protected:
+protected:
 
-    /** Overrides from  SchedulerBase  */
-    virtual bool watchSocket(int fd);
-    virtual void unWatchSocket(int fd);
-    virtual bool waitForEvents(const struct timespec &timeout);
-    virtual int getNextSocketEvent();
+  /** Overrides from  SchedulerBase  */
+  virtual bool watchSocket(int fd);
+  virtual void unWatchSocket(int fd);
+  virtual bool waitForEvents(const struct timespec &timeout);
+  virtual int getNextSocketEvent();
 
 
-  private:
+private:
 
-    void resizeEvents();
+  void resizeEvents();
 
-    int m_totalEvents;
-    int m_kqueue;
-    int m_foundEvents; // from last waitForEvents()
-    int m_nextCheckEvent;  // for getNextSocketEvent
-    std::vector<struct kevent> m_events; // from last waitForEvents()
-  };
+  int m_totalEvents;
+  int m_kqueue;
+  int m_foundEvents; // from last waitForEvents()
+  int m_nextCheckEvent;  // for getNextSocketEvent
+  std::vector<struct kevent> m_events; // from last waitForEvents()
+};
 
-}
 
 #endif  // USE_KEVENT_SCHEDULER

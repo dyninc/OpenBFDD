@@ -11,7 +11,6 @@
 LogImp gLog;
 LogImp::LogImp() : Logger()
 {
-
   // Defaults have already been set by Logger.
 
   //

@@ -9,35 +9,32 @@
 
 using namespace std;
 
-namespace openbfdd
+Addr::Type Addr::FamilyToType(int af)
 {
-  Addr::Type Addr::FamilyToType(int af)
-  {
-    if (af == AF_INET)
-      return Addr::IPv4;
-    else if (af == AF_INET6)
-      return Addr::IPv6;
-    else
-      return Addr::Invalid;
-  }
+  if (af == AF_INET)
+    return Addr::IPv4;
+  else if (af == AF_INET6)
+    return Addr::IPv6;
+  else
+    return Addr::Invalid;
+}
 
-  int Addr::TypeToFamily(Addr::Type type)
-  {
-    if (type == Addr::IPv4)
-      return AF_INET;
-    else if (type == Addr::IPv6)
-      return AF_INET6;
-    else
-      return AF_UNSPEC;
-  }
+int Addr::TypeToFamily(Addr::Type type)
+{
+  if (type == Addr::IPv4)
+    return AF_INET;
+  else if (type == Addr::IPv6)
+    return AF_INET6;
+  else
+    return AF_UNSPEC;
+}
 
-  const char* Addr::TypeToString(Addr::Type type)
-  {
-    if (type == Addr::IPv4)
-      return "IPv4";
-    else if (type == Addr::IPv6)
-      return "IPv6";
-    else
-      return "<unknown>";
-  }
+const char* Addr::TypeToString(Addr::Type type)
+{
+  if (type == Addr::IPv4)
+    return "IPv4";
+  else if (type == Addr::IPv6)
+    return "IPv6";
+  else
+    return "<unknown>";
 }

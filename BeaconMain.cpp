@@ -11,12 +11,11 @@
 #include <unistd.h>
 
 using namespace std;
-using namespace openbfdd;
 
 int main(int argc, char *argv[])
 {
   bool ret;
-  openbfdd::Beacon app;
+  Beacon app;
   bool tee = false;
   bool doFork = true;
   int argIndex;
@@ -47,7 +46,7 @@ int main(int argc, char *argv[])
     }
     else if (0 == strcmp("--version", argv[argIndex]))
     {
-      fprintf(stdout, "%s version %s\n", openbfdd::BeaconAppName, openbfdd::SofwareVesrion);
+      fprintf(stdout, "%s version %s\n", BeaconAppName, SofwareVesrion);
       exit(0);
     }
     else if (CheckArg("--control", argv[argIndex], &valueString))
@@ -94,7 +93,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-      fprintf(stderr, "Unrecognized %s command line option %s.\n", openbfdd::BeaconAppName, argv[argIndex]);
+      fprintf(stderr, "Unrecognized %s command line option %s.\n", BeaconAppName, argv[argIndex]);
       exit(1);
     }
   }
@@ -111,7 +110,7 @@ int main(int argc, char *argv[])
 
   srand(time(NULL));
 
-  if (!openbfdd::UtilsInit() || !openbfdd::UtilsInitThread())
+  if (!UtilsInit() || !UtilsInitThread())
   {
     fprintf(stderr, "Unable to init thread local storage. Exiting.\n");
     exit(1);
@@ -137,7 +136,7 @@ int main(int argc, char *argv[])
   }
 
   // Setup logging first
-  //  openbfdd::gLog.SetLogLevel(openbfdd::Log::Detail);
+  //  gLog.SetLogLevel(Log::Detail);
   gLog.LogToSyslog("bfdd-beacon", tee);
   gLog.Message(Log::App, "Started %d", getpid());
 

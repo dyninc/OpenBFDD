@@ -5,38 +5,35 @@
 ***************************************************************/
 #pragma once
 
-namespace openbfdd
+
+struct Addr
 {
-
-  struct Addr
+  enum Type
   {
-    enum Type
-    {
-      Invalid,
-      IPv4,
-      IPv6
-    };
-
-    /**
-     * Returns IPv4, IPv6 or <Unknown>
-     *
-     * @param type
-     *
-     * @return const char*
-     */
-    static const char* TypeToString(Addr::Type type);
-
-    /**
-     * Converts an address family to a Addr::Type
-     */
-    static Addr::Type FamilyToType(int af);
-
-    /**
-     * Converts a Addr::Type to an address family.
-     */
-    static int TypeToFamily(Addr::Type type);
-
-    inline static Addr::Type TypeFromBytesLen(size_t len) { return len == 4 ? IPv4 : len == 16 ? IPv6 : Invalid;}
-
+    Invalid,
+    IPv4,
+    IPv6
   };
-}
+
+  /**
+   * Returns IPv4, IPv6 or <Unknown>
+   *
+   * @param type
+   *
+   * @return const char*
+   */
+  static const char* TypeToString(Addr::Type type);
+
+  /**
+   * Converts an address family to a Addr::Type
+   */
+  static Addr::Type FamilyToType(int af);
+
+  /**
+   * Converts a Addr::Type to an address family.
+   */
+  static int TypeToFamily(Addr::Type type);
+
+  inline static Addr::Type TypeFromBytesLen(size_t len) { return len == 4 ? IPv4 : len == 16 ? IPv6 : Invalid;}
+
+};

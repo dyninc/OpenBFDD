@@ -24,8 +24,6 @@
 #include <ext/hash_map>
 #endif
 
-namespace openbfdd
-{
 #ifdef  HAS_STD_UNORDERED_MAP
   template<class _Key, class _Tp,
            class _Hash = std::hash<_Key>,
@@ -53,4 +51,3 @@ namespace openbfdd
 #else
 #error no unordered_map implementation found.
 #endif
-}

@@ -10,17 +10,13 @@
 
 using namespace std;
 
-namespace openbfdd
+
+void CloseFileDescriptor(int val)
 {
+  ::close(val);
+};
 
-  void CloseFileDescriptor(int val)
-  {
-    ::close(val);
-  };
-
-  void CloseFileHandle(FILE *val)
-  {
-    fclose(val);
-  }
-
+void CloseFileHandle(FILE *val)
+{
+  fclose(val);
 }

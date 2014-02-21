@@ -13,8 +13,6 @@
 #define PORTNUM     957
 #define ALT_PORTNUM     958
 
-namespace openbfdd
-{
 
   /// magic message header .. in network order
   extern const uint32_t MagicMessageNumber;
@@ -72,4 +70,3 @@ namespace openbfdd
           (gLog.Message(Log::Critical, "ASSERT FALSE: %s:%d: %s: %s", __FILE__, __LINE__, __func__, msg), false)
 
   #endif
-}

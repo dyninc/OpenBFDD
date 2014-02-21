@@ -6,10 +6,7 @@
 // Common code for beacon and control
 #include "common.h"
 
-namespace openbfdd
-{
-  const uint32_t MagicMessageNumber = 0xfeed1966;
-  const char *SofwareVesrion = PACKAGE_VERSION;
-  const char *ControlAppName = "bfdd-control";
-  const char *BeaconAppName = "bfdd-beacon";
-}
+const uint32_t MagicMessageNumber = 0xfeed1966;
+const char *SofwareVesrion = PACKAGE_VERSION;
+const char *ControlAppName = "bfdd-control";
+const char *BeaconAppName = "bfdd-beacon";

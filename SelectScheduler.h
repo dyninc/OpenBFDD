@@ -18,40 +18,37 @@
 #include <vector>
 #include <set>
 
-namespace openbfdd
+class SelectScheduler : public SchedulerBase
 {
-  class SelectScheduler : public SchedulerBase
-  {
 
-  public:
-  public:
-    /**
-     * Constructor
-     * The thread that calls this is considered the "main thread". See
-     * Scheduler::IsMainThread().
-     */
-    SelectScheduler();
-    virtual ~SelectScheduler();
+public:
+public:
+  /**
+   * Constructor
+   * The thread that calls this is considered the "main thread". See
+   * Scheduler::IsMainThread().
+   */
+  SelectScheduler();
+  virtual ~SelectScheduler();
 
-  protected:
+protected:
 
-    /** Overrides from  SchedulerBase  */
-    virtual bool watchSocket(int fd);
-    virtual void unWatchSocket(int fd);
-    virtual bool waitForEvents(const struct timespec &timeout);
-    virtual int getNextSocketEvent();
+  /** Overrides from  SchedulerBase  */
+  virtual bool watchSocket(int fd);
+  virtual void unWatchSocket(int fd);
+  virtual bool waitForEvents(const struct timespec &timeout);
+  virtual int getNextSocketEvent();
 
 
-  private:
+private:
 
-    void resizeFoundSockets();
+  void resizeFoundSockets();
 
-    int m_foundEvents;  // from last waitForEvents()
-    std::vector<int> m_foundSockets; // from last waitForEvents().
-    int m_nextCheckEvent;  // for getNextSocketEvent
-    std::set<int> m_watchSockets;
-  };
+  int m_foundEvents;  // from last waitForEvents()
+  std::vector<int> m_foundSockets; // from last waitForEvents().
+  int m_nextCheckEvent;  // for getNextSocketEvent
+  std::set<int> m_watchSockets;
+};
 
-}
 
 #endif  // !USE_KEVENT_SCHEDULER
