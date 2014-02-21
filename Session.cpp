@@ -427,7 +427,7 @@ namespace openbfdd
 
     if (header.GetPoll())
     {
-      // If poll was received than send a final response asap, "without respect to
+      // If poll was received then send a final response asap, "without respect to
       // the transmission timer" (v10/6.8.7)
       m_pollReceived = true;
       sendControlPacket();
@@ -863,17 +863,13 @@ namespace openbfdd
    */
   void Session::sendControlPacket()
   {
-    BfdPacket packet;
-    BfdPacketHeader &header = packet.header;
     bool poll;
-
-    if (!ensureSendSocket())
-      return;
 
     poll = (!m_pollReceived && (m_pollState == PollState::Requested || m_pollState == PollState::Polling));
 
-    packet = BfdPacket();
-
+    BfdPacket packet = BfdPacket();
+    BfdPacketHeader &header = packet.header;
+    
     header.SetVersion(bfd::Version);
     header.length = sizeof(header);
 
@@ -894,12 +890,15 @@ namespace openbfdd
     header.rxRequiredMinInt = htonl(m_requiredMinRxInterval);
     header.rxRequiredMinEchoInt = htonl(0);  // no echo allowed for this system.
 
-    // Since we have sent a poll response, we are done unless we get another.
+    // Since we will have tried to send a poll response, we are done unless we get another.
     m_pollReceived = false;
 
-    // Since we are sending the packet, we have fulfilled m_immediateControlPacket
+    // Since we are attempting to send the packet, we have fulfilled m_immediateControlPacket
     m_immediateControlPacket = false;
 
+    if (!ensureSendSocket())
+      return;
+    
     send(packet);
 
     if (poll)
@@ -955,7 +954,7 @@ namespace openbfdd
     char tmp[255];
     sendSocket.SetLogName(FormatStr(tmp, sizeof(tmp), "Session %d sock", m_id));
 
-    // NotE that all sockets will log errors, so we do not have to.
+    // Note that all sockets will log errors, so we do not have to.
     if (!sendSocket.OpenUDP(m_localAddr.Type()))
       return false;
 
