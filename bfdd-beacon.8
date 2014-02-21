@@ -25,7 +25,7 @@ Logging will not be sent to stdout. This is the default for release builds.
 .B --nofork
 Prevents the beacon from running as a daemon. This is useful for debugging.
 .TP
-.B --control \fIip\fB:\fIport\fR
+.B --control=\fIip\fB:\fIport\fR
 Adds a communication channel to use for communicating with \fBbfdd-beacon\fR(8). 
 \fIip\fR may be an IPv4 or Ipv6 address. A \fIport\fR must be supplied.
 This option may appear multiple times, to create multiple control channels. 
@@ -35,7 +35,7 @@ When specifying an IPv6 \fIip\fR address, the address must be contained in brack
 to allow for a \fIport\fR specification. For example \fB[::1]:10001\fR. 
 See the \fBPARAMETERS\fR section for more details on specifying an \fIip\fR address.
 .TP
-.B --listen \fIip\fB
+.B --listen=\fIip\fB
 Adds an address on which to listen for new incoming BFD connections. 
 \fIip\fR may be an IPv4 or Ipv6 address. 
 The IPv4 address of \fB0.0.0.0.0\fR, or the IPv6 address \fB::\fR may be used to 
