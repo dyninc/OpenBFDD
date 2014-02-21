@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 void CloseFileDescriptor(int val)
 {
   ::close(val);

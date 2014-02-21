@@ -1,3 +1,8 @@
+/**************************************************************
+* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Distributed under the FreeBSD License - see LICENSE
+***************************************************************/
 #pragma once
 
 #include "common.h"
@@ -170,8 +175,8 @@ public:
 
   /**
    * @return - The error from the last call. 0 if it succeeded.
- * @note - only calls that specifically state in their comments that they set
- *       the error are guaranteed to do so. Others may, or may not.
+   * @note - only calls that specifically state in their comments that they set
+   *       the error are guaranteed to do so. Others may, or may not.
    */
   int GetLastError() { return m_error;}
 
@@ -188,7 +193,6 @@ public:
    *
    */
   void AlwaysClose();
-
 
   /**
    * Is there a socket attached.
@@ -355,9 +359,9 @@ public:
    * @note Use GetLastError() for error code on failure.
    *
    * @param buffer [in/out] - The buffer containing the data to be written. See
-   *  			 description for value on return.
+   *         description for value on return.
    * @param bufferLen [in/out] - The number of bytes to write. See
-   *  			 description for value on return.
+   *         description for value on return.
    * @param toAddress
    * @param flags
    *
@@ -399,9 +403,9 @@ public:
    * @note Use GetLastError() for error code on failure.
    *
    * @param buffer [in/out] - The buffer containing the data to be written. See
-   *  			 description for value on return.
+   *         description for value on return.
    * @param bufferLen [in/out] - The number of bytes to write. See
-   *  			 description for value on return.
+   *         description for value on return.
    *
    * @return bool - False on failure. A partial write is NOT failure.
    */
@@ -436,14 +440,14 @@ public:
    * programming based protocols like TCP.
    *
    * @param buffer [in/out] - The buffer to hold the data. On success, this points
-   *  			 to the next unused buffer position. May point to one past the
-   *  			 end of the buffer if bufferRemain is 0 on return. Not changed
-   *  			 on failure.
+   *         to the next unused buffer position. May point to one past the
+   *         end of the buffer if bufferRemain is 0 on return. Not changed
+   *         on failure.
    * @param bufferRemain [in/out] - The available size of buffer. On return this
-   *  				   will be the new available size of the new buffer value.
+   *             will be the new available size of the new buffer value.
    * @param written [in/out] - This value will be incremented by the number of
-   *  			  bytes written. This may be NULL. This mirrors bufferRemain,
-   *  			  and is provided for convenance.
+   *          bytes written. This may be NULL. This mirrors bufferRemain,
+   *          and is provided for convenance.
    * @param flags
    *
    * @return bool - False on failure.

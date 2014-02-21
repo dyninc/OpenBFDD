@@ -57,6 +57,7 @@ public:
       freeFn(val); val = NULL;}
   bool IsValid() const { return !isNull();}
   T * operator->()  { return val;}
+  T*& ClearAndGetRef() { Dispose(); return val;} // Use when T** is needed
 protected:
   bool isNull() const { return val == NULL;}
 private:
@@ -169,3 +170,22 @@ private:
   RaiiObjCall & operator=(RaiiObjCall<T, C, freeFn> &src); // don't want two RaiiObjCallVar freeing the same object
   RaiiObjCall(const RaiiObjCall<T, C, freeFn> &src); // never use this.
 };
+
+
+/**
+ * Call to delete all elements in a single parameter stl container that contains
+ * pointers.
+ *
+ * @param C
+ * @param container
+ */
+template<typename C> void DeletePointerContainer(C &container)
+{
+  typename C::iterator it;
+  for (it = container.begin(); it != container.end(); ++it)
+  {
+    delete *it;
+  }
+
+  container.clear();
+}

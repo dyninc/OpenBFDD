@@ -29,6 +29,7 @@ struct Log
     Critical = 0, // Serious failure.
     Error, // Major failure
     Warn, // Problematic condition
+    Debug,
     App, // General important info about app
     AppDetail, // Detailed info about app.
     Session, // Session creation and state change.

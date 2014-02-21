@@ -1,3 +1,8 @@
+/**************************************************************
+* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
+* Distributed under the FreeBSD License - see LICENSE
+***************************************************************/
 #include "common.h"
 #include "Socket.h"
 #include "utils.h"
@@ -141,7 +146,7 @@ void Socket::SetLogName(const char *str)
   if (!str || !*str)
     m_logName.clear();
   else
-    m_logName	= str;
+    m_logName = str;
 }
 
 bool Socket::SetQuiet(bool quiet)
@@ -162,14 +167,14 @@ void Socket::Close()
 {
   if (!empty() && m_owned)
     ::close(m_socket);
-  clear();    // must do full clear, because internally we rely on that behavior.
+  clear();  // must do full clear, because internally we rely on that behavior.
 }
 
 void Socket::AlwaysClose()
 {
   if (!empty())
     ::close(m_socket);
-  clear();    // must do full clear, because internally we rely on that behavior.
+  clear();  // must do full clear, because internally we rely on that behavior.
 }
 
 
@@ -186,7 +191,7 @@ bool Socket::SetBlocking(bool block)
   if (block)
     flags &= ~(int)O_NONBLOCK;
   else
-    flags	|= O_NONBLOCK;
+    flags |= O_NONBLOCK;
   if (-1 == ::fcntl(m_socket, F_SETFL, flags))
     return setErrorAndLog(errno, "Failed to set socket to %sblocking", block ? "" : "non-");
   return true;
@@ -553,7 +558,6 @@ bool Socket::Accept(Socket &outResult)
 
   return true;
 }
-
 
 size_t Socket::GetMaxControlSizeReceiveTTLOrHops()
 {

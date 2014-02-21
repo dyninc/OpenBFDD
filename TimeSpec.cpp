@@ -186,3 +186,39 @@ const char* TimeSpec::SpanToLogText(int decimals, bool shortName)
 
   return SpanToLogText(unit,  decimals,  shortName);
 }
+
+/**
+ * Helper. See LocalTimeToLogText() and UTCTimeToLogText()
+ */
+static const char* timeToLogText(struct tm &time, const char *format)
+{
+  char *buffer;
+  size_t bigSize = GetMediumTLSBuffer(&buffer);
+  if (bigSize == 0)
+    return "<tls_error>";
+
+  if (format == NULL)
+    format = "%c";
+
+  size_t ret = strftime(buffer, bigSize, format, &time);
+  if (ret == 0)
+    return "<error>";
+  return buffer;
+}
+
+
+const char* TimeSpec::LocalTimeToLogText(const char *format /*NULL*/)
+{
+  struct tm time;
+  localtime_r(&tv_sec, &time);
+
+  return timeToLogText(time,  format);
+}
+
+const char* TimeSpec::UTCTimeToLogText(const char *format /*NULL*/)
+{
+  struct tm time;
+  gmtime_r(&tv_sec, &time);
+
+  return timeToLogText(time,  format);
+}

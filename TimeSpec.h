@@ -330,4 +330,32 @@ struct TimeSpec : public timespec
    */
   const char* SpanToLogText(int decimals, bool shortName = true);
 
+
+  /**
+   * Formats the time, in local time.
+   * Uses utils.h TLS buffer for result.
+   *
+   * @note - Fractions of a second are dropped.
+   *
+   * @param format [in] - A format like std::strftime(). NULL to use default time
+   *               format.
+   *
+   * @return const char* - The resulting string, of "<error>" on failure
+   */
+  const char* LocalTimeToLogText(const char *format = NULL);
+
+
+  /**
+   * Formats the time, in UTC time.
+   * Uses utils.h TLS buffer for result.
+   *
+   * @note - Fractions of a second are dropped.
+   *
+   * @param format [in] - A format like std::strftime(). NULL to use default time
+   *               format.
+   *
+   * @return const char* - The resulting string, of "<error>" on failure
+   */
+  const char* UTCTimeToLogText(const char *format = NULL);
+
 };

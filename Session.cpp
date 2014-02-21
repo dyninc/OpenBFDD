@@ -98,7 +98,7 @@ Session::Session(Scheduler &scheduler, Beacon *beacon, uint32_t descriminator, c
   snprintf(name, sizeof(name), "<Tx %u>", m_id);
   m_transmitNextTimer = m_scheduler->MakeTimer(name);
 
-  m_receiveTimeoutTimer->SetCallback(handleRecieveTimeoutTimerCallback,  this);
+  m_receiveTimeoutTimer->SetCallback(handleReceiveTimeoutTimerCallback,  this);
   m_receiveTimeoutTimer->SetPriority(Timer::Priority::Low);
   m_transmitNextTimer->SetCallback(handletTransmitNextTimerCallback,  this);
   m_transmitNextTimer->SetPriority(Timer::Priority::Hi);
@@ -455,7 +455,7 @@ bool Session::ProcessControlPacket(const BfdPacket &packet, in_port_t port)
   }
 
   // Packet received ... update Detection time timer
-  scheduleRecieveTimeout();
+  scheduleReceiveTimeout();
 
   return true;
 }
@@ -479,7 +479,7 @@ uint64_t Session::getDetectionTimeout()
  * Schedule the next received timeout based on the current settings.
  *
  */
-void  Session::scheduleRecieveTimeout()
+void  Session::scheduleReceiveTimeout()
 {
   // Reset received timer (if any) using UpdateMicroTimer()
   if (!LogVerify(!m_demandMode))
@@ -498,7 +498,7 @@ void  Session::scheduleRecieveTimeout()
 /**
  * Change the received timeout based on the current settings.
  */
-void  Session::reScheduleRecieveTimeout()
+void  Session::reScheduleReceiveTimeout()
 {
   // Reset received timer (if any) using UpdateMicroTimer()
   if (!LogVerify(!m_demandMode))
@@ -578,7 +578,7 @@ void Session::setSessionState(bfd::State::Value newState, bfd::Diag::Value diag,
         // This is Ok here only since we know we are not up.
         gLog.Optional(Log::Session, "(id=%u) RequiredMinRxInterval now using new value %u due to session down.", m_id, m_requiredMinRxInterval);
         setUseRequiredMinRxInterval(m_requiredMinRxInterval);
-        reScheduleRecieveTimeout();
+        reScheduleReceiveTimeout();
       }
     }
 
@@ -753,7 +753,7 @@ bool Session::transitionPollState(PollState::Value nextState, bool allowAmbiguou
       if (!m_wantsPollForNewRequiredMinRxInterval && getUseRequiredMinRxInterval() != m_requiredMinRxInterval)
       {
         setUseRequiredMinRxInterval(m_requiredMinRxInterval);
-        reScheduleRecieveTimeout();
+        reScheduleReceiveTimeout();
       }
 
       // If we are only sending packets as part of a poll then we can stop now.
@@ -944,6 +944,8 @@ bool Session::ensureSendSocket()
   if (!m_sendSocket.empty())
     return true;
 
+  m_sendSocket.SetVerbose(Log::Warn);
+
   if (!LogVerify(m_localAddr.IsValid()))
     return false;
   if (!LogVerify(!m_localAddr.IsAny()))
@@ -1021,7 +1023,7 @@ bool Session::ensureSendSocket()
  *
  * @param timer
  */
-void Session::handleRecieveTimeoutTimer(Timer *ATTR_UNUSED(timer))
+void Session::handleReceiveTimeoutTimer(Timer *ATTR_UNUSED(timer))
 {
   // We have timed out.
 
@@ -1526,7 +1528,7 @@ void Session::setRequiredMinRxInterval(uint32_t newValue, SetValueFlags::Flag fl
   if (oldUseRequiredMinRxInterval !=  getUseRequiredMinRxInterval())
   {
     // Change in timeout
-    reScheduleRecieveTimeout();
+    reScheduleReceiveTimeout();
   }
 }
 

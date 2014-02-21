@@ -28,6 +28,10 @@ LogImp::LogImp() : Logger()
   m_types[Log::Warn].logName = "warn";
   m_types[Log::Warn].syslogPriority = LOG_WARNING;
 
+  m_types[Log::Debug].name = "debug";
+  m_types[Log::Debug].logName = "debug";
+  m_types[Log::Debug].syslogPriority = LOG_DEBUG;
+  
   m_types[Log::App].name = "app";
   m_types[Log::App].description = "General application messages";
 
@@ -110,6 +114,7 @@ LogImp::LogImp() : Logger()
   // Dev
   m_levelsMap[Log::Dev].name = "dev";
   copyLevelTypes(Log::Detailed, Log::Dev);
+  m_levelsMap[Log::Dev].types[Log::Debug] = true;
   m_levelsMap[Log::Dev].types[Log::Packet] = true;
   m_levelsMap[Log::Dev].types[Log::PacketContents] = true;
   m_levelsMap[Log::Dev].types[Log::AppDetail] = true;

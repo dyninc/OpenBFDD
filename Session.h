@@ -320,8 +320,8 @@ private:
   void sendControlPacket();
   void send(const BfdPacket &packet);
   bool isRemoteDemandModeActive();
-  void scheduleRecieveTimeout();
-  void reScheduleRecieveTimeout();
+  void scheduleReceiveTimeout();
+  void reScheduleReceiveTimeout();
   uint64_t getDetectionTimeout();
   void scheduleTransmit();
   uint32_t getBaseTransmitTime();
@@ -331,8 +331,8 @@ private:
   void logSessionTransition();
   bool ensureSendSocket();
 
-  static void handleRecieveTimeoutTimerCallback(Timer *timer, void *userdata) { reinterpret_cast<Session *>(userdata)->handleRecieveTimeoutTimer(timer);}
-  void handleRecieveTimeoutTimer(Timer *timer);
+  static void handleReceiveTimeoutTimerCallback(Timer *timer, void *userdata) { reinterpret_cast<Session *>(userdata)->handleReceiveTimeoutTimer(timer);}
+  void handleReceiveTimeoutTimer(Timer *timer);
 
   static void handletTransmitNextTimerCallback(Timer *timer, void *userdata) { reinterpret_cast<Session *>(userdata)->handletTransmitNextTimer(timer);}
   void handletTransmitNextTimer(Timer *timer);

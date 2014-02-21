@@ -104,7 +104,7 @@ bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenA
 
   m_packet.AllocBuffers(bfd::MaxPacketSize,
                         Socket::GetMaxControlSizeReceiveDestinationAddress() +
-                        Socket::GetMaxControlSizeRecieveTTLOrHops() +
+                        Socket::GetMaxControlSizeReceiveTTLOrHops() +
                         +8 /*just in case*/);
 
   // We use this "signal channel" to communicate back to ourself in the Scheduler
@@ -408,7 +408,7 @@ void Beacon::makeListenSocket(const IpAddr &listenAddr, Socket &outSocket)
   if (!listenSocket.SetTTLOrHops(bfd::TTLValue))
     return;
 
-  if (!listenSocket.SetRecieveTTLOrHops(true))
+  if (!listenSocket.SetReceiveTTLOrHops(true))
     return;
 
   if (!listenSocket.SetReceiveDestinationAddress(true))
