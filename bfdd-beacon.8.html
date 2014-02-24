@@ -1,8 +1,9 @@
+
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <HTML><HEAD><TITLE>Man page of bfdd-beacon</TITLE>
 </HEAD><BODY>
 <H1>bfdd-beacon</H1>
-Section: OpenBFDD v0.5.0 (8)<BR>Updated: February 5, 2013<BR><A HREF="#index">Index</A>
+Section: OpenBFDD v0.5.2 (8)<BR>Updated: February 24, 2014<BR><A HREF="#index">Index</A>
 
 <A NAME="lbAB">&nbsp;</A>
 </DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">NAME</p><DL><DD>
@@ -41,7 +42,7 @@ Logging will not be sent to stdout. This is the default for release builds.
 
 <DD>
 Prevents the beacon from running as a daemon. This is useful for debugging.
-<DT><B style="color: #996600;">--control </B><i style="color: #008000;">ip</I><B style="color: #996600;">:</B><i style="color: #008000;">port</I>
+<DT><B style="color: #996600;">--control=</B><i style="color: #008000;">ip</I><B style="color: #996600;">:</B><i style="color: #008000;">port</I>
 
 <DD>
 Adds a communication channel to use for communicating with <B style="color: #996600;"><A HREF="bfdd-beacon.8.html">bfdd-beacon</A></B>(8). 
@@ -52,7 +53,7 @@ are created on <B style="color: #996600;">127.0.0.1</B>.
 When specifying an IPv6 <i style="color: #008000;">ip</I> address, the address must be contained in brackets, 
 to allow for a <i style="color: #008000;">port</I> specification. For example <B style="color: #996600;">[::1]:10001</B>. 
 See the <B style="color: #996600;">PARAMETERS</B> section for more details on specifying an <i style="color: #008000;">ip</I> address.
-<DT><B style="color: #996600;">--listen </B><i style="color: #008000;">ip</I><B style="color: #996600;"></B>
+<DT><B style="color: #996600;">--listen=</B><i style="color: #008000;">ip</I><B style="color: #996600;"></B>
 
 <DD>
 Adds an address on which to listen for new incoming BFD connections. 
@@ -117,7 +118,7 @@ Jake Montgomery for Dynamic Network Services, Inc.
 <A NAME="lbAM">&nbsp;</A>
 </DL></DL><p style="color: #996600; text-decoration: underline;  font-weight: bold;">COPYRIGHT</p><DL><DD>
 
-Copyright (c) 2010-2013, Dynamic Network Services, Inc.
+Copyright (c) 2010-2014, Dynamic Network Services, Inc.
 <P>
 
 <HR>
