@@ -1,3 +1,13 @@
+2014-02-24 Jake Montgomery Update Version to 0.5.2
+	* Portability improvements
+	* Added --disable-cpp11 configuration option.
+	* Formatting changes and typos fixed.
+	* Fixed bug in _unused_ function: "TimeSpec &operator*=(double)"
+	* Refactored logging code
+	* Fixed lockup when local address is invalid in an active connection.
+	* No longer using the openbfdd namespace.
+	* Updated man pages.
+
 2013-03-06  Jake Montgomery Update Version to 0.5.0
 	* Variable number of configurable control channels now supported.
 
