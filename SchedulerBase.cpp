@@ -82,7 +82,7 @@ public:
     else
     {
       // Remove us from active timers list. (Must remove before changing timer.)
-      SchedulerBase::timer_set_it found = m_activeTimers->find(this);
+      SchedulerBase::timer_set_it found = SchedulerBase::TimeSetFindExact(*m_activeTimers, this);
       if (found != m_activeTimers->end())
         m_activeTimers->erase(found);
 
@@ -226,7 +226,7 @@ private:
 
     if (expireChange)
     {
-      SchedulerBase::timer_set_it found = m_activeTimers->find(this);
+      SchedulerBase::timer_set_it found = SchedulerBase::TimeSetFindExact(*m_activeTimers, this);
       if (found != m_activeTimers->end())
       {
         if (!willTimerBeSorted(found, expireTime))
@@ -678,4 +678,35 @@ bool SchedulerBase::compareTimers(const TimerImpl *lhs, const TimerImpl *rhs)
   // We want the "earliest" timers first. So we return true if lhs is earlier than
   // rhs. -1 if left is earlier.
   return (0 > timespecCompare(lhs->GetExpireTime(), rhs->GetExpireTime()));
+}
+
+/**
+ * Finds a TimerImpl in the timer_set.
+ *
+ * Note that timer_set::find() would return any timer that matches, which is
+ * defined as matching expire time. This function will **only** return an
+ * iterator that points to the specific TimerImpl provided.
+ *
+ *
+ * @param timerSet [in] - The timer set to search.
+ * @param target [in] - The object to search for.
+ *
+ * @return SchedulerBase::timer_set_it - An iterator to the timer, or
+ *      timerSet.end() if no match was found.
+ *
+ */
+SchedulerBase::timer_set_it SchedulerBase::TimeSetFindExact(SchedulerBase::timer_set &timerSet,
+                                                            TimerImpl *target)
+{
+  std::pair<timer_set_it, timer_set_it> range;
+
+  range = timerSet.equal_range(target);
+
+  for (timer_set_it it = range.first; it != range.second; ++it)
+  {
+    // Compare as pointers
+    if (target == *it)
+      return it;
+  }
+  return timerSet.end();
 }

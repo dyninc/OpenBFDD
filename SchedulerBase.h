@@ -40,6 +40,10 @@ public:
   virtual Timer* MakeTimer(const char *name);
   virtual void FreeTimer(Timer *timer);
 
+  /** Other public functions */
+  static timer_set_it TimeSetFindExact(timer_set &timerSet, TimerImpl *target);
+
+
 protected:
   /**
    * Constructor

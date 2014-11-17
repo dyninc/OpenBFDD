@@ -31,7 +31,7 @@ LogImp::LogImp() : Logger()
   m_types[Log::Debug].name = "debug";
   m_types[Log::Debug].logName = "debug";
   m_types[Log::Debug].syslogPriority = LOG_DEBUG;
-  
+
   m_types[Log::App].name = "app";
   m_types[Log::App].description = "General application messages";
 
