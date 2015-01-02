@@ -7,6 +7,7 @@
 #include "standard.h"
 #include "SmartPointer.h"
 #include <unistd.h>
+#include <iostream>
 
 using namespace std;
 
