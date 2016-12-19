@@ -9,7 +9,7 @@
  * specific purposes.
  * 
  * ===========================================
- *
+ * ORIGINAL License from unbound 1.2.1:
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
