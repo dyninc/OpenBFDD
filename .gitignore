@@ -1,0 +1,15 @@
+autom4te.cache/
+.deps/
+*.o
+aclocal.m4
+bfdd-beacon
+bfdd-control
+compile
+config.h
+config.h.in
+config.log
+config.status
+configure
+Makefile
+Makefile.in
+stamp-h1
