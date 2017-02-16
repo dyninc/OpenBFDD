@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Copyright (c) 2011-2017, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -10,30 +10,31 @@
 #include <string.h>
 #include <strings.h>
 
-using namespace std;
-
-
 TimeSpec::TimeSpec(TimeSpec::Unit unit, int64_t value)
 {
   //gLog.Optional(Log::Debug, "TimeSpec(TimeSpec::Unit)");
   switch (unit)
   {
+  case Nanosec:
   default:
     // nanoseconds
     // Assuming C99 compliance for % operator.
     tv_sec = value / NSecPerSec;
     tv_nsec = value % NSecPerSec;
     break;
+
   case Microsec:
     // Assuming C99 compliance for % operator.
     tv_sec = value / 1000000;
-    tv_nsec = (value % 1000000) * USecPerMs;
+    tv_nsec = (value % 1000000) * NSecPerUs;
     break;
+
   case Millisec:
     // Assuming C99 compliance for % operator.
     tv_sec = value / 1000;
     tv_nsec = (value % 1000) * NSecPerMs;
     break;
+
   case Seconds:
     tv_sec = value;
     tv_nsec = 0;
@@ -46,9 +47,11 @@ TimeSpec::TimeSpec(TimeSpec::Unit unit, int64_t value)
   }
 }
 
+
+
 TimeSpec TimeSpec::MonoNow()
 {
-  TimeSpec now;
+  struct TimeSpec now;
 
   if (0 == clock_gettime(CLOCK_MONOTONIC, &now))
     return now;
@@ -60,7 +63,7 @@ TimeSpec TimeSpec::MonoNow()
 
 TimeSpec TimeSpec::RealNow()
 {
-  TimeSpec now;
+  struct TimeSpec now;
 
   if (0 == clock_gettime(CLOCK_REALTIME, &now))
     return now;
@@ -97,13 +100,17 @@ TimeSpec::Unit TimeSpec::StringToUnit(const char *str)
 {
   str = SkipWhite(str);
 
-  if (TestString("milliseconds",  str)
-      || TestString("ms",  str))
-    return Millisec;
+  if (TestString("nanoseconds",  str)
+      || TestString("ns",  str))
+    return Nanosec;
 
   if (TestString("microseconds",  str)
       || TestString("us",  str))
     return Microsec;
+
+  if (TestString("milliseconds",  str)
+      || TestString("ms",  str))
+    return Millisec;
 
   if (TestString("seconds",  str)
       || TestString("sec",  str)
@@ -125,12 +132,14 @@ double TimeSpec::UnitToSeconds(TimeSpec::Unit unit)
   default:
     LogAssert(false);
     return 1.0;
-
-  case Millisec:
-    return (1.0 / 1000.0);
+  case Nanosec:
+    return (1.0 / NSecPerSec);
 
   case Microsec:
-    return (1.0 / 1000000.0);
+    return (1.0 / USecPerSec);
+
+  case Millisec:
+    return (1.0 / MSecPerSec);
 
   case Seconds:
     return 1.0;
@@ -140,12 +149,16 @@ double TimeSpec::UnitToSeconds(TimeSpec::Unit unit)
   }
 }
 
+
 const char* TimeSpec::UnitToString(TimeSpec::Unit unit,  bool shortName)
 {
   switch (unit)
   {
   default:
     return NULL;
+
+  case Nanosec:
+    return shortName ? "ns" : "nanoseconds";
 
   case Microsec:
     return shortName ? "us" : "microseconds";
@@ -161,30 +174,38 @@ const char* TimeSpec::UnitToString(TimeSpec::Unit unit,  bool shortName)
   }
 }
 
-const char* TimeSpec::SpanToLogText(TimeSpec::Unit unit, int decimals, bool shortName)
+
+const char* TimeSpec::SpanToLogText(TimeSpec::Unit unit, int decimals,  TextFlags flags)
 {
   double val = ToDecimal() / UnitToSeconds(unit);
 
-  if (val == int64_t(val))
+  if (0 == (flags & NoTruncation) && val == int64_t(val))
     decimals = 0;
 
-  return FormatShortStr("%.*f %s", decimals, val,  UnitToString(unit, shortName));
+  return FormatShortStr("%.*f %s", decimals, val,  UnitToString(unit, 0 == (flags & LongName)));
 }
 
-const char* TimeSpec::SpanToLogText(int decimals, bool shortName)
+TimeSpec::Unit TimeSpec::SmallestSpanUnit() const
 {
   double val = ToDecimal();
 
-  TimeSpec::Unit unit = TimeSpec::Seconds;
-  if (val != 0)
-  {
-    if (val / 60 == int64_t(val / 60))
-      unit = TimeSpec::Minutes;
-    else if (val < 1.0)
-      unit = TimeSpec::Millisec;
-  }
+  if (val == 0.0)
+    return TimeSpec::Seconds;
 
-  return SpanToLogText(unit,  decimals,  shortName);
+  if (val / 60 == int64_t(val / 60))
+    return TimeSpec::Minutes;
+  if (val < 1.0 / USecPerSec)
+    return TimeSpec::Nanosec;
+  if (val < 1.0 / MSecPerSec)
+    return TimeSpec::Microsec;
+  if (val < 1.0)
+    return TimeSpec::Millisec;
+  return TimeSpec::Seconds;
+}
+
+const char* TimeSpec::SpanToLogText(int decimals, TextFlags flags)
+{
+  return SpanToLogText(SmallestSpanUnit(),  decimals,  flags);
 }
 
 /**

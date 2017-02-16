@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Copyright (c) 2011-2017, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -7,18 +7,23 @@
 
 #include <time.h>
 
+
 /**
  * Minimal wrapper around struct timespec.
  */
 struct TimeSpec : public timespec
 {
   static const long NSecPerSec = 1000000000L;
+  static const long USecPerSec = 1000000L;
+  static const long MSecPerSec = 1000L;
+
   static const long NSecPerMs =  1000000L;
-  static const long USecPerMs =  1000L;
+  static const long NSecPerUs =  1000L;
 
   enum Unit
   {
     None,
+    Nanosec,
     Microsec,
     Millisec,
     Seconds,
@@ -94,7 +99,7 @@ struct TimeSpec : public timespec
     }
     else if (tv_sec < 0 && tv_nsec > 0)
     {
-      tv_sec++; tv_nsec = NSecPerSec - tv_nsec;
+      tv_sec++; tv_nsec = -(NSecPerSec - tv_nsec);
     }
   }
 
@@ -102,6 +107,16 @@ struct TimeSpec : public timespec
   {
     return (double(tv_sec) + double(tv_nsec) / NSecPerSec);
   }
+
+
+  /**
+  * Returns the time as nanoseconds. Overflow is possible.
+  */
+  int64_t ToNanoseconds() const
+  {
+    return int64_t(tv_sec) * 1000000000L + tv_nsec;
+  }
+
 
   TimeSpec &operator+=(const struct timespec &rhs)
   {
@@ -189,6 +204,7 @@ struct TimeSpec : public timespec
 
     return *this;
   }
+
 
   TimeSpec operator*(double mult) const
   { return TimeSpec(*this) *= mult;}
@@ -305,31 +321,45 @@ struct TimeSpec : public timespec
    */
   static double UnitToSeconds(TimeSpec::Unit unit);
 
+  // These flags control SpanToLogText
+  enum TextFlags
+  {
+    Default = 0x0000,
+    // Use full, instead of abbreviated named.
+    LongName  = 0x0001,
+    // Always use specified decimal places, even for whole numbers.
+    NoTruncation = 0x0002
+  };
+
   /**
    * Converts to a string with a  single value and single unit.
    * Uses utils.h TLS buffer for result.
    *
    * @param unit
    * @param decimals [in] - The maximum number of decimal palaces to use.
-   * @param shortName
    *
    * @return const char*
    */
-  const char* SpanToLogText(TimeSpec::Unit unit, int decimals, bool shortName = true);
+  const char* SpanToLogText(TimeSpec::Unit unit, int decimals, TextFlags flags = TextFlags::Default);
 
   /**
    * Converts to a string with a single value and single unit. The unit is chosen
    * based on the value.
    * Uses utils.h TLS buffer for result.
    *
-   *
-   * @param shortName
    * @param decimals [in] - The maximum number of decimal palaces to use.
    *
    * @return const char*
    */
-  const char* SpanToLogText(int decimals, bool shortName = true);
+  const char* SpanToLogText(int decimals, TextFlags flags = TextFlags::Default);
 
+  /**
+  * Determines the smallest unit which results in a whole number.
+  * Seconds ate the largest unit returned, unless the TimeSpec can be expressed
+  * precisely as a whole number of minutes. An empty TimeSpec will always return
+  * Seconds.
+  */
+  TimeSpec::Unit SmallestSpanUnit() const;
 
   /**
    * Formats the time, in local time.
@@ -359,3 +389,10 @@ struct TimeSpec : public timespec
   const char* UTCTimeToLogText(const char *format = NULL);
 
 };
+
+// Make enum flags
+inline TimeSpec::TextFlags operator|(TimeSpec::TextFlags f1, TimeSpec::TextFlags f2) { return TimeSpec::TextFlags((int)f1 | (int)f2);}
+inline TimeSpec::TextFlags operator|=(TimeSpec::TextFlags &f1, TimeSpec::TextFlags f2) { f1 = f1 | f2; return f1;}
+inline TimeSpec::TextFlags operator&(TimeSpec::TextFlags f1, TimeSpec::TextFlags f2) { return TimeSpec::TextFlags((int)f1 & (int)f2);}
+inline TimeSpec::TextFlags operator&=(TimeSpec::TextFlags &f1, TimeSpec::TextFlags f2) { f1 = f1 & f2; return f1;}
+inline TimeSpec::TextFlags operator ~(TimeSpec::TextFlags f1) { return TimeSpec::TextFlags(~(int)f1);}
