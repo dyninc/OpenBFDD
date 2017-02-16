@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Copyright (c) 2011-2017, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -13,7 +13,7 @@
 using namespace std;
 
 /**
- * Checks for 'expected', non-fatal errors that may occur in certain fucntions.
+ * Checks for 'expected', non-fatal errors that may occur in certain functions.
  * For now, the same set is used for all checks.
  */
 static inline bool isErrorExpected(int error)
@@ -37,7 +37,9 @@ void Socket::clear()
 Socket::Socket() :
    m_logName()
    , m_quiet(false)
-   , m_verboseLogType(Log::Debug)
+   , m_verboseErrorLogType(Log::Error)
+   , m_verboseExpectedLogType(Log::Debug)
+
 {
   clear();
 }
@@ -45,7 +47,8 @@ Socket::Socket() :
 Socket::Socket(int sock, Addr::Type family, bool owned /*false*/) :
    m_logName()
    , m_quiet(false)
-   , m_verboseLogType(Log::Debug)
+   , m_verboseErrorLogType(Log::Error)
+   , m_verboseExpectedLogType(Log::Debug)
 {
   clear();
   m_socket = sock;
@@ -56,7 +59,8 @@ Socket::Socket(int sock, Addr::Type family, bool owned /*false*/) :
 Socket::Socket(const Socket &src) :
    m_logName()
    , m_quiet(false)
-   , m_verboseLogType(Log::Debug)
+   , m_verboseErrorLogType(Log::Error)
+   , m_verboseExpectedLogType(Log::Debug)
 {
   clear();
   copy(src);
@@ -64,7 +68,7 @@ Socket::Socket(const Socket &src) :
 
 /**
  * Copies the socket. This will NOT own the socket.
- * Does not copy quiet or log name settings.
+ * Does not copy quiet, log or log name settings.
  *
  * @param src
  */
@@ -146,7 +150,7 @@ void Socket::SetLogName(const char *str)
   if (!str || !*str)
     m_logName.clear();
   else
-    m_logName = str;
+    m_logName	= str;
 }
 
 bool Socket::SetQuiet(bool quiet)
@@ -156,25 +160,35 @@ bool Socket::SetQuiet(bool quiet)
   return old;
 }
 
-Log::Type Socket::SetVerbose(Log::Type type)
+
+Log::Type Socket::SetVerbosity(Log::Type type)
 {
-  Log::Type old = m_verboseLogType;
-  m_verboseLogType = type;
+  Log::Type old = m_verboseErrorLogType;
+  m_verboseErrorLogType = type;
   return old;
 }
+
+
+Log::Type Socket::SetExpectedVerbosity(Log::Type type)
+{
+  Log::Type old = m_verboseExpectedLogType;
+  m_verboseExpectedLogType = type;
+  return old;
+}
+
 
 void Socket::Close()
 {
   if (!empty() && m_owned)
     ::close(m_socket);
-  clear();  // must do full clear, because internally we rely on that behavior.
+  clear();    // must do full clear, because internally we rely on that behavior.
 }
 
 void Socket::AlwaysClose()
 {
   if (!empty())
     ::close(m_socket);
-  clear();  // must do full clear, because internally we rely on that behavior.
+  clear();    // must do full clear, because internally we rely on that behavior.
 }
 
 
@@ -191,7 +205,7 @@ bool Socket::SetBlocking(bool block)
   if (block)
     flags &= ~(int)O_NONBLOCK;
   else
-    flags |= O_NONBLOCK;
+    flags	|= O_NONBLOCK;
   if (-1 == ::fcntl(m_socket, F_SETFL, flags))
     return setErrorAndLog(errno, "Failed to set socket to %sblocking", block ? "" : "non-");
   return true;
@@ -277,8 +291,6 @@ bool Socket::SetUseTimestamp(bool timestamp)
   return setIntSockOpt(SOL_SOCKET, SO_TIMESTAMP, "SO_TIMESTAMP", timestamp ? 1 : 0);
 }
 
-
-
 bool Socket::SetTTLOrHops(int hops)
 {
   if (!ensureSocket())
@@ -320,13 +332,17 @@ bool Socket::SetReceiveDestinationAddress(bool receive)
 #elif defined IP_PKTINFO
     return setIntSockOpt(IPPROTO_IP, IP_PKTINFO, "IP_PKTINFO", val);
 #endif
-    m_error = ENOTSUP;
-    return logError("Platform does not support IP_RECVDSTADDR or IP_PKTINFO");
+    return setErrorAndLog(ENOTSUP, "Platform does not support IP_RECVDSTADDR or IP_PKTINFO");
   }
   else
     return setIntSockOpt(IPPROTO_IPV6, IPV6_RECVPKTINFO, "IPV6_RECVPKTINFO", val);
 }
 
+
+bool Socket::GetPendingError(int &ouError)
+{
+  return getIntSockOpt(SOL_SOCKET, SO_ERROR, "SO_ERROR", ouError);
+}
 
 bool Socket::SetIPv6Only(bool ipv6Only)
 {
@@ -336,10 +352,7 @@ bool Socket::SetIPv6Only(bool ipv6Only)
   if (GetAddress().IsIPv6())
     return setIntSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, "IPV6_V6ONLY", ipv6Only ? 1 : 0);
   else
-  {
-    m_error = ENOTSUP;
-    return logError("IPV6_V6ONLY not supported on IPv4 socket");
-  }
+    return setErrorAndLog(ENOTSUP, "IPV6_V6ONLY not supported on IPv4 socket");
 }
 
 bool Socket::Bind(const SockAddr &address)
@@ -365,7 +378,12 @@ bool Socket::Connect(const SockAddr &address)
   m_address.clear();
 
   if (::connect(m_socket, &address.GetSockAddr(), address.GetSize()) < 0)
-    return setErrorAndLog(errno, "Failed to connect socket to %s",  address.ToString());
+  {
+    bool expected = (errno == EINPROGRESS);
+    setErrorAndLogAsExpected(expected, errno, "Failed to connect socket to %s",  address.ToString());
+    if (!expected)
+      return false;
+  }
 
   m_address = address;
   return true;
@@ -413,7 +431,7 @@ bool Socket::SendToStream(const void **buffer, size_t *bufferLen, const SockAddr
     {
       *bufferLen = 0;
       *buffer = NULL;
-      return logError("Unexpeted sendto() sent more data than was supplied");
+      return logError("Unexpected sendto() sent more data than was supplied");
     }
     *buffer = reinterpret_cast<const char *>(*buffer) + result;
     *bufferLen -= result;
@@ -462,7 +480,7 @@ bool Socket::SendStream(const void **buffer, size_t *bufferLen, int flags /*0*/)
     {
       *bufferLen = 0;
       *buffer = NULL;
-      return logError("Unexpeted send() sent more data than was supplied");
+      return logError("Unexpected send() sent more data than was supplied");
     }
     *buffer = reinterpret_cast<const char *>(*buffer) + result;
     *bufferLen -= result;
@@ -475,6 +493,85 @@ bool Socket::SendStream(void **buffer, size_t *bufferLen, int flags /*0*/)
   return SendStream(const_cast<const void **>(buffer), bufferLen, flags);
 }
 
+
+/**
+ * Like sendmsg(), for stream based protocols.
+ *
+ * This function can have one of three results:
+ *
+ *   1 - If the write completes successfully, and completely, then
+ * message->msg_iov is set to NULL and message->msg_iovlen is set to 0. true is
+ * returned.
+ *   2 -  If the write completes partially, message->msg_iov and
+ * message->msg_iovlen will be modified to reflect the unwritten data location
+ * and length. In this case the function returns true.
+ *   3 - If there is some other failure, then  message->msg_iov and
+ * message->msg_iovlen will remain unchanged, and false will be returned.
+ *
+ * @note Use GetLastError() for error code on failure. LastErrorWasSendFatal()
+ *  	 may be helpful when deciding whether to try again.
+ *
+ * @param message [in/out] - The message containing the data to be written.
+ *  			 May no be NULL. See description for value on return.
+ *
+ * @return bool - False on failure. A partial write is NOT failure.
+ */
+bool Socket::SendMsgStream(struct msghdr *message, int flags /*0*/)
+{
+  if (!ensureSocket())
+    return false;
+
+  if (message->msg_iovlen == 0)
+    return true;
+
+  ssize_t result = ::sendmsg(m_socket, message, flags);
+  if (result < 0)
+    return setErrorAndLogAsExpected(isErrorExpected(errno), errno, "Error sending packet using sendmsg");
+
+  // Determine how much has been written (Note - Some non-POSIX compliant systems
+  // have message->msg_iovlen as size_t)
+  int whichIOVec;
+  for (whichIOVec = 0; whichIOVec < ssize_t(message->msg_iovlen); ++whichIOVec)
+  {
+    ssize_t thisLen = message->msg_iov[whichIOVec].iov_len;
+    if (thisLen != 0 && result == thisLen)
+    {
+      // Completed this one
+      ++whichIOVec;
+      result -= thisLen;
+      break;
+    }
+    else if (result < thisLen)
+    {
+      //  Partial write to here
+      message->msg_iov[whichIOVec].iov_len = thisLen - result;
+      message->msg_iov[whichIOVec].iov_base = reinterpret_cast<uint8_t *>(message->msg_iov[whichIOVec].iov_base) + result;
+      result -= thisLen;
+      break;
+    }
+    result -= thisLen;
+  }
+  // whichIOVec is one past the last complete write
+
+  if (result != 0)
+  {
+    message->msg_iovlen = 0;
+    message->msg_iov = NULL;
+    return setErrorAndLog(EINVAL, "Unexpected sendmsg() sent more data than was supplied");
+  }
+
+  if (whichIOVec >= ssize_t(message->msg_iovlen))
+  {
+    // Full write
+    message->msg_iovlen = 0;
+    message->msg_iov = NULL;
+    return true;
+  }
+  // partial write
+  message->msg_iovlen -= whichIOVec;
+  message->msg_iov += whichIOVec;
+  return true;
+}
 
 bool Socket::LastErrorWasSendFatal()
 {
@@ -559,6 +656,7 @@ bool Socket::Accept(Socket &outResult)
   return true;
 }
 
+
 size_t Socket::GetMaxControlSizeReceiveTTLOrHops()
 {
   // IP_TTL and IPV6_HOPLIMIT use int, and IP_RECVTTL may use byte.
@@ -590,25 +688,49 @@ bool Socket::ensureSocket()
 {
   if (!empty())
     return true;
-  m_error = EBADF;
-  return logError("Socket is invalid");
+  return setErrorAndLog(EBADF, "Socket is invalid");
+}
+
+
+inline bool Socket::shouldLog(bool expected)
+{
+  if (expected)
+    return !m_quiet && m_verboseExpectedLogType != Log::TypeCount && gLog.LogTypeEnabled(m_verboseExpectedLogType);
+  else
+    return !m_quiet && m_verboseErrorLogType != Log::TypeCount && gLog.LogTypeEnabled(m_verboseErrorLogType);
 }
 
 /**
  * Helper function, will log a message based on m_error, and logs the message.
- * Will prepend the socket name, if any. Will append the error string. Will
- * always log.
+ * Will prepend the socket name, if any. Will append the error string.
+ *
+ * Will always log, so call shouldLog() first.
  *
  * @return - false always!
  */
 void Socket::doErrorLog(Log::Type type, const char *format, va_list args)
 {
+  if (m_logName.empty() &&  m_error == 0)
+  {
+    // Special case to avoid extra copy
+    gLog.MessageVa(type, format, args);
+  }
+
   const char *str = FormatMediumStrVa(format, args);
 
-  if (!m_logName.empty())
-    gLog.Optional(type, "%s : %s : (%d) %s", m_logName.c_str(), str, m_error, SystemErrorToString(m_error));
+  if (m_error != 0)
+  {
+    if (!m_logName.empty())
+      gLog.Optional(type, "%s : %s : (%d) %s", m_logName.c_str(), str, m_error, SystemErrorToString(m_error));
+    else
+      gLog.Optional(type, "%s : (%d) %s", str, m_error, SystemErrorToString(m_error));
+  }
   else
-    gLog.Optional(type, "%s : (%d) %s", str, m_error, SystemErrorToString(m_error));
+  {
+    LogAssert(!m_logName.empty());  // the empty case handled at the start of this fn.
+    gLog.Optional(type, "%s : %s", m_logName.c_str(), str);
+  }
+
 }
 
 
@@ -627,17 +749,12 @@ bool Socket::setErrorAndLogAsExpected(bool isExpected, int error, const char *fo
 {
   m_error = error;
 
-  if (m_quiet)
-    return false;
-
-  if (isExpected && (m_verboseLogType == Log::TypeCount || !gLog.LogTypeEnabled(m_verboseLogType)))
+  if (!shouldLog(isExpected))
     return false;
 
   va_list args;
   va_start(args, format);
-
-  doErrorLog(isExpected ? m_verboseLogType : Log::Error, format, args);
-
+  doErrorLog(isExpected ? m_verboseExpectedLogType : m_verboseErrorLogType, format, args);
   va_end(args);
   return false;
 }
@@ -656,14 +773,12 @@ bool Socket::setErrorAndLog(int error, const char *format, ...)
 {
   m_error = error;
 
-  if (m_quiet)
+  if (!shouldLog(false))
     return false;
 
   va_list args;
   va_start(args, format);
-
-  doErrorLog(Log::Error, format, args);
-
+  doErrorLog(m_verboseErrorLogType, format, args);
   va_end(args);
   return false;
 }
@@ -681,20 +796,12 @@ bool Socket::logError(const char *format, ...)
 {
   m_error = 0;
 
-  if (m_quiet)
+  if (!shouldLog(false))
     return false;
 
   va_list args;
   va_start(args, format);
-  if (!m_logName.empty())
-  {
-    const char *str = FormatMediumStrVa(format, args);
-    gLog.LogError("%s : %s",  m_logName.c_str(), str);
-  }
-  else
-  {
-    gLog.MessageVa(Log::Error, format, args);
-  }
+  doErrorLog(m_verboseErrorLogType, format, args);
   va_end(args);
   return false;
 }

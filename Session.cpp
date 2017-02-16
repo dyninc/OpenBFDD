@@ -944,7 +944,7 @@ bool Session::ensureSendSocket()
   if (!m_sendSocket.empty())
     return true;
 
-  m_sendSocket.SetVerbose(Log::Warn);
+  m_sendSocket.SetExpectedVerbosity(Log::Warn);
 
   if (!LogVerify(m_localAddr.IsValid()))
     return false;

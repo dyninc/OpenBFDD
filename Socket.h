@@ -1,5 +1,5 @@
 /**************************************************************
-* Copyright (c) 2011, Dynamic Network Services, Inc.
+* Copyright (c) 201-2017, Dynamic Network Services, Inc.
 * Jake Montgomery (jmontgomery@dyn.com) & Tom Daly (tom@dyn.com)
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
@@ -36,7 +36,7 @@ public:
   Socket(int sock, Addr::Type family, bool owned = false);
 
   /**
-   * Copies socket. The LogName and Quiet values are not copied.
+   * Copies socket. The Log, LogName and Quiet values are not copied.
    *
    * @note The new socket is NOT owned.
    */
@@ -125,12 +125,15 @@ public:
   /**
    * Makes this a copy of src. This will own the socket if src did, and src will
    * loose ownership (if it had it)
-   * The LogName and Quiet values are not copied.
+   * The Log, LogName and Quiet values are not copied.
    */
   void Transfer(Socket &src);
 
   /**
    * Sets the name used for logging of errors.
+   *
+   * This setting is not copied when the socket is copied.
+   *
    *
    * @param str [in] - NULL or empty for no name.
    */
@@ -143,9 +146,9 @@ public:
    */
   const char* LogName() { return m_logName.c_str();}
 
-
   /**
    * Disables logging of errors.
+   * This setting is not copied when the socket is copied.
    *
    * @param quiet
    *
@@ -154,17 +157,34 @@ public:
   bool SetQuiet(bool quiet);
 
   /**
-   * By default, certain 'expected' errors, such as EAGAIN and EINTR are logged at
-   * the Log::Debug level. Setting verbose will log these at the level given. If
+   * By default, most errors (other than 'expected' errors, are logged at the
+   * Log::Error level. Setting verbosity will log these at the level given. If
    * logging is disabled for this socket (see SetQuiet() ), then these messages
    * will not be logged.
+   *
+   * This setting is not copied when the socket is copied.
    *
    * @param type [in] - The log level to use for logging these 'errors'. Use
    *             Log::TypeCount to disable logging of these.
    *
    * @return Log::Type - The old verbose value.
    */
-  Log::Type SetVerbose(Log::Type type);
+  Log::Type SetVerbosity(Log::Type type);
+
+  /**
+   * By default, certain 'expected' errors, such as EAGAIN and EINTR are logged at
+   * the Log::Debug level. Setting verbose will log these at the level given. If
+   * logging is disabled for this socket (see SetQuiet() ), then these messages
+   * will not be logged.
+   *
+   * This setting is not copied when the socket is copied.
+   *
+   * @param type [in] - The log level to use for logging these 'errors'. Use
+   *             Log::TypeCount to disable logging of these.
+   *
+   * @return Log::Type - The old verbose value.
+   */
+  Log::Type SetExpectedVerbosity(Log::Type type);
 
   /**
    * Returns the socket.
@@ -175,8 +195,9 @@ public:
 
   /**
    * @return - The error from the last call. 0 if it succeeded.
-   * @note - only calls that specifically state in their comments that they set
-   *       the error are guaranteed to do so. Others may, or may not.
+   * @note only calls that specifically state that they set the error are
+   *       guaranteed to do so. Others may, or may not.
+   *
    */
   int GetLastError() { return m_error;}
 
@@ -193,6 +214,7 @@ public:
    *
    */
   void AlwaysClose();
+
 
   /**
    * Is there a socket attached.
@@ -297,6 +319,17 @@ public:
   static size_t GetMaxControlSizeReceiveDestinationAddress();
 
   /**
+   * Gets information about socket error status.
+   * See getsockopt() SO_ERROR.
+   * @note Use GetLastError() for error code on failure.
+   *
+   * @param ouError [out] - On success, this is the SO_ERROR value.
+   *
+   * @return bool - false if getsockopt() fails.
+   */
+  bool GetPendingError(int &ouError);
+
+  /**
    * See socket bind().
    *
    * @note Use GetLastError() for error code on failure.
@@ -330,7 +363,7 @@ public:
    *
    * @note - a 'partial send' is possible on stream based protocols, like TCP.
    * In that case, this function will return true, but not all data is sent. for
-   * this reason, this is not reccomended for stream based protocols. Use
+   * this reason, this is not recommended for stream based protocols. Use
    * SendToStream() instead.
    *
    *
@@ -359,9 +392,9 @@ public:
    * @note Use GetLastError() for error code on failure.
    *
    * @param buffer [in/out] - The buffer containing the data to be written. See
-   *         description for value on return.
+   *  			 description for value on return.
    * @param bufferLen [in/out] - The number of bytes to write. See
-   *         description for value on return.
+   *  			 description for value on return.
    * @param toAddress
    * @param flags
    *
@@ -375,7 +408,7 @@ public:
    *
    * @note - a 'partial send' is possible on stream based protocols, like TCP.
    * In that case, this function will return true, but not all data is sent. for
-   * this reason, this is not reccomended for stream based protocols. Use
+   * this reason, this is not recommended for stream based protocols. Use
    * SendStream,() instead.
    *
    * @note Use GetLastError() for error code on failure.
@@ -403,9 +436,9 @@ public:
    * @note Use GetLastError() for error code on failure.
    *
    * @param buffer [in/out] - The buffer containing the data to be written. See
-   *         description for value on return.
+   *  			 description for value on return.
    * @param bufferLen [in/out] - The number of bytes to write. See
-   *         description for value on return.
+   *  			 description for value on return.
    *
    * @return bool - False on failure. A partial write is NOT failure.
    */
@@ -413,9 +446,34 @@ public:
   bool SendStream(void **buffer, size_t *bufferLen, int flags = 0);
 
   /**
-   * After a call to SendTo(), SendToStream(), Send() or SendStream() returns
-   * false, this will check if the error was fatal, or if it is reasonable to try
-   * sending again.
+   * Like sendmsg(), for stream based protocols.
+   *
+   * This function can have one of three results:
+   *
+   *   1 - If the write completes successfully, and completely, then
+   * message->msg_iov is set to NULL and message->msg_iovlen is set to 0. true is
+   * returned.
+   *   2 -  If the write completes partially, message->msg_iov and
+   * message->msg_iovlen will be modified to reflect the unwritten data location
+   * and length. In this case the function returns true.
+   *   3 - If there is some other failure, then  message->msg_iov and
+   * message->msg_iovlen will remain unchanged, and false will be returned.
+   *
+   * @note Use GetLastError() for error code on failure. LastErrorWasSendFatal()
+   *  	 may be helpful when deciding whether to try again.
+   *
+   * @param message [in/out] - The message containing the data to be written.
+   *  			 May no be NULL. See description for value on return.
+   *
+   * @return bool - False on failure. A partial write is NOT failure.
+   */
+  bool SendMsgStream(struct msghdr *message, int flags = 0);
+
+
+  /**
+   * After a call to SendMsgStream, SendTo(), SendToStream(), Send() or
+   * SendStream() returns false, this will check if the error was fatal, or if it
+   * is reasonable to try sending again.
    *
    *
    * @return bool - false if it may be reasonable to try sending again.
@@ -440,14 +498,14 @@ public:
    * programming based protocols like TCP.
    *
    * @param buffer [in/out] - The buffer to hold the data. On success, this points
-   *         to the next unused buffer position. May point to one past the
-   *         end of the buffer if bufferRemain is 0 on return. Not changed
-   *         on failure.
+   *  			 to the next unused buffer position. May point to one past the
+   *  			 end of the buffer if bufferRemain is 0 on return. Not changed
+   *  			 on failure.
    * @param bufferRemain [in/out] - The available size of buffer. On return this
-   *             will be the new available size of the new buffer value.
+   *  				   will be the new available size of the new buffer value.
    * @param written [in/out] - This value will be incremented by the number of
-   *          bytes written. This may be NULL. This mirrors bufferRemain,
-   *          and is provided for convenance.
+   *  			  bytes written. This may be NULL. This mirrors bufferRemain,
+   *  			  and is provided for convenance.
    * @param flags
    *
    * @return bool - False on failure.
@@ -498,7 +556,7 @@ public:
 
   /**
    * Copies socket.
-   * The LogName and Quiet values are not copied.
+   * The Log, LogName and Quiet values are not copied.
    *
    * @note The new socket is NOT owned.
    */
@@ -516,7 +574,7 @@ private:
   bool setErrorAndLog(int error, const char *format, ...) ATTR_FORMAT(printf, 3, 4);
   bool setErrorAndLogAsExpected(bool isExpected, int error, const char* format, ...)ATTR_FORMAT(printf, 4, 5);
   bool logError(const char* format, ...)ATTR_FORMAT(printf, 2, 3);
-
+  bool shouldLog(bool expected);
 
   int m_socket;
   SockAddr m_address;
@@ -524,5 +582,6 @@ private:
   int m_error;
   std::string m_logName;
   bool m_quiet;
-  Log::Type m_verboseLogType;
+  Log::Type m_verboseErrorLogType; // for non-expected errors
+  Log::Type m_verboseExpectedLogType; // for non-expected errors
 };
