@@ -4,6 +4,7 @@
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "common.h"
+#include "threads.h"
 #include "SchedulerBase.h"
 #include "utils.h"
 #include "SmartPointer.h"

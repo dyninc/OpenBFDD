@@ -4,6 +4,7 @@
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "common.h"
+#include "threads.h"
 #include "utils.h"
 #include "compat.h"
 #include <errno.h>
@@ -538,7 +539,7 @@ const char* Ip4ToString(in_addr_t address, uint16_t port)
           (uint8_t)data[1],
           (uint8_t)data[2],
           (uint8_t)data[3],
-          (unsigned int)port
+          (unsigned short)port
          );
 
   return buf;

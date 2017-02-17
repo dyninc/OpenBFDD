@@ -4,6 +4,7 @@
 * Distributed under the FreeBSD License - see LICENSE
 ***************************************************************/
 #include "standard.h"
+#include "threads.h"
 #include "Logger.h"
 #include "LogException.h"
 #include "compat.h"
