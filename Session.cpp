@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -554,6 +555,15 @@ void Session::setSessionState(bfd::State::Value newState, bfd::Diag::Value diag,
   if (m_sessionState != newState)
   {
     LogOptional(Log::Session, "(id=%u) Session transition from %s to %s", m_id, bfd::StateName(m_sessionState),  bfd::StateName(newState));
+
+    char const* hook = getenv("OPENBFDD_TRANSITION_HOOK");
+    if (hook != NULL && access(hook, X_OK) == 0) {
+      string cmd = string(hook) +
+        " " + m_localAddr.ToString() + " " + m_remoteAddr.ToString() +
+        " " + bfd::StateName(m_sessionState) + " " + bfd::StateName(newState);
+      (void)system(cmd.c_str());
+    }
+
     m_sessionState = newState;
 
     logSessionTransition();

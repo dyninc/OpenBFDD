@@ -73,6 +73,11 @@ The \fBbfdd-control\fR(8) utility can then be used to start an active session, o
 The current implementation of the BFD protocol was tested specifically with the Juniper router's BFD (JUNOS 8.5). Demand mode is not currently supported. 
 Echo mode is not currently supported. 
 Authentication is not supported. 
+.SH ENVIRONMENT
+.TP
+.B OPENBFDD_TRANSITION_HOOK
+If \fBOPENBFDD_TRANSITION_HOOK\fR is specified and point to an executable program that program will be called
+for each session state transition with parameters; \fBlocal-ip remote-ip old-state new-state\fR
 .SH BUGS
 No known bugs at this time.
 .SH "SEE ALSO"
