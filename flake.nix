@@ -1,10 +1,4 @@
 {
-  inputs = {
-    nixpkgs = {
-      url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    };
-  };
-
   outputs = {
     self,
     nixpkgs,
@@ -34,6 +28,9 @@
           nixpkgsFor.${system}.ginkgo
           nixpkgsFor.${system}.gnumake
           nixpkgsFor.${system}.bash
+          nixpkgsFor.${system}.automake
+          nixpkgsFor.${system}.autoconf
+          nixpkgsFor.${system}.gcc
         ];
       };
     });
