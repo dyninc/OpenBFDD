@@ -13,3 +13,4 @@ configure
 Makefile
 Makefile.in
 stamp-h1
+.envrc/
